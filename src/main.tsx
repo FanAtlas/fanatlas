@@ -10,21 +10,27 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { SOSPage } from "./pages/SOSPage";
 import { AIChatPage } from "./pages/AIChatPage";
 import { TravelGuidesPage } from "./pages/TravelGuidesPage";
+import { CurrencyConverterPage } from "./pages/CurrencyConverterPage";
+import { VoiceTranslatorPage } from "./pages/VoiceTranslatorPage";
+import { TVConnectPage } from "./pages/TVConnectPage";
 
-type Tab = "home" | "map" | "explore" | "matches" | "sos" | "profile" | "ai" | "guides";
+export type Tab = "home" | "map" | "explore" | "matches" | "sos" | "profile" | "ai" | "guides" | "currency" | "translator" | "tv";
 
 function App() {
   const [tab, setTab] = useState<Tab>("home");
 
   const render = () => {
     if (tab === "home") return <HomePage setTab={setTab} />;
-    if (tab === "map") return <MapPage />;
-    if (tab === "explore") return <ExplorePage />;
+    if (tab === "map") return <MapPage setTab={setTab} />;
+    if (tab === "explore") return <ExplorePage setTab={setTab} />;
     if (tab === "matches") return <MatchesPage setTab={setTab} />;
     if (tab === "sos") return <SOSPage />;
-    if (tab === "profile") return <ProfilePage />;
+    if (tab === "profile") return <ProfilePage setTab={setTab} />;
     if (tab === "ai") return <AIChatPage />;
     if (tab === "guides") return <TravelGuidesPage />;
+    if (tab === "currency") return <CurrencyConverterPage />;
+    if (tab === "translator") return <VoiceTranslatorPage />;
+    if (tab === "tv") return <TVConnectPage />;
     return <HomePage setTab={setTab} />;
   };
 
@@ -44,11 +50,7 @@ function App() {
         {nav.map((item) => {
           const Icon = item.icon;
           return (
-            <button
-              key={item.id}
-              className={`nav-btn ${tab === item.id ? "active" : ""}`}
-              onClick={() => setTab(item.id as Tab)}
-            >
+            <button key={item.id} className={`nav-btn ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id as Tab)}>
               <Icon size={20} />
               <span>{item.label}</span>
             </button>

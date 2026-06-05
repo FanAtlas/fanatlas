@@ -1,33 +1,16 @@
-export function ProfilePage() {
+import { Tab } from "../main";
+export function ProfilePage({ setTab }: { setTab: (tab: Tab) => void }) {
   return (
     <>
-      <div className="header">
-        <div>
-          <div className="logo">Profile</div>
-          <div className="subtle">Preferences and membership</div>
-        </div>
-      </div>
-
-      <div className="card">
-        <p className="title">Guest User</p>
-        <p className="subtle">Favorite team: Morocco</p>
-        <p className="subtle">Language: English</p>
-        <span className="badge">Free Plan</span>
-      </div>
-
-      <h3>Membership</h3>
-      <div className="card">
-        <p className="small-title">Free</p>
-        <p className="subtle">Basic AI, match schedules, travel guides.</p>
-      </div>
-      <div className="card cyan">
-        <p className="small-title">Premium — Coming Soon</p>
-        <p className="subtle">Unlimited AI, offline maps, translator, priority alerts.</p>
-      </div>
-      <div className="card">
-        <p className="small-title">VIP — Coming Soon</p>
-        <p className="subtle">Concierge recommendations, VIP fan zones, exclusive deals.</p>
-      </div>
+      <div className="topbar"><div className="brand">FanAtlas <span>2026</span></div><div className="language-pill">🌐 English</div></div>
+      <div className="profile-hero"><div className="avatar">👤</div><h2>Med</h2><p>kadsimohamedads@gmail.com</p></div>
+      <div className="setting-row"><span>♡ Favorite Team</span><strong>Morocco ›</strong></div>
+      <div className="setting-row"><span>🌐 Language</span><strong>English ›</strong></div>
+      <button className="premium-row">👑 FanAtlas Premium <span>Upgrade plan →</span></button>
+      <button className="setting-row" onClick={()=>setTab("map")}><span>📡 Offline Content</span><strong>Download maps & itineraries</strong></button>
+      <button className="setting-row" onClick={()=>setTab("tv")}><span>📺 Connect to TV</span><strong>Cast map & matches</strong></button>
+      <button className="setting-row" onClick={()=>setTab("translator")}><span>🗣 Voice Translator</span><strong>10 languages</strong></button>
+      <button className="signout">↪ Sign Out</button>
     </>
   );
 }
