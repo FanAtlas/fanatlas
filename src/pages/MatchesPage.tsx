@@ -3,7 +3,10 @@ import { matches as fallbackMatches, stadiums as fallbackStadiums } from "../dat
 import { getWorldCup2026Games, getWorldCup2026Stadiums, FanAtlasMatch, FanAtlasStadium } from "../services/worldcup2026";
 import { Tab } from "../main";
 
-type Props = { setTab: (tab: Tab) => void };
+type Props = {
+  setTab: (tab: Tab) => void;
+  setSelectedMatch: (match: FanAtlasMatch) => void;
+};
 
 function getMatchTone(city: string) {
   const c = city.toLowerCase();
@@ -19,7 +22,7 @@ function shouldShowScore(match: FanAtlasMatch) {
   return match.status.toLowerCase() !== "scheduled" && match.score;
 }
 
-export function MatchesPage({ setTab }: Props) {
+export function MatchesPage({ setTab, setSelectedMatch }: Props) {
   const [matches, setMatches] = useState<FanAtlasMatch[]>(fallbackMatches as FanAtlasMatch[]);
   const [stadiums, setStadiums] = useState<FanAtlasStadium[]>(fallbackStadiums as FanAtlasStadium[]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +52,11 @@ export function MatchesPage({ setTab }: Props) {
     }
     loadWorldCupData();
   }, []);
+
+  function planMatch(match: FanAtlasMatch) {
+    setSelectedMatch(match);
+    setTab("matchday");
+  }
 
   return (
     <>
@@ -88,7 +96,7 @@ export function MatchesPage({ setTab }: Props) {
             <div className="match-detail-line">🏟 {m.stadium} · {m.city}</div>
             <div className="match-detail-line">🎉 After match: {m.fanZone}</div>
             <div className="match-actions-premium">
-              <button className="primary-btn" onClick={() => setTab("ai")}>Plan this match day</button>
+              <button className="primary-btn" onClick={() => planMatch(m)}>Plan this match day</button>
               <button className="stadium-map-btn" onClick={() => setTab("map")}>📍 Stadium Map</button>
             </div>
           </div>
