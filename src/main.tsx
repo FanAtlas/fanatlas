@@ -30,7 +30,9 @@ export type Tab =
   | "currency"
   | "translator"
   | "tv"
-  | "matchday";
+  | "matchday"
+  | "hotels"
+  | "esim";
 
 function App() {
   const [tab, setTab] = useState<Tab>("home");
@@ -48,6 +50,8 @@ function App() {
     if (tab === "currency") return <CurrencyConverterPage />;
     if (tab === "translator") return <VoiceTranslatorPage />;
     if (tab === "tv") return <TVConnectPage />;
+    if (tab === "hotels") return <HotelsPage />;
+    if (tab === "esim") return <ESimPage />;
     if (tab === "matchday") return <MatchDayPage match={selectedMatch} setTab={setTab} />;
     return <HomePage setTab={setTab} />;
   };
