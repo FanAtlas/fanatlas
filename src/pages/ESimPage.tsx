@@ -1,19 +1,34 @@
 export function ESimPage() {
-  const plans = [
+  const esimPlans = [
     {
       provider: "Airalo",
-      data: "10GB",
-      days: "30 Days"
+      title: "Airalo North America",
+      data: "10GB Data",
+      days: "30 Days",
+      coverage: "USA • Canada • Mexico",
+      price: "$9.99",
+      commission: true,
+      url: "https://example.com/airalo-affiliate"
     },
     {
       provider: "Holafly",
-      data: "Unlimited",
-      days: "15 Days"
+      title: "Holafly Unlimited",
+      data: "Unlimited Data",
+      days: "15 Days",
+      coverage: "USA • Canada • Mexico",
+      price: "$19.90",
+      commission: true,
+      url: "https://example.com/holafly-affiliate"
     },
     {
       provider: "Nomad",
-      data: "20GB",
-      days: "30 Days"
+      title: "Nomad World Cup Plan",
+      data: "20GB Data",
+      days: "30 Days",
+      coverage: "USA • Canada • Mexico",
+      price: "$14.99",
+      commission: true,
+      url: "https://example.com/nomad-affiliate"
     }
   ];
 
@@ -22,23 +37,24 @@ export function ESimPage() {
       <div className="topbar">
         <div>
           <div className="brand">eSIM</div>
-          <div className="subtle">
-            Travel internet packages
-          </div>
+          <div className="subtle">Travel internet packages</div>
         </div>
       </div>
 
-      {plans.map((plan) => (
-        <div className="list-card" key={plan.provider}>
+      {esimPlans.map((plan) => (
+        <div className="product-card" key={plan.provider}>
           <div className="thumb">📶</div>
 
-          <div>
-            <strong>{plan.provider}</strong>
-
-            <p>{plan.data}</p>
-
-            <p>{plan.days}</p>
+          <div className="product-info">
+            <strong>{plan.title}</strong>
+            <p>{plan.data} • {plan.days}</p>
+            <p>{plan.coverage}</p>
+            <span className="price">{plan.price}</span>
           </div>
+
+          <a className="buy-btn" href={plan.url}>
+            Buy eSIM
+          </a>
         </div>
       ))}
     </>
