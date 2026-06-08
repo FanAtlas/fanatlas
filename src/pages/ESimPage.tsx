@@ -7,7 +7,7 @@ export function ESimPage() {
       days: "30 Days",
       coverage: "USA • Canada • Mexico",
       price: "$9.99",
-      commission: true,
+      bestFor: "Best for budget travelers",
       url: "https://example.com/airalo-affiliate"
     },
     {
@@ -17,7 +17,7 @@ export function ESimPage() {
       days: "15 Days",
       coverage: "USA • Canada • Mexico",
       price: "$19.90",
-      commission: true,
+      bestFor: "Best for heavy internet use",
       url: "https://example.com/holafly-affiliate"
     },
     {
@@ -27,7 +27,7 @@ export function ESimPage() {
       days: "30 Days",
       coverage: "USA • Canada • Mexico",
       price: "$14.99",
-      commission: true,
+      bestFor: "Best for multi-country trips",
       url: "https://example.com/nomad-affiliate"
     }
   ];
@@ -37,7 +37,15 @@ export function ESimPage() {
       <div className="topbar">
         <div>
           <div className="brand">eSIM</div>
-          <div className="subtle">Travel internet packages</div>
+          <div className="subtle">Travel internet packages for World Cup fans</div>
+        </div>
+      </div>
+
+      <div className="feature-card blue">
+        <span className="feature-emoji">📶</span>
+        <div>
+          <h3>Stay connected</h3>
+          <p>Compare travel eSIM plans for USA, Canada, and Mexico.</p>
         </div>
       </div>
 
@@ -47,6 +55,7 @@ export function ESimPage() {
 
           <div className="product-info">
             <strong>{plan.title}</strong>
+            <p>{plan.bestFor}</p>
             <p>{plan.data} • {plan.days}</p>
             <p>{plan.coverage}</p>
             <span className="price">{plan.price}</span>
@@ -57,6 +66,13 @@ export function ESimPage() {
           </a>
         </div>
       ))}
+
+      <div className="card-dark">
+        <h3>Before you buy</h3>
+        <p className="subtle">
+          Make sure your phone is unlocked and supports eSIM before purchasing.
+        </p>
+      </div>
     </>
   );
 }
