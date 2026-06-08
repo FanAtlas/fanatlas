@@ -72,9 +72,25 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
       <button className="feature-card red" onClick={() => setTab("sos")}><span className="feature-emoji">🚨</span><div><h3>SOS Emergency</h3><p>911 · Hospital · Embassy · Phrases</p></div><strong>OPEN →</strong></button>
 
       <h3>🔥 Trending Restaurants</h3>
-      <div className="horizontal-scroll">
-        {places.map((p) => <div className="place-card" key={p.name}><div className="place-image">🍽️</div><strong>{p.name}</strong><p>⭐ {p.rating} · 👥 {p.busy}</p><span>{p.city}</span></div>)}
-      </div>
+<div className="horizontal-scroll">
+  {places.map((p) => (
+    <button
+      className="place-card"
+      key={p.name}
+      onClick={() => setTab("explore")}
+    >
+      <div className="place-image">🍽️</div>
+
+      <strong>{p.name}</strong>
+
+      <p>⭐ {p.rating} · 👥 {p.busy}</p>
+
+      <span>{p.city}</span>
+
+      <small>Tap to explore restaurants →</small>
+    </button>
+  ))}
+</div>
 
       <h3>🎉 Fan Zones</h3>
       {fanZones.slice(0, 3).map((z) => <div className="list-card" key={z.name}><div className="thumb">⚽</div><div><strong>{z.name}</strong><p>{z.city} · {z.hours} · 👥 {z.capacity}</p></div><span className="safe-badge">{z.entry}</span></div>)}
