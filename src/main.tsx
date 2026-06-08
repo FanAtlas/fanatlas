@@ -15,6 +15,8 @@ import { VoiceTranslatorPage } from "./pages/VoiceTranslatorPage";
 import { TVConnectPage } from "./pages/TVConnectPage";
 import { MatchDayPage } from "./pages/MatchDayPage";
 import { FanAtlasMatch } from "./services/worldcup2026";
+import { HotelsPage } from "./pages/HotelsPage";
+import { ESimPage } from "./pages/ESimPage";
 
 export type Tab =
   | "home"
