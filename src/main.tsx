@@ -13,17 +13,32 @@ import { TravelGuidesPage } from "./pages/TravelGuidesPage";
 import { CurrencyConverterPage } from "./pages/CurrencyConverterPage";
 import { VoiceTranslatorPage } from "./pages/VoiceTranslatorPage";
 import { TVConnectPage } from "./pages/TVConnectPage";
+import { MatchDayPage } from "./pages/MatchDayPage";
+import { FanAtlasMatch } from "./services/worldcup2026";
 
-export type Tab = "home" | "map" | "explore" | "matches" | "sos" | "profile" | "ai" | "guides" | "currency" | "translator" | "tv";
+export type Tab =
+  | "home"
+  | "map"
+  | "explore"
+  | "matches"
+  | "sos"
+  | "profile"
+  | "ai"
+  | "guides"
+  | "currency"
+  | "translator"
+  | "tv"
+  | "matchday";
 
 function App() {
   const [tab, setTab] = useState<Tab>("home");
+  const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
 
   const render = () => {
     if (tab === "home") return <HomePage setTab={setTab} />;
     if (tab === "map") return <MapPage setTab={setTab} />;
     if (tab === "explore") return <ExplorePage setTab={setTab} />;
-    if (tab === "matches") return <MatchesPage setTab={setTab} />;
+    if (tab === "matches") return <MatchesPage setTab={setTab} setSelectedMatch={setSelectedMatch} />;
     if (tab === "sos") return <SOSPage />;
     if (tab === "profile") return <ProfilePage setTab={setTab} />;
     if (tab === "ai") return <AIChatPage />;
@@ -31,6 +46,7 @@ function App() {
     if (tab === "currency") return <CurrencyConverterPage />;
     if (tab === "translator") return <VoiceTranslatorPage />;
     if (tab === "tv") return <TVConnectPage />;
+    if (tab === "matchday") return <MatchDayPage match={selectedMatch} setTab={setTab} />;
     return <HomePage setTab={setTab} />;
   };
 
