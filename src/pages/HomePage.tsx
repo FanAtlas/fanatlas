@@ -8,8 +8,8 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
     { label: "AI Chat", icon: Bot, tab: "ai" as Tab },
     { label: "Currency", icon: Coins, tab: "currency" as Tab },
     { label: "Fan Zones", icon: Crown, tab: "explore" as Tab },
-    { label: "eSIM", icon: Wifi, tab: "explore" as Tab },
-    { label: "Stays", icon: Hotel, tab: "explore" as Tab },
+    { label: "eSIM", icon: Wifi, tab: "esim" as Tab },
+    { label: "Stays", icon: Hotel, tab: "hotels" as Tab },
     { label: "Offline", icon: MapPin, tab: "map" as Tab },
     { label: "TV Mode", icon: Tv, tab: "tv" as Tab }
   ];
