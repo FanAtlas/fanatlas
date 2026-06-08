@@ -23,7 +23,22 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
         </div>
         <div className="language-pill">🌐 🇺🇸 English</div>
       </div>
+<div className="next-match-card">
+  <div className="next-match-top">
+    <span>🏆 NEXT MATCH</span>
+    <strong>Live Schedule</strong>
+  </div>
 
+  <h2>Mexico vs South Africa</h2>
+
+  <p>Jun 11, 2026 • 13:00</p>
+
+  <p>📍 Estadio Azteca • Mexico City</p>
+
+  <button className="primary-btn" onClick={() => setTab("matches")}>
+    Plan Match Day
+  </button>
+</div>
       <div className="searchbar"><Search size={18} /><span>Search places, restaurants, stadiums...</span></div>
 
       <div className="section-row"><h3>🔴 Live Crowd Alerts</h3><span className="subtle">Updated live</span></div>
