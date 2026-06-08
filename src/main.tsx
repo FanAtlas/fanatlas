@@ -17,6 +17,7 @@ import { MatchDayPage } from "./pages/MatchDayPage";
 import { FanAtlasMatch } from "./services/worldcup2026";
 import { HotelsPage } from "./pages/HotelsPage";
 import { ESimPage } from "./pages/ESimPage";
+import { RestaurantDetailPage } from "./pages/RestaurantDetailPage";
 
 export type Tab =
   | "home"
@@ -54,6 +55,13 @@ function App() {
     if (tab === "hotels") return <HotelsPage />;
     if (tab === "esim") return <ESimPage />;
     if (tab === "matchday") return <MatchDayPage match={selectedMatch} setTab={setTab} />;
+    if (tab === "restaurant")
+  return (
+    <RestaurantDetailPage
+      restaurant={selectedRestaurant}
+      setTab={setTab}
+    />
+  );
     return <HomePage setTab={setTab} />;
   };
 
@@ -64,6 +72,8 @@ function App() {
     { id: "matches", label: "Matches", icon: Trophy },
     { id: "sos", label: "SOS", icon: Shield },
     { id: "profile", label: "Profile", icon: User },
+    const [selectedRestaurant, setSelectedRestaurant] =
+  useState<any>(null);
   ] as const;
 
   return (
