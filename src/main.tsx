@@ -33,6 +33,7 @@ export type Tab =
   | "matchday"
   | "hotels"
   | "esim";
+  | "restaurant"
 
 function App() {
   const [tab, setTab] = useState<Tab>("home");
