@@ -133,3 +133,15 @@
   color: #9fb2cf;
   margin: 6px 0;
 }
+.place-card {
+  border: 1px solid rgba(148,163,184,.14);
+  color: #eef6ff;
+  text-align: left;
+}
+
+.place-card small {
+  display: block;
+  color: #57d5ee;
+  margin-top: 8px;
+  font-weight: 800;
+}
