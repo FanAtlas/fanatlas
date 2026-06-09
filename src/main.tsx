@@ -18,7 +18,8 @@ import { FanAtlasMatch } from "./services/worldcup2026";
 import { HotelsPage } from "./pages/HotelsPage";
 import { ESimPage } from "./pages/ESimPage";
 import { RestaurantDetailPage } from "./pages/RestaurantDetailPage";
-
+import { AuthPage } from "./pages/AuthPage";
+import { supabase } from "./lib/supabase";
 export type Tab =
   | "home"
   | "map"
