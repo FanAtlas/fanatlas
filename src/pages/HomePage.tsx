@@ -1,6 +1,7 @@
 import { Search, Bot, MapPin, Shield, Languages, Crown, Wifi, Hotel, Coins, BookOpen, Tv } from "lucide-react";
 import { alerts, crowdAlerts, fanZones, places } from "../data/mockData";
 import { Tab } from "../main";
+import { InstallBanner } from "./InstallBanner";
 
 export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
   const quick = [
