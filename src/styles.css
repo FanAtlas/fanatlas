@@ -175,6 +175,25 @@
   padding: 9px 12px;
   font-weight: 900;
 }
+.auth-page{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:24px;
+}
+
+.auth-page input{
+  padding:14px;
+  border-radius:12px;
+  border:none;
+}
+
+.auth-page button{
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  font-weight:700;
+}
 
 .install-banner span {
   color: #9fb2cf;
