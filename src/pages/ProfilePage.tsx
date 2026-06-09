@@ -10,7 +10,11 @@ export function ProfilePage({ setTab }: { setTab: (tab: Tab) => void }) {
       <button className="setting-row" onClick={()=>setTab("map")}><span>📡 Offline Content</span><strong>Download maps & itineraries</strong></button>
       <button className="setting-row" onClick={()=>setTab("tv")}><span>📺 Connect to TV</span><strong>Cast map & matches</strong></button>
       <button className="setting-row" onClick={()=>setTab("translator")}><span>🗣 Voice Translator</span><strong>10 languages</strong></button>
-      <button className="signout">↪ Sign Out</button>
+      onClick={async () => {
+  if (!supabase) return;
+
+  await supabase.auth.signOut();
+}}
     </>
   );
 }
