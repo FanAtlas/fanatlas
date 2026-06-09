@@ -145,3 +145,39 @@
   margin-top: 8px;
   font-weight: 800;
 }
+.install-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(34,211,238,.20), rgba(37,99,235,.14));
+  border: 1px solid rgba(34,211,238,.28);
+  border-radius: 18px;
+  padding: 14px;
+  margin: 10px 0 14px;
+}
+
+.install-banner strong {
+  display: block;
+  color: #eef6ff;
+}
+
+.install-banner p {
+  margin: 4px 0 0;
+  color: #9fb2cf;
+  font-size: 13px;
+}
+
+.install-banner button {
+  background: #57d5ee;
+  color: #062033;
+  border: none;
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-weight: 900;
+}
+
+.install-banner span {
+  color: #9fb2cf;
+  font-size: 22px;
+  cursor: pointer;
+}
