@@ -20,6 +20,7 @@ import { ESimPage } from "./pages/ESimPage";
 import { RestaurantDetailPage } from "./pages/RestaurantDetailPage";
 import { AuthPage } from "./pages/AuthPage";
 import { supabase } from "./lib/supabase";
+import { useEffect } from "react";
 export type Tab =
   | "home"
   | "map"
@@ -38,9 +39,24 @@ export type Tab =
   | "restaurant"
 
 function App() {
+  const [session,setSession] = useState<any>(null);
   const [tab, setTab] = useState<Tab>("home");
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
+useEffect(() => {
+  if (!supabase) return;
 
+  supabase.auth.getSession().then(({ data }) => {
+    setSession(data.session);
+  });
+
+  const {
+    data: { subscription }
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
   const render = () => {
     if (tab === "home") return <HomePage setTab={setTab} />;
     if (tab === "map") return <MapPage setTab={setTab} />;
@@ -57,6 +73,9 @@ function App() {
     if (tab === "esim") return <ESimPage />;
     if (tab === "matchday") return <MatchDayPage match={selectedMatch} setTab={setTab} />;
     if (tab === "restaurant")
+    if (!session) {
+  return <AuthPage />;
+}
   return (
     <RestaurantDetailPage
       restaurant={selectedRestaurant}
