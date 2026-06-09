@@ -17,6 +17,7 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
 
   return (
     <>
+      <InstallBanner />
       <div className="topbar">
         <div>
           <div className="brand">FanAtlas <span>2026</span></div>
