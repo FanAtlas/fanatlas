@@ -237,3 +237,143 @@
   color: white;
   margin-bottom: 12px;
 }
+.map-pin {
+  position: absolute;
+  z-index: 2;
+  background: #162033;
+  color: #eef6ff;
+  border: 2px solid #22d3ee;
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.45);
+}
+
+.navigation-panel {
+  background: #101827;
+  border: 1px solid rgba(148,163,184,.16);
+  border-radius: 24px 24px 18px 18px;
+  padding: 16px;
+  margin-top: 14px;
+}
+
+.nav-drag {
+  width: 48px;
+  height: 5px;
+  background: rgba(148,163,184,.35);
+  border-radius: 99px;
+  margin: 0 auto 14px;
+}
+
+.nav-place-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nav-place-header h2 {
+  margin: 0;
+}
+
+.nav-place-header p {
+  color: #9fb2cf;
+  margin: 5px 0 0;
+}
+
+.nav-place-header button {
+  background: rgba(255,255,255,.08);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+}
+
+.travel-mode-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.travel-mode {
+  background: #07111f;
+  color: #9fb2cf;
+  border: 1px solid rgba(148,163,184,.16);
+  border-radius: 16px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.travel-mode span {
+  font-size: 22px;
+}
+
+.travel-mode strong {
+  font-size: 12px;
+}
+
+.travel-mode small {
+  font-size: 11px;
+}
+
+.travel-mode.active {
+  background: #22d3ee;
+  color: #062033;
+  border-color: #22d3ee;
+}
+
+.route-summary {
+  background: #07111f;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.route-summary p {
+  color: #9fb2cf;
+  margin: 6px 0;
+}
+
+.route-summary strong {
+  color: #eef6ff;
+}
+
+.route-steps {
+  background: #07111f;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.route-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 10px 0;
+}
+
+.route-step span {
+  background: #22d3ee;
+  color: #062033;
+  font-weight: 900;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.route-step p {
+  margin: 0;
+  color: #dce9fb;
+}
+
+.full-width {
+  width: 100%;
+  margin-top: 14px;
+}
