@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+useEffect(() => {
+  if (matchedPlace) {
+    buildRoute(matchedPlace, "walking");
+  }
+}, [selectedMatch]);
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from "react-leaflet";
 import L from "leaflet";
