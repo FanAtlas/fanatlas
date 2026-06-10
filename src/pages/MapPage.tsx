@@ -5,6 +5,11 @@ import L from "leaflet";
 import { Tab } from "../main";
 
 type Place = {
+  const matchedPlace =
+  selectedMatch &&
+  places.find((p) =>
+    selectedMatch.stadium?.toLowerCase().includes(p.name.toLowerCase())
+  );
   name: string;
   type: string;
   city: string;
