@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Home, MapPin, Compass, Trophy, User, Shield } from "lucide-react";
 import "./styles.css";
+
 import { HomePage } from "./pages/HomePage";
 import { MapPage } from "./pages/MapPage";
 import { ExplorePage } from "./pages/ExplorePage";
@@ -14,13 +15,14 @@ import { CurrencyConverterPage } from "./pages/CurrencyConverterPage";
 import { VoiceTranslatorPage } from "./pages/VoiceTranslatorPage";
 import { TVConnectPage } from "./pages/TVConnectPage";
 import { MatchDayPage } from "./pages/MatchDayPage";
-import { FanAtlasMatch } from "./services/worldcup2026";
 import { HotelsPage } from "./pages/HotelsPage";
 import { ESimPage } from "./pages/ESimPage";
 import { RestaurantDetailPage } from "./pages/RestaurantDetailPage";
 import { AuthPage } from "./pages/AuthPage";
+
+import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
-import { useEffect } from "react";
+
 export type Tab =
   | "home"
   | "map"
@@ -35,33 +37,46 @@ export type Tab =
   | "tv"
   | "matchday"
   | "hotels"
-  | "esim";
-  | "restaurant"
+  | "esim"
+  | "restaurant";
 
 function App() {
-  const [session,setSession] = useState<any>(null);
+  const [session, setSession] = useState<any>(null);
   const [tab, setTab] = useState<Tab>("home");
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
-useEffect(() => {
-  if (!supabase) return;
+  const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
 
-  supabase.auth.getSession().then(({ data }) => {
-    setSession(data.session);
-  });
+  useEffect(() => {
+    if (!supabase) return;
 
-  const {
-    data: { subscription }
-  } = supabase.auth.onAuthStateChange((_event, session) => {
-    setSession(session);
-  });
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
 
-  return () => subscription.unsubscribe();
-}, []);
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (!session) {
+    return <AuthPage />;
+  }
+
   const render = () => {
     if (tab === "home") return <HomePage setTab={setTab} />;
     if (tab === "map") return <MapPage setTab={setTab} />;
     if (tab === "explore") return <ExplorePage setTab={setTab} />;
-    if (tab === "matches") return <MatchesPage setTab={setTab} setSelectedMatch={setSelectedMatch} />;
+    if (tab === "matches")
+      return (
+        <MatchesPage
+          setTab={setTab}
+          setSelectedMatch={setSelectedMatch}
+        />
+      );
     if (tab === "sos") return <SOSPage />;
     if (tab === "profile") return <ProfilePage setTab={setTab} />;
     if (tab === "ai") return <AIChatPage />;
@@ -71,17 +86,16 @@ useEffect(() => {
     if (tab === "tv") return <TVConnectPage />;
     if (tab === "hotels") return <HotelsPage />;
     if (tab === "esim") return <ESimPage />;
-    if (tab === "matchday") return <MatchDayPage match={selectedMatch} setTab={setTab} />;
+    if (tab === "matchday")
+      return <MatchDayPage match={selectedMatch} setTab={setTab} />;
     if (tab === "restaurant")
-    if (!session) {
-  return <AuthPage />;
-}
-  return (
-    <RestaurantDetailPage
-      restaurant={selectedRestaurant}
-      setTab={setTab}
-    />
-  );
+      return (
+        <RestaurantDetailPage
+          restaurant={selectedRestaurant}
+          setTab={setTab}
+        />
+      );
+
     return <HomePage setTab={setTab} />;
   };
 
@@ -91,19 +105,23 @@ useEffect(() => {
     { id: "explore", label: "Explore", icon: Compass },
     { id: "matches", label: "Matches", icon: Trophy },
     { id: "sos", label: "SOS", icon: Shield },
-    { id: "profile", label: "Profile", icon: User },
-    const [selectedRestaurant, setSelectedRestaurant] =
-  useState<any>(null);
+    { id: "profile", label: "Profile", icon: User }
   ] as const;
 
   return (
     <div className="app-shell">
       <main className="screen">{render()}</main>
+
       <nav className="bottom-nav">
         {nav.map((item) => {
           const Icon = item.icon;
+
           return (
-            <button key={item.id} className={`nav-btn ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id as Tab)}>
+            <button
+              key={item.id}
+              className={`nav-btn ${tab === item.id ? "active" : ""}`}
+              onClick={() => setTab(item.id as Tab)}
+            >
               <Icon size={20} />
               <span>{item.label}</span>
             </button>
