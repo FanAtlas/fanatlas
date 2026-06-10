@@ -4,43 +4,11 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup } from "react-leaflet"
 import L from "leaflet";
 import { Tab } from "../main";
 
-type Place = {
-  name: string;
-  city: string;
-  lat: number;
-  lng: number;
-  emoji: string;
-};
-
-const places: Place[] = [
-  {
-    name: "MetLife Stadium",
-    city: "New York / New Jersey",
-    lat: 40.8135,
-    lng: -74.0745,
-    emoji: "🏟"
-  },
-  {
-    name: "Estadio Azteca",
-    city: "Mexico City",
-    lat: 19.3029,
-    lng: -99.1505,
-    emoji: "🏟"
-  },
-  {
-    name: "SoFi Stadium",
-    city: "Los Angeles",
-    lat: 33.9535,
-    lng: -118.3392,
-    emoji: "🏟"
-  },
-  {
-    name: "Times Square Fan Park",
-    city: "New York",
-    lat: 40.758,
-    lng: -73.9855,
-    emoji: "🎉"
-  }
+const places = [
+  { name: "MetLife Stadium", city: "New York / New Jersey", lat: 40.8135, lng: -74.0745, emoji: "🏟" },
+  { name: "Estadio Azteca", city: "Mexico City", lat: 19.3029, lng: -99.1505, emoji: "🏟" },
+  { name: "SoFi Stadium", city: "Los Angeles", lat: 33.9535, lng: -118.3392, emoji: "🏟" },
+  { name: "Times Square Fan Park", city: "New York", lat: 40.758, lng: -73.9855, emoji: "🎉" }
 ];
 
 const createIcon = (emoji: string) =>
@@ -51,25 +19,16 @@ const createIcon = (emoji: string) =>
   });
 
 export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
-  const [userLocation, setUserLocation] = useState<[number, number]>([
-    40.758,
-    -73.9855
-  ]);
-
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-
+  const [userLocation, setUserLocation] = useState<[number, number]>([40.758, -73.9855]);
+  const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [route, setRoute] = useState<[number, number][]>([]);
-
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
-        setUserLocation([
-          pos.coords.latitude,
-          pos.coords.longitude
-        ]);
+        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
       },
       () => {
         console.log("Location not available");
@@ -77,7 +36,7 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
     );
   }, []);
 
-  async function buildRoute(place: Place) {
+  async function buildRoute(place: any) {
     setSelectedPlace(place);
 
     const url =
@@ -94,19 +53,12 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
     const routeData = data.routes[0];
 
     const coordinates = routeData.geometry.coordinates.map(
-      ([lng, lat]: [number, number]) =>
-        [lat, lng] as [number, number]
+      ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
     );
 
     setRoute(coordinates);
-
-    setDistance(
-      `${(routeData.distance / 1000).toFixed(1)} km`
-    );
-
-    setDuration(
-      `${Math.round(routeData.duration / 60)} min`
-    );
+    setDistance(`${(routeData.distance / 1000).toFixed(1)} km`);
+    setDuration(`${Math.round(routeData.duration / 60)} min`);
   }
 
   return (
@@ -116,48 +68,30 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
           <div className="brand">
             FanAtlas <span>2026</span>
           </div>
-
-          <div className="subtle">
-            Real Navigation
-          </div>
+          <div className="subtle">Real Navigation</div>
         </div>
-
-        <div className="language-pill">
-          🌐 English
-        </div>
+        <div className="language-pill">🌐 English</div>
       </div>
 
       <button
         className="primary-btn full-width"
         onClick={() => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              setUserLocation([
-                pos.coords.latitude,
-                pos.coords.longitude
-              ]);
-            }
-          );
+          navigator.geolocation.getCurrentPosition((pos) => {
+            setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+          });
         }}
       >
         📍 Use My Current Location
       </button>
 
       <div className="real-map-wrapper">
-        <MapContainer
-          center={userLocation}
-          zoom={11}
-          className="real-map"
-        >
+        <MapContainer center={userLocation} zoom={11} className="real-map">
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="© OpenStreetMap"
           />
 
-          <Marker
-            position={userLocation}
-            icon={createIcon("📍")}
-          >
+          <Marker position={userLocation} icon={createIcon("📍")}>
             <Popup>Your Location</Popup>
           </Marker>
 
@@ -174,9 +108,7 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
             </Marker>
           ))}
 
-          {route.length > 0 && (
-            <Polyline positions={route} />
-          )}
+          {route.length > 0 && <Polyline positions={route} />}
         </MapContainer>
       </div>
 
@@ -192,16 +124,12 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
             <p>
               ETA: <strong>{duration}</strong>
             </p>
-
             <p>
               Distance: <strong>{distance}</strong>
             </p>
           </div>
 
-          <button
-            className="primary-btn full-width"
-            onClick={() => setTab("matches")}
-          >
+          <button className="primary-btn full-width" onClick={() => setTab("matches")}>
             Use for Match Day Plan
           </button>
         </div>
