@@ -129,7 +129,16 @@ export function MapPage({
           <Marker position={userLocation} icon={iconFor("📍")}>
             <Popup>Your location</Popup>
           </Marker>
-
+<button
+  className="primary-btn full-width"
+  onClick={() => {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+    });
+  }}
+>
+  📍 Use My Current Location
+</button>
           {places.map((place) => (
             <Marker
               key={place.name}
