@@ -29,7 +29,13 @@ const iconFor = (emoji: string) =>
     iconSize: [38, 38]
   });
 
-export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
+export function MapPage({
+  setTab,
+  selectedMatch
+}: {
+  setTab: (tab: Tab) => void;
+  selectedMatch?: any;
+}) {
   const [userLocation, setUserLocation] = useState<[number, number]>([40.758, -73.9855]);
   const [selected, setSelected] = useState<Place | null>(null);
   const [mode, setMode] = useState<"walking" | "driving" | "train" | "bus">("walking");
