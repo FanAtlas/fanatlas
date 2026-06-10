@@ -1,225 +1,164 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import "leaflet/dist/leaflet.css";
+import { MapContainer, TileLayer, Marker, Polyline, Popup } from "react-leaflet";
+import L from "leaflet";
 import { Tab } from "../main";
 
 type Place = {
   name: string;
   type: string;
-  emoji: string;
   city: string;
-  top: string;
-  left: string;
+  lat: number;
+  lng: number;
+  emoji: string;
 };
 
 const places: Place[] = [
-  {
-    name: "MetLife Stadium",
-    type: "stadium",
-    emoji: "🏟",
-    city: "New York/New Jersey",
-    top: "27%",
-    left: "70%"
-  },
-  {
-    name: "Estadio Azteca",
-    type: "stadium",
-    emoji: "🏟",
-    city: "Mexico City",
-    top: "77%",
-    left: "38%"
-  },
-  {
-    name: "Times Square Fan Park",
-    type: "fan zone",
-    emoji: "🎉",
-    city: "New York",
-    top: "22%",
-    left: "73%"
-  },
-  {
-    name: "Hospital",
-    type: "hospital",
-    emoji: "🏥",
-    city: "New York",
-    top: "32%",
-    left: "67%"
-  },
-  {
-    name: "LA Cafe",
-    type: "cafe",
-    emoji: "☕",
-    city: "Los Angeles",
-    top: "48%",
-    left: "15%"
-  },
-  {
-    name: "Miami Restaurant",
-    type: "restaurant",
-    emoji: "🍽",
-    city: "Miami",
-    top: "72%",
-    left: "73%"
-  }
+  { name: "MetLife Stadium", type: "stadium", city: "New York/New Jersey", lat: 40.8135, lng: -74.0745, emoji: "🏟" },
+  { name: "Estadio Azteca", type: "stadium", city: "Mexico City", lat: 19.3029, lng: -99.1505, emoji: "🏟" },
+  { name: "SoFi Stadium", type: "stadium", city: "Los Angeles", lat: 33.9535, lng: -118.3392, emoji: "🏟" },
+  { name: "Times Square Fan Park", type: "fan zone", city: "New York", lat: 40.758, lng: -73.9855, emoji: "🎉" },
+  { name: "LA Cafe", type: "cafe", city: "Los Angeles", lat: 34.0522, lng: -118.2437, emoji: "☕" },
+  { name: "Nearby Hospital NYC", type: "hospital", city: "New York", lat: 40.7648, lng: -73.9808, emoji: "🏥" }
 ];
 
-const travelModes = [
-  {
-    id: "walk",
-    icon: "🚶",
-    label: "Walk",
-    eta: "18 min",
-    distance: "1.4 km"
-  },
-  {
-    id: "car",
-    icon: "🚗",
-    label: "Car",
-    eta: "9 min",
-    distance: "3.2 km"
-  },
-  {
-    id: "train",
-    icon: "🚆",
-    label: "Train",
-    eta: "28 min",
-    distance: "8.1 km"
-  },
-  {
-    id: "bus",
-    icon: "🚌",
-    label: "Bus",
-    eta: "34 min",
-    distance: "6.8 km"
-  }
-];
+const iconFor = (emoji: string) =>
+  L.divIcon({
+    html: `<div class="real-map-marker">${emoji}</div>`,
+    className: "",
+    iconSize: [38, 38]
+  });
 
 export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [mode, setMode] = useState("walk");
+  const [userLocation, setUserLocation] = useState<[number, number]>([40.758, -73.9855]);
+  const [selected, setSelected] = useState<Place | null>(null);
+  const [mode, setMode] = useState<"walking" | "driving" | "train" | "bus">("walking");
+  const [route, setRoute] = useState<[number, number][]>([]);
+  const [steps, setSteps] = useState<string[]>([]);
+  const [distance, setDistance] = useState("");
+  const [duration, setDuration] = useState("");
 
-  const selectedMode = travelModes.find((m) => m.id === mode);
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+      },
+      () => {
+        console.log("Location permission denied. Using default location.");
+      }
+    );
+  }, []);
+
+  async function buildRoute(place: Place, selectedMode: typeof mode) {
+    setSelected(place);
+    setMode(selectedMode);
+    setRoute([]);
+    setSteps([]);
+
+    if (selectedMode === "train" || selectedMode === "bus") {
+      setDistance("Transit route");
+      setDuration("Coming soon");
+      setSteps([
+        "Walk to the nearest official transit station.",
+        "Use public transit toward the stadium or fan zone.",
+        "Follow official event signs after arrival.",
+        "Avoid unofficial taxis or street rides."
+      ]);
+      return;
+    }
+
+    const profile = selectedMode === "walking" ? "foot" : "car";
+
+    const url = `https://router.project-osrm.org/route/v1/${profile}/${userLocation[1]},${userLocation[0]};${place.lng},${place.lat}?overview=full&geometries=geojson&steps=true`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const firstRoute = data.routes?.[0];
+    if (!firstRoute) return;
+
+    const coords = firstRoute.geometry.coordinates.map(
+      ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+    );
+
+    setRoute(coords);
+    setDistance(`${(firstRoute.distance / 1000).toFixed(1)} km`);
+    setDuration(`${Math.round(firstRoute.duration / 60)} min`);
+
+    const routeSteps =
+      firstRoute.legs?.[0]?.steps?.map((s: any) => {
+        const name = s.name ? ` on ${s.name}` : "";
+        return `${s.maneuver?.type || "Continue"}${name}`;
+      }) || [];
+
+    setSteps(routeSteps.slice(0, 8));
+  }
 
   return (
     <>
       <div className="topbar">
         <div>
-          <div className="brand">
-            FanAtlas <span>2026</span>
-          </div>
-          <div className="subtle">In-app navigation</div>
+          <div className="brand">FanAtlas <span>2026</span></div>
+          <div className="subtle">Real in-app navigation</div>
         </div>
-
-        <div className="language-pill">🌐 English</div>
       </div>
 
-      <div className="map-screen">
-        <div className="chip-scroll map-chips">
-          {["All", "🏟 stadium", "🎉 fan zone", "🍽 restaurant", "☕ cafe", "🏨 hotel", "🏥 hospital", "🚓 police"].map(
-            (chip, index) => (
-              <span className={`chip ${index === 0 ? "active" : ""}`} key={chip}>
-                {chip}
-              </span>
-            )
-          )}
-        </div>
+      <div className="real-map-wrapper">
+        <MapContainer center={userLocation} zoom={11} className="real-map">
+          <TileLayer
+            attribution="© OpenStreetMap"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
-        {places.map((place) => (
-          <button
-            className="map-pin"
-            style={{ top: place.top, left: place.left }}
-            key={place.name}
-            onClick={() => setSelectedPlace(place)}
-          >
-            {place.emoji} {place.name}
-          </button>
-        ))}
+          <Marker position={userLocation} icon={iconFor("📍")}>
+            <Popup>Your location</Popup>
+          </Marker>
 
-        <button className="find-nearby">➤ Find Nearby</button>
+          {places.map((place) => (
+            <Marker
+              key={place.name}
+              position={[place.lat, place.lng]}
+              icon={iconFor(place.emoji)}
+              eventHandlers={{
+                click: () => buildRoute(place, mode)
+              }}
+            >
+              <Popup>{place.name}</Popup>
+            </Marker>
+          ))}
+
+          {route.length > 0 && <Polyline positions={route} />}
+        </MapContainer>
       </div>
 
-      {selectedPlace && (
+      {selected && (
         <div className="navigation-panel">
-          <div className="nav-drag"></div>
-
-          <div className="nav-place-header">
-            <div>
-              <h2>
-                {selectedPlace.emoji} {selectedPlace.name}
-              </h2>
-              <p>{selectedPlace.city}</p>
-            </div>
-
-            <button onClick={() => setSelectedPlace(null)}>×</button>
-          </div>
+          <h2>{selected.emoji} {selected.name}</h2>
+          <p>{selected.city}</p>
 
           <div className="travel-mode-row">
-            {travelModes.map((travel) => (
-              <button
-                key={travel.id}
-                className={`travel-mode ${mode === travel.id ? "active" : ""}`}
-                onClick={() => setMode(travel.id)}
-              >
-                <span>{travel.icon}</span>
-                <strong>{travel.label}</strong>
-                <small>{travel.eta}</small>
-              </button>
-            ))}
+            <button className={`travel-mode ${mode === "walking" ? "active" : ""}`} onClick={() => buildRoute(selected, "walking")}>🚶 Walk</button>
+            <button className={`travel-mode ${mode === "driving" ? "active" : ""}`} onClick={() => buildRoute(selected, "driving")}>🚗 Car</button>
+            <button className={`travel-mode ${mode === "train" ? "active" : ""}`} onClick={() => buildRoute(selected, "train")}>🚆 Train</button>
+            <button className={`travel-mode ${mode === "bus" ? "active" : ""}`} onClick={() => buildRoute(selected, "bus")}>🚌 Bus</button>
           </div>
 
           <div className="route-summary">
-            <h3>
-              {selectedMode?.icon} {selectedMode?.label} Route
-            </h3>
-
-            <p>
-              ETA: <strong>{selectedMode?.eta}</strong>
-            </p>
-
-            <p>
-              Distance: <strong>{selectedMode?.distance}</strong>
-            </p>
-
-            <p>
-              Route type: <strong>Safest route recommended</strong>
-            </p>
+            <p>ETA: <strong>{duration}</strong></p>
+            <p>Distance: <strong>{distance}</strong></p>
           </div>
 
-          <div className="route-steps">
-            <h3>Directions</h3>
-
-            <div className="route-step">
-              <span>1</span>
-              <p>Start from your current location.</p>
+          <h3>Directions</h3>
+          {steps.map((step, index) => (
+            <div className="route-step" key={index}>
+              <span>{index + 1}</span>
+              <p>{step}</p>
             </div>
-
-            <div className="route-step">
-              <span>2</span>
-              <p>Follow the safest main streets toward {selectedPlace.name}.</p>
-            </div>
-
-            <div className="route-step">
-              <span>3</span>
-              <p>Avoid crowded exits and unofficial shortcuts.</p>
-            </div>
-
-            <div className="route-step">
-              <span>4</span>
-              <p>Arrive at {selectedPlace.name}.</p>
-            </div>
-          </div>
+          ))}
 
           <button className="primary-btn full-width" onClick={() => setTab("matches")}>
             Use for Match Day Plan
           </button>
-        </div>
-      )}
-
-      {!selectedPlace && (
-        <div className="feature-card blue">
-          <span className="feature-emoji">🧭</span>
-          <div>
-            <h3>Tap any place on the map</h3>
-            <p>Choose walking, car, train, or bus directions inside FanAtlas.</p>
-          </div>
         </div>
       )}
     </>
