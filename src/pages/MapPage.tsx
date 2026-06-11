@@ -49,6 +49,26 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const watchIdRef = useRef<number | null>(null);
+         <button
+  className="start-navigation-btn"
+  onClick={startNavigation}
+>
+  {isNavigating ? "Navigation Active" : "Start Navigation"}
+</button>
+{isNavigating && (
+  <button
+    className="stop-navigation-btn"
+    onClick={() => {
+      setIsNavigating(false);
+
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    }}
+  >
+    Stop Navigation
+  </button>
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -140,27 +160,6 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
             </>
           )}
         </MapContainer>
-
-        <button
-  className="start-navigation-btn"
-  onClick={startNavigation}
->
-  {isNavigating ? "Navigation Active" : "Start Navigation"}
-</button>
-{isNavigating && (
-  <button
-    className="stop-navigation-btn"
-    onClick={() => {
-      setIsNavigating(false);
-
-      if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-    }}
-  >
-    Stop Navigation
-  </button>
 )}
         {isNavigating && selectedPlace && (
           <div className="next-turn-banner">
