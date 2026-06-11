@@ -47,6 +47,8 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
   const [duration, setDuration] = useState("");
   const [mode, setMode] = useState<"walking" | "driving">("driving");
   const [isNavigating, setIsNavigating] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -139,14 +141,33 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
           )}
         </MapContainer>
 
-        <button className="location-floating-btn" onClick={useMyLocation}>
-          📍
-        </button>
+        <button
+  className="start-navigation-btn"
+  onClick={startNavigation}
+>
+  {isNavigating ? "Navigation Active" : "Start Navigation"}
+</button>
+{isNavigating && (
+  <button
+    className="stop-navigation-btn"
+    onClick={() => {
+      setIsNavigating(false);
 
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    }}
+  >
+    Stop Navigation
+  </button>
+)}
         {isNavigating && selectedPlace && (
           <div className="next-turn-banner">
-            <strong>Continue to {selectedPlace.name}</strong>
-            <span>{duration} · {distance}</span>
+            <strong>
+  {steps[currentStep] || `Continue to ${selectedPlace.name}`}
+</strong>
+<span>{duration} · {distance}</span>
           </div>
         )}
       </div>
@@ -208,5 +229,38 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
         </div>
       )}
     </div>
+  );
+}
+function startNavigation() {
+  if (!selectedPlace) return;
+
+  setIsNavigating(true);
+  setCurrentStep(0);
+
+  if (watchIdRef.current) {
+    navigator.geolocation.clearWatch(watchIdRef.current);
+  }
+
+  watchIdRef.current = navigator.geolocation.watchPosition(
+    (pos) => {
+      const newLocation: [number, number] = [
+        pos.coords.latitude,
+        pos.coords.longitude
+      ];
+
+      setUserLocation(newLocation);
+
+      if (currentStep < steps.length - 1) {
+        setCurrentStep((prev) => prev + 1);
+      }
+    },
+    () => {
+      alert("Please allow location access to use live navigation.");
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 10000
+    }
   );
 }
