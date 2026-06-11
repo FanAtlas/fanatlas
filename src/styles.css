@@ -574,3 +574,12 @@
   padding: 14px;
   margin-bottom: 12px;
 }
+.nav-app-buttons {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.nav-app-buttons button {
+  width: 100%;
+}
