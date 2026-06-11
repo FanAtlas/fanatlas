@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import {
   MapContainer,
@@ -74,10 +74,6 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
   const [mode, setMode] = useState<"walking" | "driving">("driving");
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
-
-  const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -91,12 +87,6 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
         console.log("Location unavailable");
       }
     );
-
-    return () => {
-      if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-    };
   }, []);
 
   async function buildRoute(
@@ -105,8 +95,6 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
   ) {
     setSelectedPlace(place);
     setMode(travelMode);
-    setIsNavigating(false);
-    setCurrentStep(0);
 
     const profile = travelMode === "walking" ? "foot" : "car";
 
@@ -162,48 +150,31 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
     );
   }
 
-  function startNavigation() {
+  function openAppleMaps() {
     if (!selectedPlace) return;
 
-    setIsNavigating(true);
-    setCurrentStep(0);
-
-    if (watchIdRef.current) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-    }
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const newLocation: [number, number] = [
-          pos.coords.latitude,
-          pos.coords.longitude
-        ];
-
-        setUserLocation(newLocation);
-
-        setCurrentStep((prev) => {
-          if (prev < steps.length - 1) return prev + 1;
-          return prev;
-        });
-      },
-      () => {
-        alert("Please allow location access to use live navigation.");
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 10000
-      }
+    window.open(
+      `https://maps.apple.com/?daddr=${selectedPlace.lat},${selectedPlace.lng}`,
+      "_blank"
     );
   }
 
-  function stopNavigation() {
-    setIsNavigating(false);
+  function openGoogleMaps() {
+    if (!selectedPlace) return;
 
-    if (watchIdRef.current) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${selectedPlace.lat},${selectedPlace.lng}&travelmode=driving`,
+      "_blank"
+    );
+  }
+
+  function openWaze() {
+    if (!selectedPlace) return;
+
+    window.open(
+      `https://waze.com/ul?ll=${selectedPlace.lat},${selectedPlace.lng}&navigate=yes`,
+      "_blank"
+    );
   }
 
   return (
@@ -253,19 +224,6 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
         >
           📍
         </button>
-
-        {isNavigating && selectedPlace && (
-          <div className="next-turn-banner">
-            <strong>
-              {steps[currentStep] ||
-                `Continue to ${selectedPlace.name}`}
-            </strong>
-
-            <span>
-              {duration} · {distance}
-            </span>
-          </div>
-        )}
       </div>
 
       {selectedPlace ? (
@@ -316,23 +274,28 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
             </p>
           </div>
 
-          <button
-            className="start-navigation-btn"
-            onClick={startNavigation}
-          >
-            {isNavigating
-              ? "Navigation Active"
-              : "Start Navigation"}
-          </button>
-
-          {isNavigating && (
+          <div className="nav-app-buttons">
             <button
-              className="stop-navigation-btn"
-              onClick={stopNavigation}
+              className="start-navigation-btn"
+              onClick={openAppleMaps}
             >
-              Stop Navigation
+              🍎 Apple Maps
             </button>
-          )}
+
+            <button
+              className="start-navigation-btn"
+              onClick={openGoogleMaps}
+            >
+              📍 Google Maps
+            </button>
+
+            <button
+              className="start-navigation-btn"
+              onClick={openWaze}
+            >
+              🚗 Waze
+            </button>
+          </div>
 
           <div className="route-steps">
             <h3>Directions</h3>
@@ -359,7 +322,7 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
           <h2>Choose a destination</h2>
 
           <p>
-            Tap a stadium or fan zone to get in-app directions.
+            Tap a stadium or fan zone to get directions.
           </p>
         </div>
       )}
