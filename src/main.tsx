@@ -68,8 +68,7 @@ function App() {
 
   const render = () => {
     if (tab === "home") return <HomePage setTab={setTab} />;
-    if (tab === "map")
-  return <MapPage setTab={setTab} selectedMatch={selectedMatch} />;
+    if (tab === "map") return <MapPage setTab={setTab} />;
     if (tab === "explore") return <ExplorePage setTab={setTab} />;
     if (tab === "matches")
       return (
