@@ -457,3 +457,110 @@
   width: 100%;
   margin-top: 14px;
 }
+.navigation-page {
+  height: calc(100vh - 74px);
+  position: relative;
+  overflow: hidden;
+  margin: -10px -12px -92px;
+}
+
+.navigation-map {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.real-map {
+  height: 100%;
+  width: 100%;
+}
+
+.location-floating-btn {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 900;
+  border: none;
+  background: #101827;
+  color: white;
+  border-radius: 999px;
+  width: 46px;
+  height: 46px;
+  font-size: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
+}
+
+.apple-nav-sheet {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 88px;
+  z-index: 900;
+  max-height: 48vh;
+  overflow-y: auto;
+  background: rgba(16, 24, 39, .96);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 24px;
+  padding: 16px;
+  box-shadow: 0 25px 65px rgba(0,0,0,.45);
+}
+
+.apple-nav-sheet.compact {
+  max-height: none;
+}
+
+.apple-nav-sheet h2 {
+  margin: 0 0 4px;
+}
+
+.apple-nav-sheet p {
+  color: #9fb2cf;
+  margin: 4px 0;
+}
+
+.nav-drag {
+  width: 46px;
+  height: 5px;
+  background: rgba(148,163,184,.45);
+  border-radius: 99px;
+  margin: 0 auto 14px;
+}
+
+.start-navigation-btn {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  background: #22d3ee;
+  color: #062033;
+  font-weight: 900;
+  padding: 15px;
+  font-size: 16px;
+  margin: 12px 0;
+}
+
+.next-turn-banner {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 14px;
+  z-index: 901;
+  background: #101827;
+  border: 1px solid rgba(34,211,238,.28);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 20px 45px rgba(0,0,0,.35);
+}
+
+.next-turn-banner strong {
+  display: block;
+}
+
+.next-turn-banner span {
+  color: #9fb2cf;
+  font-size: 13px;
+}
+
+.travel-mode.disabled {
+  opacity: .45;
+}
