@@ -564,3 +564,13 @@
 .travel-mode.disabled {
   opacity: .45;
 }
+.stop-navigation-btn {
+  width: 100%;
+  border: 1px solid rgba(248,113,113,.35);
+  border-radius: 999px;
+  background: rgba(127,29,29,.35);
+  color: #fecaca;
+  font-weight: 900;
+  padding: 14px;
+  margin-bottom: 12px;
+}
