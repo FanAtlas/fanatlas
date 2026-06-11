@@ -12,10 +12,34 @@ import L from "leaflet";
 import { Tab } from "../main";
 
 const places = [
-  { name: "MetLife Stadium", city: "New York/New Jersey", lat: 40.8135, lng: -74.0745, emoji: "🏟" },
-  { name: "Estadio Azteca", city: "Mexico City", lat: 19.3029, lng: -99.1505, emoji: "🏟" },
-  { name: "SoFi Stadium", city: "Los Angeles", lat: 33.9535, lng: -118.3392, emoji: "🏟" },
-  { name: "Times Square Fan Park", city: "New York", lat: 40.758, lng: -73.9855, emoji: "🎉" }
+  {
+    name: "MetLife Stadium",
+    city: "New York/New Jersey",
+    lat: 40.8135,
+    lng: -74.0745,
+    emoji: "🏟"
+  },
+  {
+    name: "Estadio Azteca",
+    city: "Mexico City",
+    lat: 19.3029,
+    lng: -99.1505,
+    emoji: "🏟"
+  },
+  {
+    name: "SoFi Stadium",
+    city: "Los Angeles",
+    lat: 33.9535,
+    lng: -118.3392,
+    emoji: "🏟"
+  },
+  {
+    name: "Times Square Fan Park",
+    city: "New York",
+    lat: 40.758,
+    lng: -73.9855,
+    emoji: "🎉"
+  }
 ];
 
 const createIcon = (emoji: string) =>
@@ -39,7 +63,11 @@ function FitRoute({ route }: { route: [number, number][] }) {
 }
 
 export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
-  const [userLocation, setUserLocation] = useState<[number, number]>([40.758, -73.9855]);
+  const [userLocation, setUserLocation] = useState<[number, number]>([
+    40.758,
+    -73.9855
+  ]);
+
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [steps, setSteps] = useState<string[]>([]);
@@ -48,41 +76,37 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
   const [mode, setMode] = useState<"walking" | "driving">("driving");
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const watchIdRef = useRef<number | null>(null);
-         <button
-  className="start-navigation-btn"
-  onClick={startNavigation}
->
-  {isNavigating ? "Navigation Active" : "Start Navigation"}
-</button>
-{isNavigating && (
-  <button
-    className="stop-navigation-btn"
-    onClick={() => {
-      setIsNavigating(false);
 
-      if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-    }}
-  >
-    Stop Navigation
-  </button>
+  const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
-        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+        setUserLocation([
+          pos.coords.latitude,
+          pos.coords.longitude
+        ]);
       },
-      () => console.log("Location unavailable")
+      () => {
+        console.log("Location unavailable");
+      }
     );
+
+    return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
   }, []);
 
-  async function buildRoute(place: any, travelMode: "walking" | "driving" = mode) {
+  async function buildRoute(
+    place: any,
+    travelMode: "walking" | "driving" = mode
+  ) {
     setSelectedPlace(place);
     setMode(travelMode);
     setIsNavigating(false);
+    setCurrentStep(0);
 
     const profile = travelMode === "walking" ? "foot" : "car";
 
@@ -100,7 +124,8 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
     const routeData = data.routes[0];
 
     const coordinates = routeData.geometry.coordinates.map(
-      ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+      ([lng, lat]: [number, number]) =>
+        [lat, lng] as [number, number]
     );
 
     const routeSteps =
@@ -116,27 +141,88 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
   }
 
   function useMyLocation() {
-    navigator.geolocation.getCurrentPosition((pos) => {
-      setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const newLocation: [number, number] = [
+          pos.coords.latitude,
+          pos.coords.longitude
+        ];
 
-      if (selectedPlace) {
-        setTimeout(() => {
-          buildRoute(selectedPlace, mode);
-        }, 300);
+        setUserLocation(newLocation);
+
+        if (selectedPlace) {
+          setTimeout(() => {
+            buildRoute(selectedPlace, mode);
+          }, 300);
+        }
+      },
+      () => {
+        alert("Please allow location access.");
       }
-    });
+    );
+  }
+
+  function startNavigation() {
+    if (!selectedPlace) return;
+
+    setIsNavigating(true);
+    setCurrentStep(0);
+
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const newLocation: [number, number] = [
+          pos.coords.latitude,
+          pos.coords.longitude
+        ];
+
+        setUserLocation(newLocation);
+
+        setCurrentStep((prev) => {
+          if (prev < steps.length - 1) return prev + 1;
+          return prev;
+        });
+      },
+      () => {
+        alert("Please allow location access to use live navigation.");
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 10000
+      }
+    );
+  }
+
+  function stopNavigation() {
+    setIsNavigating(false);
+
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
   }
 
   return (
     <div className="navigation-page">
       <div className="navigation-map">
-        <MapContainer center={userLocation} zoom={12} className="real-map">
+        <MapContainer
+          center={userLocation}
+          zoom={12}
+          className="real-map"
+        >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="© OpenStreetMap"
           />
 
-          <Marker position={userLocation} icon={createIcon("📍")}>
+          <Marker
+            position={userLocation}
+            icon={createIcon("📍")}
+          >
             <Popup>Your Location</Popup>
           </Marker>
 
@@ -160,13 +246,24 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
             </>
           )}
         </MapContainer>
-)}
+
+        <button
+          className="location-floating-btn"
+          onClick={useMyLocation}
+        >
+          📍
+        </button>
+
         {isNavigating && selectedPlace && (
           <div className="next-turn-banner">
             <strong>
-  {steps[currentStep] || `Continue to ${selectedPlace.name}`}
-</strong>
-<span>{duration} · {distance}</span>
+              {steps[currentStep] ||
+                `Continue to ${selectedPlace.name}`}
+            </strong>
+
+            <span>
+              {duration} · {distance}
+            </span>
           </div>
         )}
       </div>
@@ -175,39 +272,67 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
         <div className="apple-nav-sheet">
           <div className="nav-drag"></div>
 
-          <h2>{selectedPlace.emoji} {selectedPlace.name}</h2>
+          <h2>
+            {selectedPlace.emoji} {selectedPlace.name}
+          </h2>
+
           <p>{selectedPlace.city}</p>
 
           <div className="travel-mode-row">
             <button
-              className={`travel-mode ${mode === "walking" ? "active" : ""}`}
+              className={`travel-mode ${
+                mode === "walking" ? "active" : ""
+              }`}
               onClick={() => buildRoute(selectedPlace, "walking")}
             >
               🚶 Walk
             </button>
 
             <button
-              className={`travel-mode ${mode === "driving" ? "active" : ""}`}
+              className={`travel-mode ${
+                mode === "driving" ? "active" : ""
+              }`}
               onClick={() => buildRoute(selectedPlace, "driving")}
             >
               🚗 Car
             </button>
 
-            <button className="travel-mode disabled">🚆 Train</button>
-            <button className="travel-mode disabled">🚌 Bus</button>
+            <button className="travel-mode disabled">
+              🚆 Train
+            </button>
+
+            <button className="travel-mode disabled">
+              🚌 Bus
+            </button>
           </div>
 
           <div className="route-summary">
-            <p>ETA: <strong>{duration}</strong></p>
-            <p>Distance: <strong>{distance}</strong></p>
+            <p>
+              ETA: <strong>{duration}</strong>
+            </p>
+
+            <p>
+              Distance: <strong>{distance}</strong>
+            </p>
           </div>
 
           <button
             className="start-navigation-btn"
-            onClick={() => setIsNavigating(true)}
+            onClick={startNavigation}
           >
-            Start Navigation
+            {isNavigating
+              ? "Navigation Active"
+              : "Start Navigation"}
           </button>
+
+          {isNavigating && (
+            <button
+              className="stop-navigation-btn"
+              onClick={stopNavigation}
+            >
+              Stop Navigation
+            </button>
+          )}
 
           <div className="route-steps">
             <h3>Directions</h3>
@@ -219,47 +344,25 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
               </div>
             ))}
           </div>
+
+          <button
+            className="primary-btn full-width"
+            onClick={() => setTab("matches")}
+          >
+            Use for Match Day Plan
+          </button>
         </div>
       ) : (
         <div className="apple-nav-sheet compact">
           <div className="nav-drag"></div>
+
           <h2>Choose a destination</h2>
-          <p>Tap a stadium or fan zone to get in-app directions.</p>
+
+          <p>
+            Tap a stadium or fan zone to get in-app directions.
+          </p>
         </div>
       )}
     </div>
-  );
-}
-function startNavigation() {
-  if (!selectedPlace) return;
-
-  setIsNavigating(true);
-  setCurrentStep(0);
-
-  if (watchIdRef.current) {
-    navigator.geolocation.clearWatch(watchIdRef.current);
-  }
-
-  watchIdRef.current = navigator.geolocation.watchPosition(
-    (pos) => {
-      const newLocation: [number, number] = [
-        pos.coords.latitude,
-        pos.coords.longitude
-      ];
-
-      setUserLocation(newLocation);
-
-      if (currentStep < steps.length - 1) {
-        setCurrentStep((prev) => prev + 1);
-      }
-    },
-    () => {
-      alert("Please allow location access to use live navigation.");
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 5000,
-      timeout: 10000
-    }
   );
 }
