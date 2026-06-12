@@ -38,8 +38,8 @@ export type Tab =
   | "matchday"
   | "hotels"
   | "esim"
-  | "restaurant";
-  | "tickets"
+  | "restaurant"
+  | "tickets";
 
 function App() {
   const [session, setSession] = useState<any>(null);
