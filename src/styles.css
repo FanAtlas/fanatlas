@@ -583,3 +583,28 @@
 .nav-app-buttons button {
   width: 100%;
 }
+.ticket-form {
+  background: #101827;
+  border: 1px solid rgba(148,163,184,.16);
+  border-radius: 18px;
+  padding: 14px;
+  margin: 12px 0;
+}
+
+.ticket-form input {
+  width: 100%;
+  background: #07111f;
+  border: 1px solid rgba(148,163,184,.2);
+  color: white;
+  border-radius: 14px;
+  padding: 13px;
+  margin-bottom: 10px;
+}
+
+.ticket-card {
+  background: linear-gradient(135deg, rgba(34,197,94,.16), rgba(37,99,235,.14));
+  border: 1px solid rgba(34,211,238,.22);
+  border-radius: 18px;
+  padding: 16px;
+  margin: 12px 0;
+}
