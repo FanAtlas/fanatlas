@@ -23,7 +23,13 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
           <div className="brand">FanAtlas <span>2026</span></div>
           <div className="subtle">📍 FIFA World Cup 2026</div>
         </div>
-        <div className="language-pill">🌐 🇺🇸 English</div>
+        <select className="language-pill">
+  <option>🇺🇸 English</option>
+  <option>🇲🇽 Español</option>
+  <option>🇫🇷 Français</option>
+  <option>🇲🇦 العربية</option>
+  <option>🇧🇷 Português</option>
+</select>
       </div>
 <div className="next-match-card">
   <div className="next-match-top">
