@@ -15,7 +15,10 @@ export function ProfilePage({ setTab }: { setTab: (tab: Tab) => void }) {
 
     loadUser();
   }, []);
-
+<button className="setting-row" onClick={() => setTab("tickets")}>
+  <span>🎟 My Tickets</span>
+  <strong>Match, seat, QR screenshot</strong>
+</button>
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
