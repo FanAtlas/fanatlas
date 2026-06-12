@@ -75,7 +75,19 @@ export function RestaurantDetailPage({
           Great place for fans before or after the match.
         </p>
       </div>
+<div className="nav-app-buttons">
+  <a className="buy-btn" href="https://www.opentable.com" target="_blank">
+    Reserve Table
+  </a>
 
+  <a className="buy-btn" href="https://www.ubereats.com" target="_blank">
+    Order Uber Eats
+  </a>
+
+  <a className="buy-btn" href="https://www.doordash.com" target="_blank">
+    Order DoorDash
+  </a>
+</div>
       <button
         className="primary-btn"
         onClick={() => setTab("map")}
