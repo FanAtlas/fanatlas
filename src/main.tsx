@@ -25,6 +25,7 @@ import { supabase } from "./lib/supabase";
 import { FanZonesPage } from "./pages/FanZonesPage";
 import { Language, languages, text } from "./i18n";
 import { LanguageContext } from "./LanguageContext";
+import { OnboardingPage } from "./pages/OnboardingPage";
 
 export type Tab =
   | "home"
@@ -50,6 +51,7 @@ function App() {
   const [tab, setTab] = useState<Tab>("home");
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [language, setLanguage] = useState<Language>("en");
   const t = text[language];
 
@@ -58,13 +60,31 @@ function App() {
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+    if (data.session?.user) {
+  supabase
+    .from("profiles")
+    .select("onboarding_complete")
+    .eq("id", data.session.user.id)
+    .single()
+    .then(({ data }) => {
+      setOnboardingComplete(data?.onboarding_complete === true);
     });
+}  
 
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.user) {
+  supabase
+    .from("profiles")
+    .select("onboarding_complete")
+    .eq("id", session.user.id)
+    .single()
+    .then(({ data }) => {
+      setOnboardingComplete(data?.onboarding_complete === true);
     });
+}
 
     return () => subscription.unsubscribe();
   }, []);
@@ -72,7 +92,10 @@ function App() {
   if (!session) {
     return <AuthPage />;
   }
-
+if (!onboardingComplete) {
+  return <OnboardingPage onComplete={() => setOnboardingComplete(true)} />;
+}
+      
   const render = () => {
     if (tab === "home") return <HomePage setTab={setTab} />;
     if (tab === "map") return <MapPage setTab={setTab} />;
