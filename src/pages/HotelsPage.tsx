@@ -55,7 +55,7 @@ export function HotelsPage() {
                 </div>
 
                 <a className="buy-btn" href={hotel.url}>
-                  View Hotel
+                Search Hotels Near This Stadium
                 </a>
               </div>
             ))}
