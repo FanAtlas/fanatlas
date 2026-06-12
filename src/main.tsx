@@ -19,7 +19,7 @@ import { HotelsPage } from "./pages/HotelsPage";
 import { ESimPage } from "./pages/ESimPage";
 import { RestaurantDetailPage } from "./pages/RestaurantDetailPage";
 import { AuthPage } from "./pages/AuthPage";
-
+import { TicketsPage } from "./pages/TicketsPage";
 import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
 
@@ -39,6 +39,7 @@ export type Tab =
   | "hotels"
   | "esim"
   | "restaurant";
+  | "tickets"
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -83,6 +84,7 @@ function App() {
     if (tab === "guides") return <TravelGuidesPage />;
     if (tab === "currency") return <CurrencyConverterPage />;
     if (tab === "translator") return <VoiceTranslatorPage />;
+    if (tab === "tickets") return <TicketsPage setTab={setTab} />;
     if (tab === "tv") return <TVConnectPage />;
     if (tab === "hotels") return <HotelsPage />;
     if (tab === "esim") return <ESimPage />;
