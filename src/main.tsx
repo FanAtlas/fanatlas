@@ -24,6 +24,7 @@ import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
 import { FanZonesPage } from "./pages/FanZonesPage";
 import { Language, languages, text } from "./i18n";
+import { LanguageContext } from "./LanguageContext";
 
 export type Tab =
   | "home"
@@ -117,6 +118,13 @@ function App() {
   ] as const;
 
   return (
+  <LanguageContext.Provider
+    value={{
+      language,
+      setLanguage,
+      t
+    }}
+  >
     <div className="app-shell">
       <main className="screen">{render()}</main>
 
@@ -136,8 +144,9 @@ function App() {
           );
         })}
       </nav>
-    </div>
-  );
+        </div>
+  </LanguageContext.Provider>
+);
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
