@@ -635,3 +635,56 @@
 .fanzone-btn.merch {
   background: linear-gradient(135deg, #10b981, #059669);
 }
+.onboarding-page {
+  min-height: 100vh;
+  background: #07111f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 430px;
+  background: #101827;
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 24px;
+  padding: 22px;
+}
+
+.onboarding-card h1,
+.onboarding-card h2 {
+  margin-top: 0;
+}
+
+.onboarding-card p {
+  color: #9fb2cf;
+}
+
+.onboarding-card select {
+  width: 100%;
+  background: #07111f;
+  color: white;
+  border: 1px solid rgba(148,163,184,.22);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 12px 0;
+}
+
+.choice-btn {
+  width: 100%;
+  background: #07111f;
+  color: white;
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 7px 0;
+  text-align: left;
+  font-weight: 800;
+}
+
+.choice-btn.active {
+  background: #22d3ee;
+  color: #062033;
+}
