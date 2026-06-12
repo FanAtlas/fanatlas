@@ -608,3 +608,30 @@
   padding: 16px;
   margin: 12px 0;
 }
+.fanzone-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.fanzone-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  padding: 16px;
+  border-radius: 16px;
+  font-weight: 800;
+  color: white;
+}
+
+.fanzone-btn.vip {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.fanzone-btn.transport {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.fanzone-btn.merch {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
