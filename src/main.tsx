@@ -23,6 +23,7 @@ import { TicketsPage } from "./pages/TicketsPage";
 import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
 import { FanZonesPage } from "./pages/FanZonesPage";
+import { Language, languages, text } from "./i18n";
 
 export type Tab =
   | "home"
@@ -48,6 +49,8 @@ function App() {
   const [tab, setTab] = useState<Tab>("home");
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+  const [language, setLanguage] = useState<Language>("en");
+  const t = text[language];
 
   useEffect(() => {
     if (!supabase) return;
@@ -105,12 +108,12 @@ function App() {
   };
 
   const nav = [
-    { id: "home", label: "Home", icon: Home },
-    { id: "map", label: "Map", icon: MapPin },
-    { id: "explore", label: "Explore", icon: Compass },
-    { id: "matches", label: "Matches", icon: Trophy },
-    { id: "sos", label: "SOS", icon: Shield },
-    { id: "profile", label: "Profile", icon: User }
+    { id: "home", label: t.home, icon: Home },
+    { id: "map", label: t.map, icon: MapPin },
+    { id: "explore", label: t.explore, icon: Compass },
+    { id: "matches", label: t.matches, icon: Trophy },
+    { id: "sos", label: t.sos, icon: Shield },
+    { id: "profile", label: t.profile, icon: User }
   ] as const;
 
   return (
