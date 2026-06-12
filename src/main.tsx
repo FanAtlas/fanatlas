@@ -22,6 +22,7 @@ import { AuthPage } from "./pages/AuthPage";
 import { TicketsPage } from "./pages/TicketsPage";
 import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
+import { FanZonesPage } from "./pages/FanZonesPage";
 
 export type Tab =
   | "home"
@@ -40,6 +41,7 @@ export type Tab =
   | "esim"
   | "restaurant"
   | "tickets";
+  | "fanzones"
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -88,6 +90,7 @@ function App() {
     if (tab === "tv") return <TVConnectPage />;
     if (tab === "hotels") return <HotelsPage />;
     if (tab === "esim") return <ESimPage />;
+    if (tab === "fanzones") return <FanZonesPage />;
     if (tab === "matchday")
       return <MatchDayPage match={selectedMatch} setTab={setTab} />;
     if (tab === "restaurant")
