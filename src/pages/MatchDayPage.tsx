@@ -1,8 +1,10 @@
 import { FanAtlasMatch } from "../services/worldcup2026";
 import { Tab } from "../main";
+import { getFanZoneDestination, getStadiumDestination, MapDestination } from "../mapDestinations";
 
 type Props = {
   match: FanAtlasMatch | null;
+  setMapDestination: (destination: MapDestination | null) => void;
   setTab: (tab: Tab) => void;
 };
 
@@ -48,7 +50,7 @@ function citySafetyTips(city: string) {
   ];
 }
 
-export function MatchDayPage({ match, setTab }: Props) {
+export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
   const m =
     match ||
     ({
@@ -63,6 +65,16 @@ export function MatchDayPage({ match, setTab }: Props) {
     } as FanAtlasMatch);
 
   const tips = citySafetyTips(m.city);
+
+  function openStadiumMap() {
+    setMapDestination(getStadiumDestination(m.stadium, m.city) || null);
+    setTab("map");
+  }
+
+  function openFanZones() {
+    setMapDestination(getFanZoneDestination(m.fanZone) || null);
+    setTab("explore");
+  }
 
   return (
     <>
@@ -91,7 +103,7 @@ export function MatchDayPage({ match, setTab }: Props) {
           <span>🧭</span>
           <strong>Route Plan</strong>
           <p>Use official transport first. Avoid unknown shortcuts after the match.</p>
-          <button onClick={() => setTab("map")}>Open in-app map</button>
+          <button onClick={openStadiumMap}>Open in-app map</button>
         </div>
 
         <div className="assistant-card">
@@ -105,7 +117,7 @@ export function MatchDayPage({ match, setTab }: Props) {
           <span>🎉</span>
           <strong>After Match</strong>
           <p>Recommended fan zone: {m.fanZone}. Travel with groups after dark.</p>
-          <button onClick={() => setTab("explore")}>View fan zones</button>
+          <button onClick={openFanZones}>View fan zones</button>
         </div>
       </div>
 

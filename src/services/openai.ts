@@ -1,27 +1,41 @@
-export async function askTravelAssistant(message: string) {
-  const key = import.meta.env.VITE_OPENAI_API_KEY;
-  if (!key) {
-    return "OpenAI key is not connected yet. For now, this is demo mode: arrive early, use official transport, check stadium rules, and ask local authorities in emergencies.";
+export type TravelAssistantResponse = {
+  answer: string;
+  error?: string;
+  mode: "live" | "demo";
+};
+
+const demoAnswer =
+  "Demo mode: I can help with World Cup 2026 stadiums, fan zones, hotels, eSIM, currency, SOS, translation, and app navigation. For match day, arrive early, use official transport, keep tickets saved offline, and use SOS for emergencies.";
+
+export async function askTravelAssistant(message: string): Promise<TravelAssistantResponse> {
+  try {
+    const res = await fetch("/api/ai-chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message })
+    });
+
+    if (!res.ok) {
+      return {
+        answer: demoAnswer,
+        error: `AI backend returned ${res.status}.`,
+        mode: "demo"
+      };
+    }
+
+    const data = await res.json();
+    return {
+      answer: data.answer || demoAnswer,
+      error: data.error,
+      mode: data.mode === "live" ? "live" : "demo"
+    };
+  } catch (error: any) {
+    return {
+      answer: demoAnswer,
+      error: error?.message || "AI backend is unavailable locally.",
+      mode: "demo"
+    };
   }
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${key}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-4.1-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are FanAtlas, an AI travel and safety assistant for FIFA World Cup 2026 tourists in USA, Canada, and Mexico. Give short, practical, safety-aware answers."
-        },
-        { role: "user", content: message }
-      ]
-    })
-  });
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || "Sorry, I could not generate an answer.";
 }

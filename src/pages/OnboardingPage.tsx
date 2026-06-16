@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { getCountryOptions, worldCup2026Teams } from "../data/onboardingOptions";
+import { Language } from "../i18n";
+import { useLanguage } from "../LanguageContext";
 import { supabase } from "../lib/supabase";
 
 type Props = {
@@ -6,11 +9,12 @@ type Props = {
 };
 
 export function OnboardingPage({ onComplete }: Props) {
+  const { language, setLanguage } = useLanguage();
   const [step, setStep] = useState(1);
-  const [language, setLanguage] = useState("en");
   const [country, setCountry] = useState("");
   const [favoriteTeam, setFavoriteTeam] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
+  const countryOptions = getCountryOptions();
 
   const toggleInterest = (item: string) => {
     setInterests((prev) =>
@@ -59,7 +63,7 @@ export function OnboardingPage({ onComplete }: Props) {
         {step === 2 && (
           <>
             <h2>Select your language</h2>
-            <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+            <select value={language} onChange={(e) => setLanguage(e.target.value as Language)}>
               <option value="en">🇺🇸 English</option>
               <option value="es">🇲🇽 Español</option>
               <option value="fr">🇫🇷 Français</option>
@@ -75,15 +79,14 @@ export function OnboardingPage({ onComplete }: Props) {
         {step === 3 && (
           <>
             <h2>Where are you traveling from?</h2>
-            {["United States", "Morocco", "Mexico", "Canada", "France", "Brazil", "Argentina", "Spain"].map((c) => (
-              <button
-                key={c}
-                className={`choice-btn ${country === c ? "active" : ""}`}
-                onClick={() => setCountry(c)}
-              >
-                {c}
-              </button>
-            ))}
+            <select value={country} onChange={(e) => setCountry(e.target.value)}>
+              <option value="">Select country</option>
+              {countryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
             <button className="primary-btn full-width" onClick={() => setStep(4)}>
               Continue
             </button>
@@ -93,15 +96,14 @@ export function OnboardingPage({ onComplete }: Props) {
         {step === 4 && (
           <>
             <h2>Who are you supporting?</h2>
-            {["Morocco", "USA", "Mexico", "Canada", "Brazil", "Argentina", "France", "Spain"].map((team) => (
-              <button
-                key={team}
-                className={`choice-btn ${favoriteTeam === team ? "active" : ""}`}
-                onClick={() => setFavoriteTeam(team)}
-              >
-                {team}
-              </button>
-            ))}
+            <select value={favoriteTeam} onChange={(e) => setFavoriteTeam(e.target.value)}>
+              <option value="">Select team</option>
+              {worldCup2026Teams.map((team) => (
+                <option key={team} value={team}>
+                  {team}
+                </option>
+              ))}
+            </select>
             <button className="primary-btn full-width" onClick={() => setStep(5)}>
               Continue
             </button>

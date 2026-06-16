@@ -1,9 +1,13 @@
 import { emergencyServices } from "../data/mockData";
+import { languages } from "../i18n";
+import { useLanguage } from "../LanguageContext";
+
 export function SOSPage() {
+  const { language } = useLanguage();
   const phrases = [["English","I need help. Call an ambulance. Where is the hospital?"],["Spanish","Necesito ayuda. Llame una ambulancia. ¿Dónde está el hospital?"],["French","J’ai besoin d’aide. Appelez une ambulance. Où est l’hôpital ?"],["Arabic","أحتاج إلى مساعدة. اتصل بالإسعاف. أين المستشفى؟"]];
   return (
     <>
-      <div className="topbar"><div className="brand">FanAtlas <span>2026</span></div><div className="language-pill">🌐 English</div></div>
+      <div className="topbar"><div className="brand">FanAtlas <span>2026</span></div><div className="language-pill">{languages[language]}</div></div>
       <a href="tel:911" className="sos-hero"><span>⚠️</span><h2>SOS Emergency</h2><p>Press to call 911</p></a>
       <div className="card-dark"><h3>Emergency Numbers</h3><div className="emergency-row">🇺🇸 USA <a href="tel:911">☎ 911</a></div><div className="emergency-row">🇨🇦 Canada <a href="tel:911">☎ 911</a></div><div className="emergency-row">🇲🇽 Mexico <a href="tel:911">☎ 911</a></div></div>
       <h3>Find Nearby</h3>{["Nearest Hospitals","Police Stations","Consulates & Embassies"].map(x=><div className="list-card" key={x}><strong>{x}</strong><span>›</span></div>)}

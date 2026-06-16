@@ -1,3 +1,6 @@
+import { Tab } from "../main";
+import { getPlaceDestination, MapDestination } from "../mapDestinations";
+
 type Restaurant = {
   name: string;
   city: string;
@@ -8,10 +11,12 @@ type Restaurant = {
 
 export function RestaurantDetailPage({
   restaurant,
+  setMapDestination,
   setTab
 }: {
   restaurant: Restaurant | null;
-  setTab: (tab: any) => void;
+  setMapDestination: (destination: MapDestination | null) => void;
+  setTab: (tab: Tab) => void;
 }) {
   if (!restaurant) {
     return (
@@ -90,7 +95,10 @@ export function RestaurantDetailPage({
 </div>
       <button
         className="primary-btn"
-        onClick={() => setTab("map")}
+        onClick={() => {
+          setMapDestination(getPlaceDestination(restaurant.name, restaurant.city) || null);
+          setTab("map");
+        }}
       >
         📍 Get Directions
       </button>

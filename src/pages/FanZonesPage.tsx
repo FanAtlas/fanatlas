@@ -1,28 +1,7 @@
-export function FanZonesPage() {
-  const fanZones = [
-    {
-      name: "Times Square Fan Park",
-      city: "New York",
-      hours: "10am–2am",
-      capacity: "50,000",
-      entry: "Free Entry"
-    },
-    {
-      name: "SoFi Fan Village",
-      city: "Los Angeles",
-      hours: "12pm–12am",
-      capacity: "30,000",
-      entry: "VIP Available"
-    },
-    {
-      name: "Azteca Fan Fest",
-      city: "Mexico City",
-      hours: "All day",
-      capacity: "80,000",
-      entry: "Free Entry"
-    }
-  ];
+import { fanZones } from "../data/mockData";
+import { Tab } from "../main";
 
+export function FanZonesPage({ setTab }: { setTab: (tab: Tab) => void }) {
   return (
     <>
       <div className="topbar">
@@ -36,22 +15,22 @@ export function FanZonesPage() {
         <div className="zone-card" key={zone.name}>
           <h3>🎉 {zone.name}</h3>
           <p>📍 {zone.city}</p>
+          <p>🗓 {zone.dates}</p>
           <p>🕘 {zone.hours}</p>
           <p>👥 {zone.capacity}</p>
           <p>🎟 {zone.entry}</p>
+          <p>🛡 Safety score: {zone.safety}/10</p>
 
           <div className="fanzone-actions">
-            <a className="fanzone-btn vip" href="#" target="_blank" rel="noreferrer">
-              ⭐ VIP Packages
-            </a>
-
-            <a className="fanzone-btn transport" href="#" target="_blank" rel="noreferrer">
-              🚌 Fan Zone Transportation
-            </a>
-
-            <a className="fanzone-btn merch" href="#" target="_blank" rel="noreferrer">
-              🛍 Official Merchandise
-            </a>
+            {zone.actions.map((action) => (
+              <button
+                className={`fanzone-btn ${action.tone}`}
+                key={action.label}
+                onClick={() => setTab(action.tab as Tab)}
+              >
+                {action.label}
+              </button>
+            ))}
           </div>
         </div>
       ))}

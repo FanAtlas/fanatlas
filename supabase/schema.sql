@@ -2,12 +2,21 @@ create table if not exists profiles (
   id uuid primary key,
   email text unique,
   name text,
+  username text,
   country text,
   favorite_team text,
   language text default 'en',
+  interests text[] default '{}',
+  notifications boolean default true,
+  onboarding_complete boolean default false,
   membership_type text default 'free',
   created_at timestamp with time zone default now()
 );
+
+alter table profiles add column if not exists username text;
+alter table profiles add column if not exists interests text[] default '{}';
+alter table profiles add column if not exists notifications boolean default true;
+alter table profiles add column if not exists onboarding_complete boolean default false;
 
 create table if not exists matches (
   id uuid primary key default gen_random_uuid(),

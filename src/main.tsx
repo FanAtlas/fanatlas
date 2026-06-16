@@ -22,11 +22,17 @@ import { AuthPage } from "./pages/AuthPage";
 import { TicketsPage } from "./pages/TicketsPage";
 import { FanZonesPage } from "./pages/FanZonesPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
+import { VIPPackagesPage } from "./pages/VIPPackagesPage";
+import { TransportationPage } from "./pages/TransportationPage";
+import { MerchandisePage } from "./pages/MerchandisePage";
 
 import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
 import { Language, text } from "./i18n";
 import { LanguageContext } from "./LanguageContext";
+import { MapDestination } from "./mapDestinations";
+
+const LANGUAGE_STORAGE_KEY = "fanatlas.language";
 
 export type Tab =
   | "home"
@@ -45,17 +51,33 @@ export type Tab =
   | "esim"
   | "restaurant"
   | "tickets"
-  | "fanzones";
+  | "fanzones"
+  | "vip"
+  | "transport"
+  | "merchandise";
+
+function isLanguage(value: string | null): value is Language {
+  return value === "en" || value === "es" || value === "fr" || value === "ar" || value === "pt";
+}
 
 function App() {
   const [session, setSession] = useState<any>(null);
   const [tab, setTab] = useState<Tab>("home");
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+  const [selectedMapDestination, setSelectedMapDestination] = useState<MapDestination | null>(null);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>(() => {
+    const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return isLanguage(storedLanguage) ? storedLanguage : "en";
+  });
 
   const t = text[language];
+
+  function applyLanguage(language: Language) {
+    setLanguageState(language);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }
 
   async function loadProfile(userId: string) {
     if (!supabase) return;
@@ -68,9 +90,20 @@ function App() {
 
     setOnboardingComplete(data?.onboarding_complete === true);
 
-    if (data?.language) {
-      setLanguage(data.language as Language);
+    if (isLanguage(data?.language || null)) {
+      applyLanguage(data.language);
     }
+  }
+
+  async function setLanguage(language: Language) {
+    applyLanguage(language);
+
+    if (!supabase || !session?.user) return;
+
+    await supabase
+      .from("profiles")
+      .update({ language })
+      .eq("id", session.user.id);
   }
 
   useEffect(() => {
@@ -107,22 +140,58 @@ function App() {
 
   if (!onboardingComplete) {
     return (
-      <OnboardingPage
-        onComplete={() => {
-          setOnboardingComplete(true);
+      <LanguageContext.Provider
+        value={{
+          language,
+          setLanguage,
+          t
         }}
-      />
+      >
+        <div className="app-shell">
+          <main className="screen">
+            <OnboardingPage
+              onComplete={() => {
+                setTab("home");
+                setOnboardingComplete(true);
+              }}
+            />
+          </main>
+        </div>
+      </LanguageContext.Provider>
     );
   }
 
   const render = () => {
-    if (tab === "home") return <HomePage setTab={setTab} />;
-    if (tab === "map") return <MapPage setTab={setTab} />;
-    if (tab === "explore") return <ExplorePage setTab={setTab} />;
+    if (tab === "home") {
+      return (
+        <HomePage
+          setMapDestination={setSelectedMapDestination}
+          setSelectedRestaurant={setSelectedRestaurant}
+          setTab={setTab}
+        />
+      );
+    }
+    if (tab === "map") {
+      return (
+        <MapPage
+          initialDestination={selectedMapDestination}
+          setTab={setTab}
+        />
+      );
+    }
+    if (tab === "explore") {
+      return (
+        <ExplorePage
+          setMapDestination={setSelectedMapDestination}
+          setTab={setTab}
+        />
+      );
+    }
 
     if (tab === "matches") {
       return (
         <MatchesPage
+          setMapDestination={setSelectedMapDestination}
           setTab={setTab}
           setSelectedMatch={setSelectedMatch}
         />
@@ -130,31 +199,68 @@ function App() {
     }
 
     if (tab === "sos") return <SOSPage />;
-    if (tab === "profile") return <ProfilePage setTab={setTab} />;
+    if (tab === "profile") {
+      return (
+        <ProfilePage
+          setMapDestination={setSelectedMapDestination}
+          setTab={setTab}
+        />
+      );
+    }
     if (tab === "ai") return <AIChatPage />;
     if (tab === "guides") return <TravelGuidesPage />;
     if (tab === "currency") return <CurrencyConverterPage />;
     if (tab === "translator") return <VoiceTranslatorPage />;
     if (tab === "tickets") return <TicketsPage setTab={setTab} />;
     if (tab === "tv") return <TVConnectPage />;
-    if (tab === "hotels") return <HotelsPage />;
+    if (tab === "hotels") {
+      return (
+        <HotelsPage
+          setMapDestination={setSelectedMapDestination}
+          setTab={setTab}
+        />
+      );
+    }
     if (tab === "esim") return <ESimPage />;
-    if (tab === "fanzones") return <FanZonesPage />;
+    if (tab === "fanzones") return <FanZonesPage setTab={setTab} />;
+    if (tab === "vip") return <VIPPackagesPage setTab={setTab} />;
+    if (tab === "transport") {
+      return (
+        <TransportationPage
+          setMapDestination={setSelectedMapDestination}
+          setTab={setTab}
+        />
+      );
+    }
+    if (tab === "merchandise") return <MerchandisePage setTab={setTab} />;
 
     if (tab === "matchday") {
-      return <MatchDayPage match={selectedMatch} setTab={setTab} />;
+      return (
+        <MatchDayPage
+          match={selectedMatch}
+          setMapDestination={setSelectedMapDestination}
+          setTab={setTab}
+        />
+      );
     }
 
     if (tab === "restaurant") {
       return (
         <RestaurantDetailPage
           restaurant={selectedRestaurant}
+          setMapDestination={setSelectedMapDestination}
           setTab={setTab}
         />
       );
     }
 
-    return <HomePage setTab={setTab} />;
+    return (
+      <HomePage
+        setMapDestination={setSelectedMapDestination}
+        setSelectedRestaurant={setSelectedRestaurant}
+        setTab={setTab}
+      />
+    );
   };
 
   const nav = [
@@ -185,7 +291,10 @@ function App() {
               <button
                 key={item.id}
                 className={`nav-btn ${tab === item.id ? "active" : ""}`}
-                onClick={() => setTab(item.id as Tab)}
+                onClick={() => {
+                  if (item.id === "map") setSelectedMapDestination(null);
+                  setTab(item.id as Tab);
+                }}
               >
                 <Icon size={20} />
                 <span>{item.label}</span>

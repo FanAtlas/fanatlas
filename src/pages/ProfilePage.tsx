@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
+import { languages } from "../i18n";
+import { useLanguage } from "../LanguageContext";
 import { supabase } from "../lib/supabase";
 import { Tab } from "../main";
+import { MapDestination } from "../mapDestinations";
 
-export function ProfilePage({ setTab }: { setTab: (tab: Tab) => void }) {
+export function ProfilePage({
+  setMapDestination,
+  setTab
+}: {
+  setMapDestination: (destination: MapDestination | null) => void;
+  setTab: (tab: Tab) => void;
+}) {
+  const { language } = useLanguage();
   const [email, setEmail] = useState("");
 
   useEffect(() => {
@@ -15,10 +25,7 @@ export function ProfilePage({ setTab }: { setTab: (tab: Tab) => void }) {
 
     loadUser();
   }, []);
-<button className="setting-row" onClick={() => setTab("tickets")}>
-  <span>🎟 My Tickets</span>
-  <strong>Match, seat, QR screenshot</strong>
-</button>
+
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -30,7 +37,7 @@ export function ProfilePage({ setTab }: { setTab: (tab: Tab) => void }) {
         <div className="brand">
           FanAtlas <span>2026</span>
         </div>
-        <div className="language-pill">🌐 English</div>
+        <div className="language-pill">{languages[language]}</div>
       </div>
 
       <div className="profile-hero">
@@ -46,14 +53,25 @@ export function ProfilePage({ setTab }: { setTab: (tab: Tab) => void }) {
 
       <div className="setting-row">
         <span>🌐 Language</span>
-        <strong>English ›</strong>
+        <strong>{languages[language]} ›</strong>
       </div>
 
       <button className="premium-row">
         👑 FanAtlas Premium <span>Upgrade plan →</span>
       </button>
 
-      <button className="setting-row" onClick={() => setTab("map")}>
+      <button className="setting-row" onClick={() => setTab("tickets")}>
+        <span>🎟 My Tickets</span>
+        <strong>Match, seat, QR screenshot</strong>
+      </button>
+
+      <button
+        className="setting-row"
+        onClick={() => {
+          setMapDestination(null);
+          setTab("map");
+        }}
+      >
         <span>📡 Offline Content</span>
         <strong>Download maps & itineraries</strong>
       </button>

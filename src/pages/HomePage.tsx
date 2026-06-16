@@ -10,13 +10,24 @@ import {
   Hotel,
   Coins,
   BookOpen,
-  Tv
+  Tv,
+  Utensils
 } from "lucide-react";
 import { alerts, crowdAlerts, fanZones, places } from "../data/mockData";
+import { Language } from "../i18n";
 import { Tab } from "../main";
+import { MapDestination } from "../mapDestinations";
 import { InstallBanner } from "./InstallBanner";
 
-export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
+export function HomePage({
+  setMapDestination,
+  setSelectedRestaurant,
+  setTab
+}: {
+  setMapDestination: (destination: MapDestination | null) => void;
+  setSelectedRestaurant: (restaurant: any) => void;
+  setTab: (tab: Tab) => void;
+}) {
   const { language, setLanguage, t } = useLanguage();
 
   const quick = [
@@ -29,6 +40,14 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
     { label: "Offline", icon: MapPin, tab: "map" as Tab },
     { label: "TV Mode", icon: Tv, tab: "tv" as Tab }
   ];
+
+  function openRestaurant(restaurant: any) {
+    setSelectedRestaurant({
+      ...restaurant,
+      cuisine: restaurant.cuisine || restaurant.category || "Local favorite"
+    });
+    setTab("restaurant");
+  }
 
   return (
     <div dir={language === "ar" ? "rtl" : "ltr"}>
@@ -45,7 +64,7 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
         <select
           className="language-pill"
           value={language}
-          onChange={(e) => setLanguage(e.target.value as any)}
+          onChange={(e) => setLanguage(e.target.value as Language)}
         >
           <option value="en">🇺🇸 English</option>
           <option value="es">🇲🇽 Español</option>
@@ -113,7 +132,10 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
             <button
               className="quick-card"
               key={q.label}
-              onClick={() => setTab(q.tab)}
+              onClick={() => {
+                if (q.tab === "map") setMapDestination(null);
+                setTab(q.tab);
+              }}
             >
               <Icon size={22} />
               <span>{q.label}</span>
@@ -155,21 +177,24 @@ export function HomePage({ setTab }: { setTab: (tab: Tab) => void }) {
       <div className="horizontal-scroll">
         {places.map((p) => (
           <button
-            className="place-card"
+            className="place-card restaurant-card"
             key={p.name}
-            onClick={() => setTab("explore")}
+            onClick={() => openRestaurant(p)}
           >
-            <div className="place-image">🍽️</div>
+            <div className="restaurant-card-top">
+              <div className="place-image">
+                <Utensils size={28} />
+              </div>
+              <span className="safe-badge">{p.safety}/10</span>
+            </div>
 
             <strong>{p.name}</strong>
 
-            <p>
-              ⭐ {p.rating} · 👥 {p.busy}
-            </p>
+            <p>⭐ {p.rating} · {p.price} · {p.category}</p>
 
             <span>{p.city}</span>
 
-            <small>Tap to explore restaurants →</small>
+            <small>Open restaurant details →</small>
           </button>
         ))}
       </div>

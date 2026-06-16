@@ -1,4 +1,13 @@
-export function HotelsPage() {
+import { Tab } from "../main";
+import { getPlaceDestination, MapDestination } from "../mapDestinations";
+
+export function HotelsPage({
+  setMapDestination,
+  setTab
+}: {
+  setMapDestination: (destination: MapDestination | null) => void;
+  setTab: (tab: Tab) => void;
+}) {
   const hotels = [
     {
       name: "Ibis Mexico City",
@@ -54,9 +63,15 @@ export function HotelsPage() {
                   <span className="price">{hotel.price}</span>
                 </div>
 
-                <a className="buy-btn" href={hotel.url}>
-                Search Hotels Near This Stadium
-                </a>
+                <button
+                  className="buy-btn"
+                  onClick={() => {
+                    setMapDestination(getPlaceDestination(hotel.name, hotel.city) || null);
+                    setTab("map");
+                  }}
+                >
+                  Navigate
+                </button>
               </div>
             ))}
         </div>

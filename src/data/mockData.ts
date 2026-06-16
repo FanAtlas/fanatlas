@@ -18,10 +18,62 @@ export const places = [
 ];
 
 export const fanZones = [
-  { name: "Times Square Fan Park", city: "New York", dates: "Jun 11 – Jul 19", hours: "10am–2am", capacity: "50,000", entry: "FREE ENTRY", safety: 8 },
-  { name: "SoFi Fan Village", city: "Los Angeles", dates: "Jun 12 – Jul 15", hours: "12pm–12am", capacity: "30,000", entry: "VIP AVAILABLE", safety: 8 },
-  { name: "Azteca Fan Fest", city: "Mexico City", dates: "Jun 11 – Jul 19", hours: "All day", capacity: "80,000", entry: "FREE ENTRY", safety: 7 },
-  { name: "Toronto Fan Experience", city: "Toronto", dates: "Jun 12 – Jul 13", hours: "12pm–10pm", capacity: "35,000", entry: "FREE ENTRY", safety: 9 }
+  {
+    name: "Times Square Fan Park",
+    city: "New York",
+    dates: "Jun 11 – Jul 19",
+    hours: "10am–2am",
+    capacity: "50,000",
+    entry: "FREE ENTRY",
+    safety: 8,
+    actions: [
+      { label: "VIP Packages", tone: "vip", tab: "vip" },
+      { label: "Fan Zone Transportation", tone: "transport", tab: "transport" },
+      { label: "Merchandise", tone: "merch", tab: "merchandise" }
+    ]
+  },
+  {
+    name: "SoFi Fan Village",
+    city: "Los Angeles",
+    dates: "Jun 12 – Jul 15",
+    hours: "12pm–12am",
+    capacity: "30,000",
+    entry: "VIP AVAILABLE",
+    safety: 8,
+    actions: [
+      { label: "VIP Packages", tone: "vip", tab: "vip" },
+      { label: "Fan Zone Transportation", tone: "transport", tab: "transport" },
+      { label: "Merchandise", tone: "merch", tab: "merchandise" }
+    ]
+  },
+  {
+    name: "Azteca Fan Fest",
+    city: "Mexico City",
+    dates: "Jun 11 – Jul 19",
+    hours: "All day",
+    capacity: "80,000",
+    entry: "FREE ENTRY",
+    safety: 7,
+    actions: [
+      { label: "VIP Packages", tone: "vip", tab: "vip" },
+      { label: "Fan Zone Transportation", tone: "transport", tab: "transport" },
+      { label: "Merchandise", tone: "merch", tab: "merchandise" }
+    ]
+  },
+  {
+    name: "Toronto Fan Experience",
+    city: "Toronto",
+    dates: "Jun 12 – Jul 13",
+    hours: "12pm–10pm",
+    capacity: "35,000",
+    entry: "FREE ENTRY",
+    safety: 9,
+    actions: [
+      { label: "VIP Packages", tone: "vip", tab: "vip" },
+      { label: "Fan Zone Transportation", tone: "transport", tab: "transport" },
+      { label: "Merchandise", tone: "merch", tab: "merchandise" }
+    ]
+  }
 ];
 
 export const matches = [

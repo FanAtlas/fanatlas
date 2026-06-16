@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { matches as fallbackMatches, stadiums as fallbackStadiums } from "../data/mockData";
 import { getWorldCup2026Games, getWorldCup2026Stadiums, FanAtlasMatch, FanAtlasStadium } from "../services/worldcup2026";
 import { Tab } from "../main";
+import { getStadiumDestination, MapDestination } from "../mapDestinations";
 
 type Props = {
+  setMapDestination: (destination: MapDestination | null) => void;
   setTab: (tab: Tab) => void;
   setSelectedMatch: (match: FanAtlasMatch) => void;
 };
@@ -22,7 +24,7 @@ function shouldShowScore(match: FanAtlasMatch) {
   return match.status.toLowerCase() !== "scheduled" && match.score;
 }
 
-export function MatchesPage({ setTab, setSelectedMatch }: Props) {
+export function MatchesPage({ setMapDestination, setTab, setSelectedMatch }: Props) {
   const [matches, setMatches] = useState<FanAtlasMatch[]>(fallbackMatches as FanAtlasMatch[]);
   const [stadiums, setStadiums] = useState<FanAtlasStadium[]>(fallbackStadiums as FanAtlasStadium[]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,11 @@ export function MatchesPage({ setTab, setSelectedMatch }: Props) {
   function planMatch(match: FanAtlasMatch) {
     setSelectedMatch(match);
     setTab("matchday");
+  }
+
+  function openStadiumMap(match: FanAtlasMatch) {
+    setMapDestination(getStadiumDestination(match.stadium, match.city) || null);
+    setTab("map");
   }
 
   return (
@@ -97,7 +104,7 @@ export function MatchesPage({ setTab, setSelectedMatch }: Props) {
             <div className="match-detail-line">🎉 After match: {m.fanZone}</div>
             <div className="match-actions-premium">
               <button className="primary-btn" onClick={() => planMatch(m)}>Plan this match day</button>
-              <button className="stadium-map-btn" onClick={() => setTab("map")}>📍 Stadium Map</button>
+              <button className="stadium-map-btn" onClick={() => openStadiumMap(m)}>📍 Stadium Map</button>
             </div>
           </div>
         ))}

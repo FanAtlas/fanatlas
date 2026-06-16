@@ -10,37 +10,9 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import { Tab } from "../main";
+import { defaultMapDestinations, MapDestination } from "../mapDestinations";
 
-const places = [
-  {
-    name: "MetLife Stadium",
-    city: "New York/New Jersey",
-    lat: 40.8135,
-    lng: -74.0745,
-    emoji: "🏟"
-  },
-  {
-    name: "Estadio Azteca",
-    city: "Mexico City",
-    lat: 19.3029,
-    lng: -99.1505,
-    emoji: "🏟"
-  },
-  {
-    name: "SoFi Stadium",
-    city: "Los Angeles",
-    lat: 33.9535,
-    lng: -118.3392,
-    emoji: "🏟"
-  },
-  {
-    name: "Times Square Fan Park",
-    city: "New York",
-    lat: 40.758,
-    lng: -73.9855,
-    emoji: "🎉"
-  }
-];
+type TravelMode = "walking" | "driving" | "transit";
 
 const createIcon = (emoji: string) =>
   L.divIcon({
@@ -62,7 +34,97 @@ function FitRoute({ route }: { route: [number, number][] }) {
   return null;
 }
 
-export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
+function FocusMap({
+  destination,
+  userLocation
+}: {
+  destination: MapDestination | null;
+  userLocation: [number, number];
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (destination) {
+      map.setView([destination.lat, destination.lng], 14, { animate: true });
+    } else {
+      map.setView(userLocation, 12, { animate: true });
+    }
+  }, [destination, map, userLocation]);
+
+  return null;
+}
+
+function formatStep(step: any) {
+  const type = step.maneuver?.type || "Continue";
+  const modifier = step.maneuver?.modifier ? ` ${step.maneuver.modifier}` : "";
+  const street = step.name ? ` on ${step.name}` : "";
+  return `${type}${modifier}${street}`;
+}
+
+function straightLineRoute(origin: [number, number], destination: MapDestination) {
+  const midpoint: [number, number] = [
+    (origin[0] + destination.lat) / 2 + 0.006,
+    (origin[1] + destination.lng) / 2 - 0.006
+  ];
+
+  return [
+    origin,
+    midpoint,
+    [destination.lat, destination.lng] as [number, number]
+  ];
+}
+
+function distanceKm(origin: [number, number], destination: MapDestination) {
+  const earthRadiusKm = 6371;
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRad(destination.lat - origin[0]);
+  const dLng = toRad(destination.lng - origin[1]);
+  const lat1 = toRad(origin[0]);
+  const lat2 = toRad(destination.lat);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadiusKm * c;
+}
+
+function buildDemoRoute(
+  origin: [number, number],
+  destination: MapDestination,
+  travelMode: TravelMode
+) {
+  const km = distanceKm(origin, destination);
+  const speed = travelMode === "walking" ? 4.8 : travelMode === "driving" ? 32 : 24;
+  const minutes = Math.max(4, Math.round((km / speed) * 60));
+  const transitPrefix = travelMode === "transit" ? "Transit demo: " : "";
+
+  return {
+    route: straightLineRoute(origin, destination),
+    distance: `${km.toFixed(1)} km`,
+    duration: `${minutes} min`,
+    steps: [
+      `${transitPrefix}Start from selected start location`,
+      travelMode === "walking"
+        ? "Walk toward the main event corridor"
+        : travelMode === "driving"
+          ? "Drive toward official event access roads"
+          : "Walk to the nearest transit stop",
+      travelMode === "transit"
+        ? "Take train or bus toward the destination district"
+        : "Continue on the highlighted route",
+      `Arrive at ${destination.name}`
+    ]
+  };
+}
+
+export function MapPage({
+  initialDestination,
+  setTab
+}: {
+  initialDestination: MapDestination | null;
+  setTab: (tab: Tab) => void;
+}) {
   const [userLocation, setUserLocation] = useState<[number, number]>([
     40.758,
     -73.9855
@@ -73,7 +135,10 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
   const [steps, setSteps] = useState<string[]>([]);
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
-  const [mode, setMode] = useState<"walking" | "driving">("driving");
+  const [mode, setMode] = useState<TravelMode>("driving");
+  const [routeError, setRouteError] = useState("");
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [manualStart, setManualStart] = useState("Times Square Fan Park");
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -85,50 +150,104 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
       },
       () => {
         console.log("Location unavailable");
+        setRouteError("Location permission was denied. Choose a manual start point below or use the demo route.");
       }
     );
   }, []);
 
+  useEffect(() => {
+    if (initialDestination) {
+      buildRoute(initialDestination, mode);
+    }
+  }, [initialDestination]);
+
   async function buildRoute(
-    place: any,
-    travelMode: "walking" | "driving" = mode
+    place: MapDestination,
+    travelMode: TravelMode = mode,
+    origin: [number, number] = userLocation
   ) {
     setSelectedPlace(place);
     setMode(travelMode);
+    setRouteError("");
+    setRouteLoading(true);
+
+    if (travelMode === "transit") {
+      const demo = buildDemoRoute(origin, place, travelMode);
+      setRoute(demo.route);
+      setSteps(demo.steps);
+      setDistance(demo.distance);
+      setDuration(demo.duration);
+      setRouteError("Transit/train/bus routing is in demo mode. Showing an estimated in-app route.");
+      setRouteLoading(false);
+      return;
+    }
 
     const profile = travelMode === "walking" ? "foot" : "car";
 
     const url =
       `https://router.project-osrm.org/route/v1/${profile}/` +
-      `${userLocation[1]},${userLocation[0]};` +
+      `${origin[1]},${origin[0]};` +
       `${place.lng},${place.lat}` +
       `?overview=full&geometries=geojson&steps=true`;
 
-    const response = await fetch(url);
-    const data = await response.json();
+    try {
+      const response = await fetch(url);
 
-    if (!data.routes?.length) return;
+      if (!response.ok) {
+        throw new Error("Routing service unavailable.");
+      }
 
-    const routeData = data.routes[0];
+      const data = await response.json();
 
-    const coordinates = routeData.geometry.coordinates.map(
-      ([lng, lat]: [number, number]) =>
-        [lat, lng] as [number, number]
-    );
+      if (!data.routes?.length) {
+        throw new Error("No route found for this destination.");
+      }
 
-    const routeSteps =
-      routeData.legs?.[0]?.steps?.map((step: any) => {
-        const street = step.name ? ` on ${step.name}` : "";
-        return `${step.maneuver?.type || "Continue"}${street}`;
-      }) || [];
+      const routeData = data.routes[0];
 
-    setRoute(coordinates);
-    setSteps(routeSteps.slice(0, 8));
-    setDistance(`${(routeData.distance / 1000).toFixed(1)} km`);
-    setDuration(`${Math.round(routeData.duration / 60)} min`);
+      const coordinates = routeData.geometry.coordinates.map(
+        ([lng, lat]: [number, number]) =>
+          [lat, lng] as [number, number]
+      );
+
+      const routeSteps =
+        routeData.legs?.[0]?.steps?.map(formatStep) || [];
+
+      setRoute(coordinates);
+      setSteps(routeSteps.slice(0, 8));
+      setDistance(`${(routeData.distance / 1000).toFixed(1)} km`);
+      setDuration(`${Math.round(routeData.duration / 60)} min`);
+    } catch (error: any) {
+      const demo = buildDemoRoute(origin, place, travelMode);
+      setRoute(demo.route);
+      setSteps(demo.steps);
+      setDistance(demo.distance);
+      setDuration(demo.duration);
+      setRouteError(`${error?.message || "Could not build live route."} Showing a demo route instead.`);
+    } finally {
+      setRouteLoading(false);
+    }
+  }
+
+  function selectManualStart(name: string) {
+    setManualStart(name);
+    const start = defaultMapDestinations.find((place) => place.name === name);
+    if (!start) return;
+
+    const nextLocation: [number, number] = [start.lat, start.lng];
+    setUserLocation(nextLocation);
+
+    if (selectedPlace) {
+      buildRoute(selectedPlace, mode, nextLocation);
+    }
   }
 
   function useMyLocation() {
+    if (!navigator.geolocation) {
+      setRouteError("Geolocation is not supported by this browser.");
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const newLocation: [number, number] = [
@@ -139,41 +258,12 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
         setUserLocation(newLocation);
 
         if (selectedPlace) {
-          setTimeout(() => {
-            buildRoute(selectedPlace, mode);
-          }, 300);
+          buildRoute(selectedPlace, mode, newLocation);
         }
       },
       () => {
-        alert("Please allow location access.");
+        setRouteError("Please allow location access to use your current position.");
       }
-    );
-  }
-
-  function openAppleMaps() {
-    if (!selectedPlace) return;
-
-    window.open(
-      `https://maps.apple.com/?daddr=${selectedPlace.lat},${selectedPlace.lng}`,
-      "_blank"
-    );
-  }
-
-  function openGoogleMaps() {
-    if (!selectedPlace) return;
-
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${selectedPlace.lat},${selectedPlace.lng}&travelmode=driving`,
-      "_blank"
-    );
-  }
-
-  function openWaze() {
-    if (!selectedPlace) return;
-
-    window.open(
-      `https://waze.com/ul?ll=${selectedPlace.lat},${selectedPlace.lng}&navigate=yes`,
-      "_blank"
     );
   }
 
@@ -190,6 +280,11 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
             attribution="© OpenStreetMap"
           />
 
+          <FocusMap
+            destination={selectedPlace}
+            userLocation={userLocation}
+          />
+
           <Marker
             position={userLocation}
             icon={createIcon("📍")}
@@ -197,7 +292,7 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
             <Popup>Your Location</Popup>
           </Marker>
 
-          {places.map((place) => (
+          {defaultMapDestinations.map((place) => (
             <Marker
               key={place.name}
               position={[place.lat, place.lng]}
@@ -236,11 +331,31 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
 
           <p>{selectedPlace.city}</p>
 
+          <label className="manual-start">
+            Start
+            <select value={manualStart} onChange={(e) => selectManualStart(e.target.value)}>
+              {defaultMapDestinations.map((place) => (
+                <option key={place.name} value={place.name}>
+                  {place.emoji} {place.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {routeLoading && (
+            <div className="route-status">Building route...</div>
+          )}
+
+          {routeError && (
+            <div className="route-status error">{routeError}</div>
+          )}
+
           <div className="travel-mode-row">
             <button
               className={`travel-mode ${
                 mode === "walking" ? "active" : ""
               }`}
+              disabled={routeLoading}
               onClick={() => buildRoute(selectedPlace, "walking")}
             >
               🚶 Walk
@@ -250,16 +365,29 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
               className={`travel-mode ${
                 mode === "driving" ? "active" : ""
               }`}
+              disabled={routeLoading}
               onClick={() => buildRoute(selectedPlace, "driving")}
             >
               🚗 Car
             </button>
 
-            <button className="travel-mode disabled">
+            <button
+              className={`travel-mode ${
+                mode === "transit" ? "active" : ""
+              }`}
+              disabled={routeLoading}
+              onClick={() => buildRoute(selectedPlace, "transit")}
+            >
               🚆 Train
             </button>
 
-            <button className="travel-mode disabled">
+            <button
+              className={`travel-mode ${
+                mode === "transit" ? "active" : ""
+              }`}
+              disabled={routeLoading}
+              onClick={() => buildRoute(selectedPlace, "transit")}
+            >
               🚌 Bus
             </button>
           </div>
@@ -272,29 +400,6 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
             <p>
               Distance: <strong>{distance}</strong>
             </p>
-          </div>
-
-          <div className="nav-app-buttons">
-            <button
-              className="start-navigation-btn"
-              onClick={openAppleMaps}
-            >
-              🍎 Apple Maps
-            </button>
-
-            <button
-              className="start-navigation-btn"
-              onClick={openGoogleMaps}
-            >
-              📍 Google Maps
-            </button>
-
-            <button
-              className="start-navigation-btn"
-              onClick={openWaze}
-            >
-              🚗 Waze
-            </button>
           </div>
 
           <div className="route-steps">
@@ -322,8 +427,23 @@ export function MapPage({ setTab }: { setTab: (tab: Tab) => void }) {
           <h2>Choose a destination</h2>
 
           <p>
-            Tap a stadium or fan zone to get directions.
+            Tap a stadium, fan zone, restaurant, hotel, or place to get directions.
           </p>
+
+          <label className="manual-start">
+            Manual start
+            <select value={manualStart} onChange={(e) => selectManualStart(e.target.value)}>
+              {defaultMapDestinations.map((place) => (
+                <option key={place.name} value={place.name}>
+                  {place.emoji} {place.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {routeError && (
+            <div className="route-status error">{routeError}</div>
+          )}
         </div>
       )}
     </div>
