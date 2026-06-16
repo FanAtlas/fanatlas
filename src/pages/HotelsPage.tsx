@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Tab } from "../main";
 import { getPlaceDestination, MapDestination } from "../mapDestinations";
 
@@ -8,6 +9,7 @@ export function HotelsPage({
   setMapDestination: (destination: MapDestination | null) => void;
   setTab: (tab: Tab) => void;
 }) {
+  const [expandedHotel, setExpandedHotel] = useState<string | null>(null);
   const hotels = [
     {
       name: "Ibis Mexico City",
@@ -15,7 +17,8 @@ export function HotelsPage({
       type: "Budget",
       distance: "0.9 km from stadium",
       price: "$80/night",
-      url: "https://example.com/ibis-affiliate"
+      bestFor: "Fans who want a clean room close to transit",
+      amenities: ["Metro access", "Breakfast", "24h desk"]
     },
     {
       name: "Holiday Inn",
@@ -23,7 +26,8 @@ export function HotelsPage({
       type: "Mid Range",
       distance: "1.2 km from stadium",
       price: "$145/night",
-      url: "https://example.com/holidayinn-affiliate"
+      bestFor: "Groups who need predictable comfort",
+      amenities: ["Parking", "Shuttle area", "Family rooms"]
     },
     {
       name: "Marriott Times Square",
@@ -31,11 +35,28 @@ export function HotelsPage({
       type: "Luxury",
       distance: "0.5 km from fan zone",
       price: "$220/night",
-      url: "https://example.com/marriott-affiliate"
+      bestFor: "Fans who want premium service near events",
+      amenities: ["Concierge", "Late dining", "Lounge"]
     }
   ];
 
-  const sections = ["Budget", "Mid Range", "Luxury"];
+  const sections = [
+    {
+      name: "Budget",
+      summary: "Simple stays near transit with the best nightly value.",
+      from: "From $80"
+    },
+    {
+      name: "Mid Range",
+      summary: "Reliable hotels for families, friend groups, and longer stays.",
+      from: "From $145"
+    },
+    {
+      name: "Luxury",
+      summary: "Premium locations and services near fan zones and stadium routes.",
+      from: "From $220"
+    }
+  ];
 
   return (
     <>
@@ -47,34 +68,60 @@ export function HotelsPage({
       </div>
 
       {sections.map((section) => (
-        <div key={section}>
-          <h3>{section}</h3>
+        <section className="hotel-section" key={section.name}>
+          <div className="hotel-tier-header">
+            <div>
+              <h3>{section.name}</h3>
+              <p>{section.summary}</p>
+            </div>
+            <span>{section.from}</span>
+          </div>
 
           {hotels
-            .filter((hotel) => hotel.type === section)
+            .filter((hotel) => hotel.type === section.name)
             .map((hotel) => (
               <div className="product-card" key={hotel.name}>
                 <div className="thumb">🏨</div>
 
                 <div className="product-info">
                   <strong>{hotel.name}</strong>
-                  <p>{hotel.city}</p>
-                  <p>{hotel.distance}</p>
+                  <p>{hotel.city} · {hotel.distance}</p>
+                  <p>{hotel.bestFor}</p>
+                  <div className="hotel-amenities">
+                    {hotel.amenities.map((amenity) => (
+                      <span key={amenity}>{amenity}</span>
+                    ))}
+                  </div>
+                  {expandedHotel === hotel.name && (
+                    <div className="hotel-detail-panel">
+                      <p>Good fit: {hotel.bestFor.toLowerCase()}.</p>
+                      <p>Use Navigate to preview the route from fan areas before booking.</p>
+                    </div>
+                  )}
                   <span className="price">{hotel.price}</span>
                 </div>
 
-                <button
-                  className="buy-btn"
-                  onClick={() => {
-                    setMapDestination(getPlaceDestination(hotel.name, hotel.city) || null);
-                    setTab("map");
-                  }}
-                >
-                  Navigate
-                </button>
+                <div className="hotel-actions">
+                  <button
+                    className="secondary-btn"
+                    type="button"
+                    onClick={() => setExpandedHotel(expandedHotel === hotel.name ? null : hotel.name)}
+                  >
+                    Details
+                  </button>
+                  <button
+                    className="buy-btn"
+                    onClick={() => {
+                      setMapDestination(getPlaceDestination(hotel.name, hotel.city) || null);
+                      setTab("map");
+                    }}
+                  >
+                    Navigate
+                  </button>
+                </div>
               </div>
             ))}
-        </div>
+        </section>
       ))}
     </>
   );

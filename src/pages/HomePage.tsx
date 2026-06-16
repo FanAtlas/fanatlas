@@ -11,7 +11,10 @@ import {
   Coins,
   BookOpen,
   Tv,
-  Utensils
+  Utensils,
+  Clock,
+  AlertTriangle,
+  Route
 } from "lucide-react";
 import { alerts, crowdAlerts, fanZones, places } from "../data/mockData";
 import { Language } from "../i18n";
@@ -39,6 +42,12 @@ export function HomePage({
     { label: t.hotels, icon: Hotel, tab: "hotels" as Tab },
     { label: "Offline", icon: MapPin, tab: "map" as Tab },
     { label: "TV Mode", icon: Tv, tab: "tv" as Tab }
+  ];
+
+  const tripStats = [
+    { label: "Crowd risk", value: "Medium", tone: "warning" },
+    { label: "Next kickoff", value: "Jun 11", tone: "info" },
+    { label: "Safety alerts", value: alerts.length.toString(), tone: "danger" }
   ];
 
   function openRestaurant(restaurant: any) {
@@ -74,6 +83,25 @@ export function HomePage({
         </select>
       </div>
 
+      <div className="home-hero">
+        <div>
+          <p className="eyebrow">World Cup travel command center</p>
+          <h1>Match day, maps, safety, and trip tools in one place.</h1>
+        </div>
+        <button className="primary-btn" onClick={() => setTab("matches")}>
+          {t.planMatchDay}
+        </button>
+      </div>
+
+      <div className="status-strip">
+        {tripStats.map((item) => (
+          <div className={`status-chip ${item.tone}`} key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+
       <div className="next-match-card">
         <div className="next-match-top">
           <span>🏆 {t.nextMatch}</span>
@@ -86,9 +114,20 @@ export function HomePage({
 
         <p>📍 Estadio Azteca • Mexico City</p>
 
-        <button className="primary-btn" onClick={() => setTab("matches")}>
-          {t.planMatchDay}
-        </button>
+        <div className="home-action-row">
+          <button className="primary-btn" onClick={() => setTab("matches")}>
+            {t.planMatchDay}
+          </button>
+          <button
+            className="secondary-btn"
+            onClick={() => {
+              setMapDestination(null);
+              setTab("map");
+            }}
+          >
+            <Route size={17} /> Map
+          </button>
+        </div>
       </div>
 
       <div className="searchbar">
@@ -97,8 +136,8 @@ export function HomePage({
       </div>
 
       <div className="section-row">
-        <h3>🔴 Live Crowd Alerts</h3>
-        <span className="subtle">Updated live</span>
+        <h3>Live Crowd Alerts</h3>
+        <span className="section-badge"><Clock size={13} /> Updated live</span>
       </div>
 
       <div className="horizontal-scroll">
@@ -116,7 +155,7 @@ export function HomePage({
 
       {alerts.map((a) => (
         <div className={`alert-card ${a.severity}`} key={a.title}>
-          <Shield size={18} />
+          <AlertTriangle size={18} />
           <div>
             <strong>{a.title}</strong>
             <p>{a.message}</p>
@@ -124,7 +163,12 @@ export function HomePage({
         </div>
       ))}
 
-      <div className="quick-grid">
+      <div className="section-row">
+        <h3>Trip Tools</h3>
+        <span className="subtle">Fast actions</span>
+      </div>
+
+      <div className="quick-grid home-tools">
         {quick.map((q) => {
           const Icon = q.icon;
 
@@ -164,7 +208,7 @@ export function HomePage({
       </button>
 
       <button className="feature-card red" onClick={() => setTab("sos")}>
-        <span className="feature-emoji">🚨</span>
+        <Shield size={31} />
         <div>
           <h3>SOS Emergency</h3>
           <p>911 · Hospital · Embassy · Phrases</p>
@@ -172,7 +216,10 @@ export function HomePage({
         <strong>OPEN →</strong>
       </button>
 
-      <h3>🔥 Trending Restaurants</h3>
+      <div className="section-row">
+        <h3>Trending Restaurants</h3>
+        <button className="mini-btn" onClick={() => setTab("explore")}>Explore</button>
+      </div>
 
       <div className="horizontal-scroll">
         {places.map((p) => (
@@ -199,7 +246,10 @@ export function HomePage({
         ))}
       </div>
 
-      <h3>🎉 {t.fanZones}</h3>
+      <div className="section-row">
+        <h3>{t.fanZones}</h3>
+        <button className="mini-btn" onClick={() => setTab("fanzones")}>Open</button>
+      </div>
 
       {fanZones.slice(0, 3).map((z) => (
         <div className="list-card" key={z.name}>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FanAtlasMatch } from "../services/worldcup2026";
 import { Tab } from "../main";
 import { getFanZoneDestination, getStadiumDestination, MapDestination } from "../mapDestinations";
@@ -65,6 +66,23 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
     } as FanAtlasMatch);
 
   const tips = citySafetyTips(m.city);
+  const checklist = [
+    "Passport or government ID",
+    "Match ticket saved offline",
+    "Phone battery above 80%",
+    "Clear or small bag only",
+    "Water before leaving",
+    "Hotel address saved"
+  ];
+  const [checked, setChecked] = useState<string[]>([]);
+
+  const timeline = [
+    { time: "T-4h", title: "Confirm essentials", detail: "Ticket, ID, phone battery, bag policy, and return route." },
+    { time: "T-3h", title: "Leave early", detail: "Use official transport first and avoid unknown shortcuts." },
+    { time: "T-2h", title: "Eat before entry", detail: "Grab food nearby before stadium lines build up." },
+    { time: "T-90m", title: "Enter stadium zone", detail: "Expect screening, crowds, and walking time to your gate." },
+    { time: "Post", title: "Exit plan", detail: `Use groups and consider ${m.fanZone} only if crowds are manageable.` }
+  ];
 
   function openStadiumMap() {
     setMapDestination(getStadiumDestination(m.stadium, m.city) || null);
@@ -74,6 +92,14 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
   function openFanZones() {
     setMapDestination(getFanZoneDestination(m.fanZone) || null);
     setTab("explore");
+  }
+
+  function toggleChecklist(item: string) {
+    setChecked((current) =>
+      current.includes(item)
+        ? current.filter((value) => value !== item)
+        : [...current, item]
+    );
   }
 
   return (
@@ -87,9 +113,29 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
       </div>
 
       <div className="matchday-hero">
+        <div className="matchday-label">Match Day Plan</div>
         <div className="matchday-teams">{m.team1} vs {m.team2}</div>
         <p>{m.date} · {m.time}</p>
         <p>🏟 {m.stadium} · {m.city}</p>
+        <div className="matchday-progress">
+          <span>{checked.length}/{checklist.length} ready</span>
+          <div>
+            <i style={{ width: `${(checked.length / checklist.length) * 100}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <h3>Timeline</h3>
+      <div className="timeline-list">
+        {timeline.map((item) => (
+          <div className="timeline-item" key={item.time}>
+            <span>{item.time}</span>
+            <div>
+              <strong>{item.title}</strong>
+              <p>{item.detail}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="assistant-grid">
@@ -130,27 +176,24 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
       ))}
 
       <h3>🎒 Stadium Checklist</h3>
-      {[
-        "Passport or government ID",
-        "Match ticket saved offline",
-        "Phone battery above 80%",
-        "Clear/small bag only",
-        "Water before leaving",
-        "Hotel address saved"
-      ].map((item) => (
-        <div className="checklist-row" key={item}>
-          <span>□</span>
+      {checklist.map((item) => (
+        <button
+          className={`checklist-row ${checked.includes(item) ? "active" : ""}`}
+          key={item}
+          onClick={() => toggleChecklist(item)}
+        >
+          <span>{checked.includes(item) ? "✓" : "□"}</span>
           <p>{item}</p>
-        </div>
+        </button>
       ))}
 
-      <div className="feature-card blue">
+      <button className="feature-card blue" onClick={() => setTab("ai")}>
         <span className="feature-emoji">🤖</span>
         <div>
-          <h3>Ask AI next</h3>
-          <p>Next version will send this match into the AI chat automatically.</p>
+          <h3>Ask AI about this match</h3>
+          <p>Get a personalized food, route, fan zone, and safety plan.</p>
         </div>
-      </div>
+      </button>
     </>
   );
 }
