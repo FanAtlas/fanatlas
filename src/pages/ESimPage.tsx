@@ -1,4 +1,7 @@
-export function ESimPage() {
+import { BackButton } from "../components/BackButton";
+import { trackRevenueClick } from "../services/revenueTracking";
+
+export function ESimPage({ onBack }: { onBack: () => void }) {
   const esimPlans = [
     {
       provider: "Airalo",
@@ -51,6 +54,7 @@ export function ESimPage() {
   return (
     <>
       <div className="topbar">
+        <BackButton onBack={onBack} />
         <div>
           <div className="brand">eSIM</div>
           <div className="subtle">Travel internet packages for World Cup fans</div>
@@ -89,7 +93,20 @@ export function ESimPage() {
             </div>
           </div>
 
-          <a className="buy-btn" href={plan.url} target="_blank" rel="noreferrer">
+          <a
+            className="buy-btn"
+            href={plan.url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => trackRevenueClick({
+              type: "esim",
+              product: plan.title,
+              provider: plan.provider,
+              amount: plan.price,
+              url: plan.url,
+              source: "eSIM Page"
+            })}
+          >
             View Plan
           </a>
         </div>

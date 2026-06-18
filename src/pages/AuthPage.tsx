@@ -1,74 +1,123 @@
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export function AuthPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [loading, setLoading] = useState(false);
+type AuthMode = "login" | "signup";
 
-  const submit = async () => {
+export function AuthPage() {
+  const [credential, setCredential] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+
     if (!supabase) {
-      alert("Supabase is not connected.");
+      setError("Supabase is not connected. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
       return;
     }
 
-    if (!email || !password) {
-      alert("Enter email and password.");
+    if (!credential.trim() || !password) {
+      setError("Enter email or phone and password.");
       return;
     }
 
     setLoading(true);
+    const trimmedCredential = credential.trim();
+    const isEmail = trimmedCredential.includes("@");
 
-    const result =
-      mode === "signup"
-        ? await supabase.auth.signUp({ email, password })
-        : await supabase.auth.signInWithPassword({ email, password });
+    const result = mode === "signup"
+      ? await supabase.auth.signUp(isEmail
+          ? {
+              email: trimmedCredential,
+              password
+            }
+          : {
+              phone: trimmedCredential,
+              password
+            })
+      : await supabase.auth.signInWithPassword(isEmail
+          ? {
+              email: trimmedCredential,
+              password
+            }
+          : {
+              phone: trimmedCredential,
+              password
+            });
 
     setLoading(false);
 
     if (result.error) {
-      alert(result.error.message);
+      setError(result.error.message);
       return;
     }
 
-    if (mode === "signup") {
-      alert("Account created. Check your email if confirmation is required.");
+    if (mode === "signup" && !result.data.session) {
+      setMessage(isEmail ? "Account created. Confirm your email, then log in." : "Account created. Confirm your phone, then log in.");
+      return;
     }
-  };
+
+    setMessage(mode === "signup" ? "Account created. Loading FanAtlas..." : "Login successful. Loading FanAtlas...");
+  }
+
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setError("");
+    setMessage("");
+  }
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
+      <form className="auth-card" onSubmit={submit}>
+        <div className="auth-logo">FA</div>
         <h1>FanAtlas</h1>
-        <p>World Cup 2026 travel companion</p>
+        <p>World Cup 2026 Travel Companion</p>
 
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <label>
+          Email or phone
+          <input
+            autoComplete="username"
+            inputMode="email"
+            placeholder="you@example.com or +15551234567"
+            type="text"
+            value={credential}
+            onChange={(event) => setCredential(event.target.value)}
+          />
+        </label>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <label>
+          Password
+          <input
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            placeholder="Password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </label>
 
-        <button className="primary-btn" onClick={submit} disabled={loading}>
-          {loading ? "Please wait..." : mode === "login" ? "Login" : "Create Account"}
+        {error && <div className="auth-status error">{error}</div>}
+        {message && <div className="auth-status">{message}</div>}
+
+        <button className="primary-btn full-width" type="submit" disabled={loading}>
+          {loading ? "Please wait..." : mode === "login" ? "Login" : "Sign Up"}
         </button>
 
-        <button
-          className="secondary-btn"
-          onClick={() => setMode(mode === "login" ? "signup" : "login")}
-        >
-          {mode === "login"
-            ? "Need an account? Sign up"
-            : "Already have an account? Login"}
-        </button>
-      </div>
+        {mode === "login" ? (
+          <button className="secondary-btn full-width" type="button" onClick={() => switchMode("signup")}>
+            New Customer? Sign Up
+          </button>
+        ) : (
+          <button className="secondary-btn full-width" type="button" onClick={() => switchMode("login")}>
+            Already a Customer? Login
+          </button>
+        )}
+      </form>
     </div>
   );
 }

@@ -21,16 +21,33 @@ import { RestaurantDetailPage } from "./pages/RestaurantDetailPage";
 import { AuthPage } from "./pages/AuthPage";
 import { TicketsPage } from "./pages/TicketsPage";
 import { FanZonesPage } from "./pages/FanZonesPage";
-import { OnboardingPage } from "./pages/OnboardingPage";
 import { VIPPackagesPage } from "./pages/VIPPackagesPage";
 import { TransportationPage } from "./pages/TransportationPage";
 import { MerchandisePage } from "./pages/MerchandisePage";
+import { FanZoneVIPPage } from "./pages/FanZoneVIPPage";
+import { FanZoneTransportPage } from "./pages/FanZoneTransportPage";
+import { FanZoneMerchPage } from "./pages/FanZoneMerchPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { PremiumPage } from "./pages/PremiumPage";
+import { StadiumDetailPage } from "./pages/StadiumDetailPage";
+import { FavoritesPage } from "./pages/FavoritesPage";
+import { OfflineGuidePage } from "./pages/OfflineGuidePage";
+import { NotificationSettingsPage } from "./pages/NotificationSettingsPage";
+import { RevenueDashboardPage } from "./pages/RevenueDashboardPage";
+import { CityGuidePage } from "./pages/CityGuidePage";
+import { ExpenseTrackerPage } from "./pages/ExpenseTrackerPage";
+import { ChecklistPage } from "./pages/ChecklistPage";
+import { MeetupPage } from "./pages/MeetupPage";
+import { PhrasebookPage } from "./pages/PhrasebookPage";
+import { AdminPage } from "./pages/AdminPage";
+import { TravelToolsPage } from "./pages/TravelToolsPage";
 
 import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
 import { Language, text } from "./i18n";
 import { LanguageContext } from "./LanguageContext";
 import { MapDestination } from "./mapDestinations";
+import { getDueNotifications, markNotificationDelivered } from "./services/notifications";
 
 const LANGUAGE_STORAGE_KEY = "fanatlas.language";
 
@@ -54,7 +71,24 @@ export type Tab =
   | "fanzones"
   | "vip"
   | "transport"
-  | "merchandise";
+  | "merchandise"
+  | "fanzonevip"
+  | "fanzonetransport"
+  | "fanzonemerch"
+  | "notifications"
+  | "premium"
+  | "stadium"
+  | "favorites"
+  | "offline"
+  | "cityguide"
+  | "expenses"
+  | "checklist"
+  | "meetups"
+  | "phrasebook"
+  | "traveltools"
+  | "admin"
+  | "notificationSettings"
+  | "revenue";
 
 function isLanguage(value: string | null): value is Language {
   return value === "en" || value === "es" || value === "fr" || value === "ar" || value === "pt";
@@ -63,10 +97,12 @@ function isLanguage(value: string | null): value is Language {
 function App() {
   const [session, setSession] = useState<any>(null);
   const [tab, setTab] = useState<Tab>("home");
+  const [previousTab, setPreviousTab] = useState<Tab | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+  const [selectedStadium, setSelectedStadium] = useState<MapDestination | null>(null);
+  const [exploreCategory, setExploreCategory] = useState("fanzones");
   const [selectedMapDestination, setSelectedMapDestination] = useState<MapDestination | null>(null);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [language, setLanguageState] = useState<Language>(() => {
     const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
     return isLanguage(storedLanguage) ? storedLanguage : "en";
@@ -79,22 +115,6 @@ function App() {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   }
 
-  async function loadProfile(userId: string) {
-    if (!supabase) return;
-
-    const { data } = await supabase
-      .from("profiles")
-      .select("onboarding_complete, language")
-      .eq("id", userId)
-      .single();
-
-    setOnboardingComplete(data?.onboarding_complete === true);
-
-    if (isLanguage(data?.language || null)) {
-      applyLanguage(data.language);
-    }
-  }
-
   async function setLanguage(language: Language) {
     applyLanguage(language);
 
@@ -102,8 +122,12 @@ function App() {
 
     await supabase
       .from("profiles")
-      .update({ language })
-      .eq("id", session.user.id);
+      .upsert({
+        id: session.user.id,
+        email: session.user.email,
+        username: session.user.email?.split("@")[0],
+        language
+      });
   }
 
   useEffect(() => {
@@ -111,21 +135,14 @@ function App() {
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-
-      if (data.session?.user) {
-        loadProfile(data.session.user.id);
-      }
     });
 
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-
       if (session?.user) {
-        loadProfile(session.user.id);
-      } else {
-        setOnboardingComplete(false);
+        setTab("home");
       }
     });
 
@@ -134,40 +151,49 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    function deliverDueNotifications() {
+      getDueNotifications().forEach((notification) => {
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification(notification.title, {
+            body: notification.message
+          });
+        }
+
+        markNotificationDelivered(notification.id);
+      });
+    }
+
+    deliverDueNotifications();
+    const timer = window.setInterval(deliverDueNotifications, 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   if (!session) {
     return <AuthPage />;
   }
 
-  if (!onboardingComplete) {
-    return (
-      <LanguageContext.Provider
-        value={{
-          language,
-          setLanguage,
-          t
-        }}
-      >
-        <div className="app-shell">
-          <main className="screen">
-            <OnboardingPage
-              onComplete={() => {
-                setTab("home");
-                setOnboardingComplete(true);
-              }}
-            />
-          </main>
-        </div>
-      </LanguageContext.Provider>
-    );
+  function navigateTo(nextTab: Tab) {
+    if (nextTab !== tab) {
+      setPreviousTab(tab);
+      setTab(nextTab);
+    }
+  }
+
+  function goBack() {
+    const target = previousTab && previousTab !== tab ? previousTab : "home";
+    setPreviousTab("home");
+    setTab(target);
   }
 
   const render = () => {
     if (tab === "home") {
       return (
         <HomePage
+          setExploreCategory={setExploreCategory}
           setMapDestination={setSelectedMapDestination}
           setSelectedRestaurant={setSelectedRestaurant}
-          setTab={setTab}
+          setTab={navigateTo}
         />
       );
     }
@@ -175,15 +201,18 @@ function App() {
       return (
         <MapPage
           initialDestination={selectedMapDestination}
-          setTab={setTab}
+          setSelectedStadium={setSelectedStadium}
+          setTab={navigateTo}
         />
       );
     }
     if (tab === "explore") {
       return (
         <ExplorePage
+          initialCategory={exploreCategory}
           setMapDestination={setSelectedMapDestination}
-          setTab={setTab}
+          setSelectedRestaurant={setSelectedRestaurant}
+          setTab={navigateTo}
         />
       );
     }
@@ -192,54 +221,114 @@ function App() {
       return (
         <MatchesPage
           setMapDestination={setSelectedMapDestination}
-          setTab={setTab}
+          setSelectedStadium={setSelectedStadium}
+          setTab={navigateTo}
           setSelectedMatch={setSelectedMatch}
         />
       );
     }
 
-    if (tab === "sos") return <SOSPage />;
+    if (tab === "sos") {
+      return (
+        <SOSPage
+          setMapDestination={setSelectedMapDestination}
+          setTab={navigateTo}
+        />
+      );
+    }
     if (tab === "profile") {
       return (
         <ProfilePage
           setMapDestination={setSelectedMapDestination}
-          setTab={setTab}
+          setTab={navigateTo}
         />
       );
     }
-    if (tab === "ai") return <AIChatPage />;
-    if (tab === "guides") return <TravelGuidesPage />;
-    if (tab === "currency") return <CurrencyConverterPage />;
-    if (tab === "translator") return <VoiceTranslatorPage />;
-    if (tab === "tickets") return <TicketsPage setTab={setTab} />;
+    if (tab === "ai") return <AIChatPage onBack={goBack} />;
+    if (tab === "guides") return <TravelGuidesPage onBack={goBack} setTab={navigateTo} />;
+    if (tab === "offline") return <OfflineGuidePage />;
+    if (tab === "cityguide") return <CityGuidePage />;
+    if (tab === "expenses") return <ExpenseTrackerPage />;
+    if (tab === "checklist") return <ChecklistPage />;
+    if (tab === "meetups") return <MeetupPage />;
+    if (tab === "phrasebook") return <PhrasebookPage />;
+    if (tab === "traveltools") return <TravelToolsPage onBack={goBack} setTab={navigateTo} />;
+    if (tab === "admin") return <AdminPage onBack={goBack} />;
+    if (tab === "currency") return <CurrencyConverterPage onBack={goBack} />;
+    if (tab === "translator") return <VoiceTranslatorPage onBack={goBack} />;
+    if (tab === "tickets") {
+      return (
+        <TicketsPage
+          onBack={goBack}
+          setSelectedMatch={setSelectedMatch}
+          setTab={navigateTo}
+        />
+      );
+    }
     if (tab === "tv") return <TVConnectPage />;
+    if (tab === "notifications") return <NotificationsPage setTab={navigateTo} />;
+    if (tab === "notificationSettings") return <NotificationSettingsPage setTab={navigateTo} />;
+    if (tab === "revenue") return <RevenueDashboardPage />;
+    if (tab === "premium") return <PremiumPage setTab={navigateTo} />;
+    if (tab === "favorites") {
+      return (
+        <FavoritesPage
+          setExploreCategory={setExploreCategory}
+          setMapDestination={setSelectedMapDestination}
+          setSelectedRestaurant={setSelectedRestaurant}
+          setSelectedStadium={setSelectedStadium}
+          setTab={navigateTo}
+        />
+      );
+    }
+    if (tab === "stadium") {
+      return (
+        <StadiumDetailPage
+          stadium={selectedStadium}
+          setMapDestination={setSelectedMapDestination}
+          onBack={goBack}
+          setTab={navigateTo}
+        />
+      );
+    }
     if (tab === "hotels") {
       return (
         <HotelsPage
           setMapDestination={setSelectedMapDestination}
-          setTab={setTab}
+          onBack={goBack}
+          setTab={navigateTo}
         />
       );
     }
-    if (tab === "esim") return <ESimPage />;
-    if (tab === "fanzones") return <FanZonesPage setTab={setTab} />;
-    if (tab === "vip") return <VIPPackagesPage setTab={setTab} />;
+    if (tab === "esim") return <ESimPage onBack={goBack} />;
+    if (tab === "fanzones") return <FanZonesPage onBack={goBack} setTab={navigateTo} />;
+    if (tab === "fanzonevip") return <FanZoneVIPPage setTab={navigateTo} />;
+    if (tab === "fanzonetransport") {
+      return (
+        <FanZoneTransportPage
+          setMapDestination={setSelectedMapDestination}
+          setTab={navigateTo}
+        />
+      );
+    }
+    if (tab === "fanzonemerch") return <FanZoneMerchPage setTab={navigateTo} />;
+    if (tab === "vip") return <VIPPackagesPage setTab={navigateTo} />;
     if (tab === "transport") {
       return (
         <TransportationPage
           setMapDestination={setSelectedMapDestination}
-          setTab={setTab}
+          setTab={navigateTo}
         />
       );
     }
-    if (tab === "merchandise") return <MerchandisePage setTab={setTab} />;
+    if (tab === "merchandise") return <MerchandisePage setTab={navigateTo} />;
 
     if (tab === "matchday") {
       return (
         <MatchDayPage
           match={selectedMatch}
           setMapDestination={setSelectedMapDestination}
-          setTab={setTab}
+          setTab={navigateTo}
         />
       );
     }
@@ -249,16 +338,18 @@ function App() {
         <RestaurantDetailPage
           restaurant={selectedRestaurant}
           setMapDestination={setSelectedMapDestination}
-          setTab={setTab}
+          onBack={goBack}
+          setTab={navigateTo}
         />
       );
     }
 
     return (
       <HomePage
+        setExploreCategory={setExploreCategory}
         setMapDestination={setSelectedMapDestination}
         setSelectedRestaurant={setSelectedRestaurant}
-        setTab={setTab}
+        setTab={navigateTo}
       />
     );
   };
@@ -293,7 +384,7 @@ function App() {
                 className={`nav-btn ${tab === item.id ? "active" : ""}`}
                 onClick={() => {
                   if (item.id === "map") setSelectedMapDestination(null);
-                  setTab(item.id as Tab);
+                  navigateTo(item.id as Tab);
                 }}
               >
                 <Icon size={20} />

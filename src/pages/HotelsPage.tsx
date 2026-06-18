@@ -1,128 +1,329 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Hotel, MapPin, Search, Star } from "lucide-react";
+import { BackButton } from "../components/BackButton";
+import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 import { getPlaceDestination, MapDestination } from "../mapDestinations";
+import { reminderDate, scheduleNotification } from "../services/notifications";
+import { FavoriteButton } from "../components/FavoriteButton";
+import { trackRevenueClick } from "../services/revenueTracking";
+
+type HotelOffer = {
+  id: string;
+  name: string;
+  city: string;
+  stadium: string;
+  image: string;
+  rating: number;
+  price: string;
+  distanceKm: number;
+  lat: number;
+  lng: number;
+  provider: string;
+  affiliatePath: string;
+};
+
+const stadiums = [
+  "MetLife Stadium",
+  "Estadio Azteca",
+  "SoFi Stadium",
+  "BMO Field",
+  "AT&T Stadium"
+];
+
+const hotelOffers: HotelOffer[] = [
+  {
+    id: "nyc-marriott-times-square",
+    name: "Marriott Times Square",
+    city: "New York",
+    stadium: "MetLife Stadium",
+    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80",
+    rating: 4.5,
+    price: "$220/night",
+    distanceKm: 10.8,
+    lat: 40.7586,
+    lng: -73.9851,
+    provider: "Booking Partner",
+    affiliatePath: "marriott-times-square"
+  },
+  {
+    id: "nyc-moxy-chelsea",
+    name: "Moxy Chelsea",
+    city: "New York",
+    stadium: "MetLife Stadium",
+    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=900&q=80",
+    rating: 4.3,
+    price: "$185/night",
+    distanceKm: 11.5,
+    lat: 40.7464,
+    lng: -73.9933,
+    provider: "Hotel Partner",
+    affiliatePath: "moxy-chelsea"
+  },
+  {
+    id: "mx-ibis-reforma",
+    name: "Ibis Mexico City",
+    city: "Mexico City",
+    stadium: "Estadio Azteca",
+    image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=900&q=80",
+    rating: 4.1,
+    price: "$80/night",
+    distanceKm: 8.7,
+    lat: 19.4285,
+    lng: -99.1677,
+    provider: "Booking Partner",
+    affiliatePath: "ibis-mexico-city"
+  },
+  {
+    id: "mx-galeria-plaza",
+    name: "Galeria Plaza Reforma",
+    city: "Mexico City",
+    stadium: "Estadio Azteca",
+    image: "https://images.unsplash.com/photo-1455587734955-081b22074882?auto=format&fit=crop&w=900&q=80",
+    rating: 4.4,
+    price: "$135/night",
+    distanceKm: 9.4,
+    lat: 19.426,
+    lng: -99.1688,
+    provider: "Hotel Partner",
+    affiliatePath: "galeria-plaza-reforma"
+  },
+  {
+    id: "la-holiday-inn-lax",
+    name: "Holiday Inn Los Angeles",
+    city: "Los Angeles",
+    stadium: "SoFi Stadium",
+    image: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=900&q=80",
+    rating: 4.2,
+    price: "$145/night",
+    distanceKm: 2.1,
+    lat: 33.9466,
+    lng: -118.3852,
+    provider: "Booking Partner",
+    affiliatePath: "holiday-inn-los-angeles"
+  },
+  {
+    id: "la-cambria-lax",
+    name: "Cambria LAX",
+    city: "Los Angeles",
+    stadium: "SoFi Stadium",
+    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=900&q=80",
+    rating: 4.4,
+    price: "$168/night",
+    distanceKm: 3.6,
+    lat: 33.9235,
+    lng: -118.391,
+    provider: "Hotel Partner",
+    affiliatePath: "cambria-lax"
+  },
+  {
+    id: "toronto-delta",
+    name: "Delta Hotels Toronto",
+    city: "Toronto",
+    stadium: "BMO Field",
+    image: "https://images.unsplash.com/photo-1568084680786-a84f91d1153c?auto=format&fit=crop&w=900&q=80",
+    rating: 4.6,
+    price: "$210/night",
+    distanceKm: 2.4,
+    lat: 43.6428,
+    lng: -79.3837,
+    provider: "Booking Partner",
+    affiliatePath: "delta-hotels-toronto"
+  },
+  {
+    id: "dallas-live-loews",
+    name: "Live by Loews Arlington",
+    city: "Dallas",
+    stadium: "AT&T Stadium",
+    image: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=900&q=80",
+    rating: 4.7,
+    price: "$260/night",
+    distanceKm: 0.6,
+    lat: 32.7506,
+    lng: -97.0871,
+    provider: "Hotel Partner",
+    affiliatePath: "live-by-loews-arlington"
+  }
+];
+
+function bookingUrl(offer: HotelOffer) {
+  const baseUrl = import.meta.env.VITE_HOTEL_AFFILIATE_BASE_URL || "https://www.booking.com/searchresults.html";
+  const params = new URLSearchParams({
+    ss: `${offer.name} ${offer.city}`,
+    aid: import.meta.env.VITE_HOTEL_AFFILIATE_ID || "fanatlas",
+    label: `fanatlas-${offer.affiliatePath}`
+  });
+
+  return `${baseUrl}?${params.toString()}`;
+}
 
 export function HotelsPage({
+  onBack,
   setMapDestination,
   setTab
 }: {
+  onBack: () => void;
   setMapDestination: (destination: MapDestination | null) => void;
   setTab: (tab: Tab) => void;
 }) {
-  const [expandedHotel, setExpandedHotel] = useState<string | null>(null);
-  const hotels = [
-    {
-      name: "Ibis Mexico City",
-      city: "Mexico City",
-      type: "Budget",
-      distance: "0.9 km from stadium",
-      price: "$80/night",
-      bestFor: "Fans who want a clean room close to transit",
-      amenities: ["Metro access", "Breakfast", "24h desk"]
-    },
-    {
-      name: "Holiday Inn",
-      city: "Los Angeles",
-      type: "Mid Range",
-      distance: "1.2 km from stadium",
-      price: "$145/night",
-      bestFor: "Groups who need predictable comfort",
-      amenities: ["Parking", "Shuttle area", "Family rooms"]
-    },
-    {
-      name: "Marriott Times Square",
-      city: "New York",
-      type: "Luxury",
-      distance: "0.5 km from fan zone",
-      price: "$220/night",
-      bestFor: "Fans who want premium service near events",
-      amenities: ["Concierge", "Late dining", "Lounge"]
-    }
-  ];
+  const { language, t } = useLanguage();
+  const [selectedStadium, setSelectedStadium] = useState(stadiums[0]);
+  const [searchedStadium, setSearchedStadium] = useState(stadiums[0]);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const offers = useMemo(
+    () => hotelOffers
+      .filter((offer) => offer.stadium === searchedStadium)
+      .sort((a, b) => a.distanceKm - b.distanceKm),
+    [searchedStadium]
+  );
 
-  const sections = [
-    {
-      name: "Budget",
-      summary: "Simple stays near transit with the best nightly value.",
-      from: "From $80"
-    },
-    {
-      name: "Mid Range",
-      summary: "Reliable hotels for families, friend groups, and longer stays.",
-      from: "From $145"
-    },
-    {
-      name: "Luxury",
-      summary: "Premium locations and services near fan zones and stadium routes.",
-      from: "From $220"
-    }
-  ];
+  async function addHotelReminder(offer: HotelOffer) {
+    const { permission } = await scheduleNotification({
+      type: "hotel",
+      title: `Hotel reminder: ${offer.name}`,
+      message: `${offer.price} near ${offer.stadium}. Review booking, check-in, cancellation policy, and route.`,
+      dueAt: reminderDate(1440),
+      source: "Hotels",
+      actionTab: "hotels"
+    });
+
+    setNotificationMessage(
+      permission === "denied"
+        ? "Hotel reminder saved in FanAtlas. Browser notifications are blocked."
+        : `Hotel reminder saved for ${offer.name}.`
+    );
+  }
 
   return (
-    <>
+    <div className="hotels-revenue-page" dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="topbar">
+        <BackButton onBack={onBack} />
         <div>
-          <div className="brand">Hotels</div>
-          <div className="subtle">Stay near stadiums and fan zones</div>
+          <div className="brand">{t.hotels}</div>
+          <div className="subtle">{t.stayNear}</div>
         </div>
       </div>
 
-      {sections.map((section) => (
-        <section className="hotel-section" key={section.name}>
-          <div className="hotel-tier-header">
-            <div>
-              <h3>{section.name}</h3>
-              <p>{section.summary}</p>
-            </div>
-            <span>{section.from}</span>
-          </div>
+      <div className="hotel-search-hero">
+        <Hotel size={30} />
+        <div>
+          <h1>Search Hotels Near This Stadium</h1>
+          <p>Compare hotel partners by rating, price, and walking or rideshare distance.</p>
+        </div>
+      </div>
 
-          {hotels
-            .filter((hotel) => hotel.type === section.name)
-            .map((hotel) => (
-              <div className="product-card" key={hotel.name}>
-                <div className="thumb">🏨</div>
-
-                <div className="product-info">
-                  <strong>{hotel.name}</strong>
-                  <p>{hotel.city} · {hotel.distance}</p>
-                  <p>{hotel.bestFor}</p>
-                  <div className="hotel-amenities">
-                    {hotel.amenities.map((amenity) => (
-                      <span key={amenity}>{amenity}</span>
-                    ))}
-                  </div>
-                  {expandedHotel === hotel.name && (
-                    <div className="hotel-detail-panel">
-                      <p>Good fit: {hotel.bestFor.toLowerCase()}.</p>
-                      <p>Use Navigate to preview the route from fan areas before booking.</p>
-                    </div>
-                  )}
-                  <span className="price">{hotel.price}</span>
-                </div>
-
-                <div className="hotel-actions">
-                  <button
-                    className="secondary-btn"
-                    type="button"
-                    onClick={() => setExpandedHotel(expandedHotel === hotel.name ? null : hotel.name)}
-                  >
-                    Details
-                  </button>
-                  <button
-                    className="buy-btn"
-                    onClick={() => {
-                      setMapDestination(getPlaceDestination(hotel.name, hotel.city) || null);
-                      setTab("map");
-                    }}
-                  >
-                    Navigate
-                  </button>
-                </div>
-              </div>
+      <div className="hotel-search-panel">
+        <label>
+          Stadium
+          <select
+            className="input"
+            value={selectedStadium}
+            onChange={(event) => setSelectedStadium(event.target.value)}
+          >
+            {stadiums.map((stadium) => (
+              <option key={stadium}>{stadium}</option>
             ))}
-        </section>
-      ))}
-    </>
+          </select>
+        </label>
+
+        <button className="primary-btn full-width" onClick={() => setSearchedStadium(selectedStadium)}>
+          <Search size={17} /> Search Hotels Near This Stadium
+        </button>
+      </div>
+
+      <div className="section-row">
+        <h3>{searchedStadium}</h3>
+        <span className="section-badge">{offers.length} hotels</span>
+      </div>
+
+      {notificationMessage && <div className="route-status">{notificationMessage}</div>}
+
+      <div className="hotel-offer-list">
+        {offers.map((offer) => (
+          <article className="hotel-offer-card" key={offer.id}>
+            <img src={offer.image} alt={offer.name} />
+
+            <div className="hotel-offer-body">
+              <div>
+                <strong>{offer.name}</strong>
+                <p>{offer.city} · {offer.provider}</p>
+              </div>
+
+              <FavoriteButton
+                item={{
+                  item_type: "hotel",
+                  item_id: offer.id,
+                  name: offer.name,
+                  city: offer.city,
+                  image: offer.image,
+                  metadata: {
+                    ...offer,
+                    destination: {
+                      name: offer.name,
+                      city: offer.city,
+                      lat: offer.lat,
+                      lng: offer.lng,
+                      emoji: "🏨",
+                      type: "hotel"
+                    }
+                  }
+                }}
+              />
+
+              <div className="hotel-offer-meta">
+                <span><Star size={14} /> {offer.rating}</span>
+                <span><MapPin size={14} /> {offer.distanceKm.toFixed(1)} km</span>
+                <strong>{offer.price}</strong>
+              </div>
+
+              <div className="hotel-offer-actions">
+                <button
+                  className="secondary-btn"
+                  onClick={() => {
+                    setMapDestination(getPlaceDestination(offer.name, offer.city) || {
+                      name: offer.name,
+                      city: offer.city,
+                      lat: offer.lat,
+                      lng: offer.lng,
+                      emoji: "🏨",
+                      type: "hotel"
+                    });
+                    setTab("map");
+                  }}
+                >
+                  {t.navigate}
+                </button>
+                <button className="secondary-btn" onClick={() => addHotelReminder(offer)}>
+                  Remind me
+                </button>
+                <a
+                  className="buy-btn"
+                  href={bookingUrl(offer)}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => trackRevenueClick({
+                    type: "hotel",
+                    product: offer.name,
+                    stadium: offer.stadium,
+                    city: offer.city,
+                    provider: offer.provider,
+                    amount: offer.price,
+                    url: bookingUrl(offer),
+                    source: "Hotels Page"
+                  })}
+                >
+                  Book Hotel
+                </a>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="action-note">
+        <Hotel size={18} />
+        <span>Revenue-ready: booking URLs are generated through hotel affiliate environment variables.</span>
+      </div>
+    </div>
   );
 }

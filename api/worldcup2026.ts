@@ -24,13 +24,17 @@ export default async function handler(req: any, res: any) {
     });
 
     if (!response.ok) {
-      return res.status(response.status).json({
-        error: "WorldCup2026 API request failed",
-        status: response.status
-      });
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    const trimmed = text.trim();
+
+    if (trimmed.startsWith("export ") || trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
+      throw new Error("WorldCup2026 API returned non-JSON content");
+    }
+
+    const data = JSON.parse(text);
 
     return res.status(200).json({
       source: "worldcup26.ir",
@@ -38,6 +42,8 @@ export default async function handler(req: any, res: any) {
       data
     });
   } catch (error: any) {
+    console.error("World Cup API error:", error);
+
     return res.status(500).json({
       error: "Server error fetching World Cup 2026 data",
       details: error?.message || "Unknown error"

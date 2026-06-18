@@ -1,41 +1,42 @@
-export type TravelAssistantResponse = {
-  answer: string;
-  error?: string;
-  mode: "live" | "demo";
+export type AssistantMessage = {
+  role: "user" | "assistant";
+  content: string;
 };
 
-const demoAnswer =
-  "Demo mode: I can help with World Cup 2026 stadiums, fan zones, hotels, eSIM, currency, SOS, translation, and app navigation. For match day, arrive early, use official transport, keep tickets saved offline, and use SOS for emergencies.";
+export type TravelAssistantResponse = {
+  answer: string;
+};
 
-export async function askTravelAssistant(message: string): Promise<TravelAssistantResponse> {
-  try {
-    const res = await fetch("/api/ai-chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ message })
-    });
+export type TravelAssistantContext = {
+  selectedMatch?: unknown;
+  city?: string;
+  stadium?: string;
+  language?: string;
+};
 
-    if (!res.ok) {
-      return {
-        answer: demoAnswer,
-        error: `AI backend returned ${res.status}.`,
-        mode: "demo"
-      };
-    }
+export async function askTravelAssistant(
+  messages: AssistantMessage[],
+  context: TravelAssistantContext = {}
+): Promise<TravelAssistantResponse> {
+  const response = await fetch("/api/ai", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ messages, ...context })
+  });
 
-    const data = await res.json();
-    return {
-      answer: data.answer || demoAnswer,
-      error: data.error,
-      mode: data.mode === "live" ? "live" : "demo"
-    };
-  } catch (error: any) {
-    return {
-      answer: demoAnswer,
-      error: error?.message || "AI backend is unavailable locally.",
-      mode: "demo"
-    };
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || `AI backend returned ${response.status}.`);
   }
+
+  if (!data.answer) {
+    throw new Error("AI backend returned an empty answer.");
+  }
+
+  return {
+    answer: data.answer
+  };
 }

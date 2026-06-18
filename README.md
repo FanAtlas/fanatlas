@@ -39,9 +39,19 @@ VITE_API_FOOTBALL_KEY=
 
 ### Currency integration
 
-`VITE_EXCHANGE_RATES_URL` is optional. If omitted, FanAtlas shows demo rates.
+`VITE_EXCHANGE_RATES_URL` is optional. If omitted, FanAtlas uses the live free endpoint:
 
-The endpoint should be browser-accessible and return USD-based JSON in either shape:
+```text
+https://open.er-api.com/v6/latest/USD
+```
+
+If that request fails, FanAtlas tries:
+
+```text
+https://api.exchangerate.host/latest
+```
+
+The endpoint should be browser-accessible and return JSON in either shape:
 
 ```json
 { "rates": { "USD": 1, "CAD": 1.37, "MXN": 18.2 } }
@@ -53,13 +63,54 @@ or:
 { "conversion_rates": { "USD": 1, "CAD": 1.37, "MXN": 18.2 } }
 ```
 
-If the endpoint fails or returns invalid data, the app shows a clear error and keeps working with demo rates.
+If both endpoints fail or return invalid data, the app shows: "Unable to load exchange rates. Please try again."
 
 ### AI Chat integration
 
-`OPENAI_API_KEY` is read only by `api/ai-chat.ts`, intended for a backend/serverless runtime such as Vercel. It is never read by frontend code.
+`OPENAI_API_KEY` is read only by `api/ai.ts`, intended for a backend/serverless runtime such as Vercel. It is never read by frontend code.
 
-Plain `npm run dev` runs Vite only, so `/api/ai-chat` may be unavailable locally. In that case the chat intentionally falls back to demo mode. For live local backend testing, run the app with a platform that serves the `api/` directory, such as Vercel dev.
+For local `.env`:
+
+```bash
+OPENAI_API_KEY=your_openai_key
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+For Vercel:
+
+```text
+Project Settings → Environment Variables → OPENAI_API_KEY
+```
+
+Plain `npm run dev` runs Vite only, so `/api/ai` may be unavailable locally unless a local serverless runtime is also serving the `api/` directory. For live local backend testing, run the app with a platform that serves Vercel functions, such as Vercel CLI. If the server key is missing, the chat shows: "OpenAI key is not configured."
+
+### Favorites table
+
+FanAtlas favorites are stored in Supabase. Create this table before using the Favorites page:
+
+```sql
+create table if not exists public.favorites (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  item_type text not null check (item_type in ('stadium', 'restaurant', 'hotel', 'fan-zone')),
+  item_id text not null,
+  name text not null,
+  city text,
+  image text,
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create index if not exists favorites_user_id_idx on public.favorites(user_id);
+
+alter table public.favorites enable row level security;
+
+create policy "Users can manage own favorites"
+on public.favorites
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+```
 
 ## GitHub setup
 

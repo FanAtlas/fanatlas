@@ -1,53 +1,49 @@
+import { useEffect, useMemo, useState } from "react";
+import { Bot, Hotel, MapPin, Search, Shield, Smartphone, Utensils, Trophy, Wrench } from "lucide-react";
 import { useLanguage } from "../LanguageContext";
-import {
-  Search,
-  Bot,
-  MapPin,
-  Shield,
-  Languages,
-  Crown,
-  Wifi,
-  Hotel,
-  Coins,
-  BookOpen,
-  Tv,
-  Utensils,
-  Clock,
-  AlertTriangle,
-  Route
-} from "lucide-react";
-import { alerts, crowdAlerts, fanZones, places } from "../data/mockData";
+import { places } from "../data/mockData";
 import { Language } from "../i18n";
 import { Tab } from "../main";
 import { MapDestination } from "../mapDestinations";
+import { FanAtlasMatch, getWorldCup2026Games } from "../services/worldcup2026";
 import { InstallBanner } from "./InstallBanner";
 
+function getNextMatch(matches: FanAtlasMatch[]) {
+  return matches.find((match) => match.status !== "Finished") || matches[0] || null;
+}
+
 export function HomePage({
+  setExploreCategory,
   setMapDestination,
   setSelectedRestaurant,
   setTab
 }: {
+  setExploreCategory: (category: string) => void;
   setMapDestination: (destination: MapDestination | null) => void;
   setSelectedRestaurant: (restaurant: any) => void;
   setTab: (tab: Tab) => void;
 }) {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+  const [matches, setMatches] = useState<FanAtlasMatch[]>([]);
 
-  const quick = [
-    { label: t.translate, icon: Languages, tab: "translator" as Tab },
-    { label: "AI Chat", icon: Bot, tab: "ai" as Tab },
-    { label: t.currency, icon: Coins, tab: "currency" as Tab },
-    { label: t.fanZones, icon: Crown, tab: "fanzones" as Tab },
-    { label: t.esim, icon: Wifi, tab: "esim" as Tab },
-    { label: t.hotels, icon: Hotel, tab: "hotels" as Tab },
-    { label: "Offline", icon: MapPin, tab: "map" as Tab },
-    { label: "TV Mode", icon: Tv, tab: "tv" as Tab }
-  ];
+  useEffect(() => {
+    getWorldCup2026Games()
+      .then(setMatches)
+      .catch((error) => {
+        console.error("Home schedule error:", error);
+        setMatches([]);
+      });
+  }, []);
 
-  const tripStats = [
-    { label: "Crowd risk", value: "Medium", tone: "warning" },
-    { label: "Next kickoff", value: "Jun 11", tone: "info" },
-    { label: "Safety alerts", value: alerts.length.toString(), tone: "danger" }
+  const nextMatch = useMemo(() => getNextMatch(matches), [matches]);
+  const restaurants = places.slice(0, 2);
+  const quickActions = [
+    { label: "Map", icon: MapPin, tab: "map" as Tab },
+    { label: "Hotels", icon: Hotel, tab: "hotels" as Tab },
+    { label: "Restaurants", icon: Utensils, tab: "explore" as Tab, category: "Restaurants" },
+    { label: "Travel Tools", icon: Wrench, tab: "traveltools" as Tab },
+    { label: "eSIM", icon: Smartphone, tab: "esim" as Tab },
+    { label: "SOS", icon: Shield, tab: "sos" as Tab }
   ];
 
   function openRestaurant(restaurant: any) {
@@ -59,216 +55,133 @@ export function HomePage({
   }
 
   return (
-    <div dir={language === "ar" ? "rtl" : "ltr"}>
+    <div className="home-compact-page" dir={language === "ar" ? "rtl" : "ltr"}>
       <InstallBanner />
 
       <div className="topbar">
         <div>
-          <div className="brand">
-            FanAtlas <span>2026</span>
-          </div>
-          <div className="subtle">📍 FIFA World Cup 2026</div>
+          <div className="brand">FanAtlas <span>Travel</span></div>
+          <div className="subtle">Global travel companion</div>
         </div>
 
         <select
           className="language-pill"
           value={language}
-          onChange={(e) => setLanguage(e.target.value as Language)}
+          onChange={(event) => setLanguage(event.target.value as Language)}
         >
-          <option value="en">🇺🇸 English</option>
-          <option value="es">🇲🇽 Español</option>
-          <option value="fr">🇫🇷 Français</option>
-          <option value="ar">🇲🇦 العربية</option>
-          <option value="pt">🇧🇷 Português</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="ar">العربية</option>
+          <option value="pt">Português</option>
         </select>
       </div>
 
-      <div className="home-hero">
-        <div>
-          <p className="eyebrow">World Cup travel command center</p>
-          <h1>Match day, maps, safety, and trip tools in one place.</h1>
-        </div>
-        <button className="primary-btn" onClick={() => setTab("matches")}>
-          {t.planMatchDay}
-        </button>
-      </div>
-
-      <div className="status-strip">
-        {tripStats.map((item) => (
-          <div className={`status-chip ${item.tone}`} key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-          </div>
-        ))}
-      </div>
-
-      <div className="next-match-card">
-        <div className="next-match-top">
-          <span>🏆 {t.nextMatch}</span>
-          <strong>Live Schedule</strong>
-        </div>
-
-        <h2>Mexico vs South Africa</h2>
-
-        <p>Jun 11, 2026 • 13:00</p>
-
-        <p>📍 Estadio Azteca • Mexico City</p>
-
-        <div className="home-action-row">
-          <button className="primary-btn" onClick={() => setTab("matches")}>
-            {t.planMatchDay}
-          </button>
-          <button
-            className="secondary-btn"
-            onClick={() => {
-              setMapDestination(null);
-              setTab("map");
-            }}
-          >
-            <Route size={17} /> Map
-          </button>
-        </div>
-      </div>
-
-      <div className="searchbar">
+      <button
+        className="searchbar home-search"
+        onClick={() => {
+          setExploreCategory("All");
+          setTab("explore");
+        }}
+      >
         <Search size={18} />
-        <span>{t.search}</span>
-      </div>
+        <span>Where are you going?</span>
+      </button>
 
-      <div className="section-row">
-        <h3>Live Crowd Alerts</h3>
-        <span className="section-badge"><Clock size={13} /> Updated live</span>
-      </div>
-
-      <div className="horizontal-scroll">
-        {crowdAlerts.map((c) => (
-          <div className={`crowd-card ${c.tone}`} key={c.name}>
-            <div className="crowd-name">{c.name}</div>
-            <div className="big-percent">{c.capacity}%</div>
-            <div className="subtle">capacity ↑</div>
-            <div className="meter">
-              <div style={{ width: `${c.capacity}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {alerts.map((a) => (
-        <div className={`alert-card ${a.severity}`} key={a.title}>
-          <AlertTriangle size={18} />
-          <div>
-            <strong>{a.title}</strong>
-            <p>{a.message}</p>
-          </div>
+      <section className="home-compact-hero">
+        <div>
+          <span>Travel planning</span>
+          <h1>Plan your trip in seconds</h1>
+          <p>AI maps, hotels, restaurants, safety, and events in one place.</p>
         </div>
-      ))}
+        <button className="primary-btn" onClick={() => setTab("ai")}>
+          <Bot size={18} /> Ask AI Travel Assistant
+        </button>
+      </section>
 
-      <div className="section-row">
-        <h3>Trip Tools</h3>
-        <span className="subtle">Fast actions</span>
-      </div>
-
-      <div className="quick-grid home-tools">
-        {quick.map((q) => {
-          const Icon = q.icon;
+      <div className="quick-grid home-compact-actions">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
 
           return (
             <button
               className="quick-card"
-              key={q.label}
+              key={action.label}
               onClick={() => {
-                if (q.tab === "map") setMapDestination(null);
-                setTab(q.tab);
+                if (action.tab === "map") setMapDestination(null);
+                if (action.category) setExploreCategory(action.category);
+                setTab(action.tab);
               }}
             >
               <Icon size={22} />
-              <span>{q.label}</span>
+              <span>{action.label}</span>
             </button>
           );
         })}
       </div>
 
-      <button className="feature-card blue" onClick={() => setTab("guides")}>
-        <BookOpen size={28} />
-        <div>
-          <h3>Travel Guides</h3>
-          <p>Visa, weather, safety & local tips</p>
-        </div>
-      </button>
-
-      <button className="feature-card green" onClick={() => setTab("ai")}>
-        <span className="feature-emoji">⚽</span>
-        <div>
-          <h3>Match Day Assistant</h3>
-          <p>Your personal game-day planner</p>
-          <small>
-            "Plan my route, food spots, fan zones, and post-game options."
-          </small>
-        </div>
-      </button>
-
-      <button className="feature-card red" onClick={() => setTab("sos")}>
-        <Shield size={31} />
-        <div>
-          <h3>SOS Emergency</h3>
-          <p>911 · Hospital · Embassy · Phrases</p>
-        </div>
-        <strong>OPEN →</strong>
-      </button>
-
-      <div className="section-row">
-        <h3>Trending Restaurants</h3>
-        <button className="mini-btn" onClick={() => setTab("explore")}>Explore</button>
-      </div>
-
-      <div className="horizontal-scroll">
-        {places.map((p) => (
-          <button
-            className="place-card restaurant-card"
-            key={p.name}
-            onClick={() => openRestaurant(p)}
-          >
-            <div className="restaurant-card-top">
-              <div className="place-image">
-                <Utensils size={28} />
-              </div>
-              <span className="safe-badge">{p.safety}/10</span>
-            </div>
-
-            <strong>{p.name}</strong>
-
-            <p>⭐ {p.rating} · {p.price} · {p.category}</p>
-
-            <span>{p.city}</span>
-
-            <small>Open restaurant details →</small>
-          </button>
-        ))}
-      </div>
-
-      <div className="section-row">
-        <h3>{t.fanZones}</h3>
-        <button className="mini-btn" onClick={() => setTab("fanzones")}>Open</button>
-      </div>
-
-      {fanZones.slice(0, 3).map((z) => (
-        <div className="list-card" key={z.name}>
-          <div className="thumb">⚽</div>
-
+      <section className="home-worldcup-card">
+        <div className="section-row">
           <div>
-            <strong>{z.name}</strong>
-            <p>
-              {z.city} · {z.hours} · 👥 {z.capacity}
-            </p>
+            <span>Featured event</span>
+            <h3>World Cup 2026 Mode</h3>
           </div>
-
-          <span className="safe-badge">{z.entry}</span>
+          <Trophy size={24} />
         </div>
-      ))}
 
-      <footer className="footer-links">
-        Privacy Policy · Terms of Service · Support
-      </footer>
+        <div className="worldcup-mini-grid">
+          <div>
+            <span>Next Match</span>
+            <strong>{nextMatch ? `${nextMatch.homeTeam} vs ${nextMatch.awayTeam}` : "Loading schedule"}</strong>
+            <p>{nextMatch ? `${nextMatch.date} · ${nextMatch.kickoffTime}` : "Live match API"}</p>
+          </div>
+          <div>
+            <span>Stadiums</span>
+            <strong>16 host venues</strong>
+          </div>
+          <div>
+            <span>Fan Zones</span>
+            <strong>City events</strong>
+          </div>
+        </div>
+
+        <button className="secondary-btn full-width" onClick={() => setTab("matches")}>
+          Open Match Center
+        </button>
+      </section>
+
+      <section>
+        <div className="section-row">
+          <h3>Nearby / Trending</h3>
+          <button
+            className="mini-btn"
+            onClick={() => {
+              setExploreCategory("All");
+              setTab("explore");
+            }}
+          >
+            Explore More
+          </button>
+        </div>
+
+        <div className="home-preview-grid">
+          {restaurants.map((restaurant) => (
+            <button className="home-preview-card" key={restaurant.name} onClick={() => openRestaurant(restaurant)}>
+              <img src={restaurant.image} alt={restaurant.name} />
+              <strong>{restaurant.name}</strong>
+              <span>⭐ {restaurant.rating} · {restaurant.distance}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-sos-mini">
+        <div>
+          <strong>SOS Emergency</strong>
+          <p>Emergency numbers, hospitals, police, and embassy help.</p>
+        </div>
+        <button className="primary-btn" onClick={() => setTab("sos")}>Open</button>
+      </section>
     </div>
   );
 }

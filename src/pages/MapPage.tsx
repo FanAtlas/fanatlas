@@ -9,8 +9,10 @@ import {
   useMap
 } from "react-leaflet";
 import L from "leaflet";
+import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 import { defaultMapDestinations, MapDestination } from "../mapDestinations";
+import { reminderDate, scheduleNotification } from "../services/notifications";
 
 type TravelMode = "walking" | "driving" | "transit";
 
@@ -47,11 +49,21 @@ function FocusMap({
     if (destination) {
       map.setView([destination.lat, destination.lng], 14, { animate: true });
     } else {
-      map.setView(userLocation, 12, { animate: true });
+      map.setView(userLocation, 4, { animate: true });
     }
   }, [destination, map, userLocation]);
 
   return null;
+}
+
+function hasDestinationMarker(destination: MapDestination | null) {
+  if (!destination) return true;
+
+  return defaultMapDestinations.some((place) => (
+    place.name === destination.name &&
+    Math.abs(place.lat - destination.lat) < 0.0001 &&
+    Math.abs(place.lng - destination.lng) < 0.0001
+  ));
 }
 
 function formatStep(step: any) {
@@ -92,7 +104,16 @@ function distanceKm(origin: [number, number], destination: MapDestination) {
 function buildDemoRoute(
   origin: [number, number],
   destination: MapDestination,
-  travelMode: TravelMode
+  travelMode: TravelMode,
+  labels: {
+    routeStart: string;
+    walkCorridor: string;
+    driveAccessRoads: string;
+    walkTransitStop: string;
+    transitRide: string;
+    continueRoute: string;
+    arriveAt: string;
+  }
 ) {
   const km = distanceKm(origin, destination);
   const speed = travelMode === "walking" ? 4.8 : travelMode === "driving" ? 32 : 24;
@@ -104,30 +125,45 @@ function buildDemoRoute(
     distance: `${km.toFixed(1)} km`,
     duration: `${minutes} min`,
     steps: [
-      `${transitPrefix}Start from selected start location`,
+      `${transitPrefix}${labels.routeStart}`,
       travelMode === "walking"
-        ? "Walk toward the main event corridor"
+        ? labels.walkCorridor
         : travelMode === "driving"
-          ? "Drive toward official event access roads"
-          : "Walk to the nearest transit stop",
+          ? labels.driveAccessRoads
+          : labels.walkTransitStop,
       travelMode === "transit"
-        ? "Take train or bus toward the destination district"
-        : "Continue on the highlighted route",
-      `Arrive at ${destination.name}`
+        ? labels.transitRide
+        : labels.continueRoute,
+      `${labels.arriveAt} ${destination.name}`
     ]
+  };
+}
+
+function mapLinks(destination: MapDestination) {
+  const query = encodeURIComponent(`${destination.name} ${destination.city}`);
+  const latLng = `${destination.lat},${destination.lng}`;
+  const encodedLatLng = encodeURIComponent(latLng);
+
+  return {
+    apple: `https://maps.apple.com/?q=${query}&ll=${encodedLatLng}`,
+    google: `https://www.google.com/maps/search/?api=1&query=${encodedLatLng}`,
+    waze: `https://www.waze.com/ul?ll=${encodedLatLng}&q=${query}&navigate=yes`
   };
 }
 
 export function MapPage({
   initialDestination,
+  setSelectedStadium,
   setTab
 }: {
   initialDestination: MapDestination | null;
+  setSelectedStadium: (destination: MapDestination | null) => void;
   setTab: (tab: Tab) => void;
 }) {
+  const { language, t } = useLanguage();
   const [userLocation, setUserLocation] = useState<[number, number]>([
-    40.758,
-    -73.9855
+    39.8283,
+    -98.5795
   ]);
 
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
@@ -137,8 +173,11 @@ export function MapPage({
   const [duration, setDuration] = useState("");
   const [mode, setMode] = useState<TravelMode>("driving");
   const [routeError, setRouteError] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
   const [routeLoading, setRouteLoading] = useState(false);
   const [manualStart, setManualStart] = useState("Times Square Fan Park");
+  const showSelectedMarker = selectedPlace && !hasDestinationMarker(selectedPlace);
+  const externalLinks = selectedPlace ? mapLinks(selectedPlace) : null;
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -150,10 +189,10 @@ export function MapPage({
       },
       () => {
         console.log("Location unavailable");
-        setRouteError("Location permission was denied. Choose a manual start point below or use the demo route.");
+        setRouteError(t.locationDenied);
       }
     );
-  }, []);
+  }, [t.locationDenied]);
 
   useEffect(() => {
     if (initialDestination) {
@@ -172,12 +211,12 @@ export function MapPage({
     setRouteLoading(true);
 
     if (travelMode === "transit") {
-      const demo = buildDemoRoute(origin, place, travelMode);
+      const demo = buildDemoRoute(origin, place, travelMode, t);
       setRoute(demo.route);
       setSteps(demo.steps);
       setDistance(demo.distance);
       setDuration(demo.duration);
-      setRouteError("Transit/train/bus routing is in demo mode. Showing an estimated in-app route.");
+      setRouteError(t.transitDemo);
       setRouteLoading(false);
       return;
     }
@@ -194,13 +233,13 @@ export function MapPage({
       const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error("Routing service unavailable.");
+        throw new Error(t.routingUnavailable);
       }
 
       const data = await response.json();
 
       if (!data.routes?.length) {
-        throw new Error("No route found for this destination.");
+        throw new Error(t.noRouteFound);
       }
 
       const routeData = data.routes[0];
@@ -218,12 +257,12 @@ export function MapPage({
       setDistance(`${(routeData.distance / 1000).toFixed(1)} km`);
       setDuration(`${Math.round(routeData.duration / 60)} min`);
     } catch (error: any) {
-      const demo = buildDemoRoute(origin, place, travelMode);
+      const demo = buildDemoRoute(origin, place, travelMode, t);
       setRoute(demo.route);
       setSteps(demo.steps);
       setDistance(demo.distance);
       setDuration(demo.duration);
-      setRouteError(`${error?.message || "Could not build live route."} Showing a demo route instead.`);
+      setRouteError(`${error?.message || t.routingUnavailable} ${t.demoRouteSuffix}`);
     } finally {
       setRouteLoading(false);
     }
@@ -244,7 +283,7 @@ export function MapPage({
 
   function useMyLocation() {
     if (!navigator.geolocation) {
-      setRouteError("Geolocation is not supported by this browser.");
+      setRouteError(t.geolocationUnsupported);
       return;
     }
 
@@ -262,17 +301,42 @@ export function MapPage({
         }
       },
       () => {
-        setRouteError("Please allow location access to use your current position.");
+        setRouteError(t.allowLocation);
       }
     );
   }
 
+  async function addStadiumArrivalReminder() {
+    if (!selectedPlace || selectedPlace.type !== "stadium") return;
+
+    const { permission } = await scheduleNotification({
+      type: "stadium-arrival",
+      title: `Stadium arrival: ${selectedPlace.name}`,
+      message: `Leave early for ${selectedPlace.name}. Recheck route, gate, bag policy, and ticket QR before arrival.`,
+      dueAt: reminderDate(90),
+      source: "Map",
+      actionTab: "map"
+    });
+
+    setNotificationMessage(
+      permission === "denied"
+        ? "Stadium arrival reminder saved in FanAtlas. Browser notifications are blocked."
+        : `Stadium arrival reminder saved for ${selectedPlace.name}.`
+    );
+  }
+
+  function openStadiumPage() {
+    if (!selectedPlace || selectedPlace.type !== "stadium") return;
+    setSelectedStadium(selectedPlace);
+    setTab("stadium");
+  }
+
   return (
-    <div className="navigation-page">
+    <div className="navigation-page" dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="navigation-map">
         <MapContainer
           center={userLocation}
-          zoom={12}
+          zoom={initialDestination ? 14 : 4}
           className="real-map"
         >
           <TileLayer
@@ -289,7 +353,7 @@ export function MapPage({
             position={userLocation}
             icon={createIcon("📍")}
           >
-            <Popup>Your Location</Popup>
+            <Popup>{t.yourLocation}</Popup>
           </Marker>
 
           {defaultMapDestinations.map((place) => (
@@ -304,6 +368,15 @@ export function MapPage({
               <Popup>{place.name}</Popup>
             </Marker>
           ))}
+
+          {showSelectedMarker && (
+            <Marker
+              position={[selectedPlace.lat, selectedPlace.lng]}
+              icon={createIcon(selectedPlace.emoji)}
+            >
+              <Popup>{selectedPlace.name}</Popup>
+            </Marker>
+          )}
 
           {route.length > 0 && (
             <>
@@ -332,7 +405,7 @@ export function MapPage({
           <p>{selectedPlace.city}</p>
 
           <label className="manual-start">
-            Start
+            {t.start}
             <select value={manualStart} onChange={(e) => selectManualStart(e.target.value)}>
               {defaultMapDestinations.map((place) => (
                 <option key={place.name} value={place.name}>
@@ -343,11 +416,15 @@ export function MapPage({
           </label>
 
           {routeLoading && (
-            <div className="route-status">Building route...</div>
+            <div className="route-status">{t.buildingRoute}</div>
           )}
 
           {routeError && (
             <div className="route-status error">{routeError}</div>
+          )}
+
+          {notificationMessage && (
+            <div className="route-status">{notificationMessage}</div>
           )}
 
           <div className="travel-mode-row">
@@ -358,7 +435,7 @@ export function MapPage({
               disabled={routeLoading}
               onClick={() => buildRoute(selectedPlace, "walking")}
             >
-              🚶 Walk
+              🚶 {t.walk}
             </button>
 
             <button
@@ -368,7 +445,7 @@ export function MapPage({
               disabled={routeLoading}
               onClick={() => buildRoute(selectedPlace, "driving")}
             >
-              🚗 Car
+              🚗 {t.car}
             </button>
 
             <button
@@ -378,7 +455,7 @@ export function MapPage({
               disabled={routeLoading}
               onClick={() => buildRoute(selectedPlace, "transit")}
             >
-              🚆 Train
+              🚆 {t.train}
             </button>
 
             <button
@@ -388,22 +465,47 @@ export function MapPage({
               disabled={routeLoading}
               onClick={() => buildRoute(selectedPlace, "transit")}
             >
-              🚌 Bus
+              🚌 {t.bus}
             </button>
           </div>
 
           <div className="route-summary">
             <p>
-              ETA: <strong>{duration}</strong>
+              {t.eta}: <strong>{duration}</strong>
             </p>
 
             <p>
-              Distance: <strong>{distance}</strong>
+              {t.distance}: <strong>{distance}</strong>
             </p>
           </div>
 
+          {selectedPlace.type === "stadium" && (
+            <div className="map-stadium-actions">
+              <button className="secondary-btn" onClick={openStadiumPage}>
+                View Stadium Page
+              </button>
+              <button className="secondary-btn" onClick={addStadiumArrivalReminder}>
+                Add stadium arrival reminder
+              </button>
+            </div>
+          )}
+
+          {externalLinks && (
+            <div className="external-map-actions">
+              <a href={externalLinks.apple} target="_blank" rel="noopener noreferrer">
+                Apple Maps
+              </a>
+              <a href={externalLinks.google} target="_blank" rel="noopener noreferrer">
+                Google Maps
+              </a>
+              <a href={externalLinks.waze} target="_blank" rel="noopener noreferrer">
+                Waze
+              </a>
+            </div>
+          )}
+
           <div className="route-steps">
-            <h3>Directions</h3>
+            <h3>{t.directions}</h3>
 
             {steps.map((step, index) => (
               <div className="route-step" key={index}>
@@ -417,21 +519,19 @@ export function MapPage({
             className="primary-btn full-width"
             onClick={() => setTab("matches")}
           >
-            Use for Match Day Plan
+            {t.useForMatchDayPlan}
           </button>
         </div>
       ) : (
         <div className="apple-nav-sheet compact">
           <div className="nav-drag"></div>
 
-          <h2>Choose a destination</h2>
+          <h2>{t.chooseDestination}</h2>
 
-          <p>
-            Tap a stadium, fan zone, restaurant, hotel, or place to get directions.
-          </p>
+          <p>{t.chooseDestinationDesc}</p>
 
           <label className="manual-start">
-            Manual start
+            {t.manualStart}
             <select value={manualStart} onChange={(e) => selectManualStart(e.target.value)}>
               {defaultMapDestinations.map((place) => (
                 <option key={place.name} value={place.name}>

@@ -1,7 +1,64 @@
 export const crowdAlerts = [
-  { name: "MetLife Stadium", location: "New York/New Jersey", capacity: 95, tone: "danger" },
-  { name: "Times Square Fan Zone", location: "New York", capacity: 78, tone: "warning" },
-  { name: "SoFi Stadium", location: "Los Angeles", capacity: 42, tone: "safe" }
+  {
+    id: "metlife-stadium",
+    name: "MetLife Stadium",
+    location: "New York/New Jersey",
+    category: "stadium",
+    congestion: 92,
+    status: "Very High",
+    source: "FanAtlas demo sensor model",
+    recommendation: "Arrive early and use train or official shuttle."
+  },
+  {
+    id: "sofi-stadium",
+    name: "SoFi Stadium",
+    location: "Los Angeles",
+    category: "stadium",
+    congestion: 64,
+    status: "High",
+    source: "FanAtlas demo sensor model",
+    recommendation: "Expect rideshare delays near stadium exits."
+  },
+  {
+    id: "times-square-fan-zone",
+    name: "Times Square Fan Park",
+    location: "New York",
+    category: "fan-zone",
+    congestion: 74,
+    status: "High",
+    source: "FanAtlas demo sensor model",
+    recommendation: "Use side streets and set a meetup point."
+  },
+  {
+    id: "azteca-fan-fest",
+    name: "Azteca Fan Fest",
+    location: "Mexico City",
+    category: "fan-zone",
+    congestion: 48,
+    status: "Medium",
+    source: "FanAtlas demo sensor model",
+    recommendation: "Hydrate and enter before peak screens fill."
+  },
+  {
+    id: "katz-deli",
+    name: "Katz's Delicatessen",
+    location: "New York",
+    category: "restaurant",
+    congestion: 88,
+    status: "Very High",
+    source: "FanAtlas demo reservation model",
+    recommendation: "Reserve ahead or choose off-peak dining."
+  },
+  {
+    id: "blue-bottle-sf",
+    name: "Blue Bottle Coffee",
+    location: "San Francisco",
+    category: "restaurant",
+    congestion: 28,
+    status: "Low",
+    source: "FanAtlas demo reservation model",
+    recommendation: "Good low-crowd stop before transit."
+  }
 ];
 
 export const alerts = [
@@ -11,10 +68,62 @@ export const alerts = [
 ];
 
 export const places = [
-  { name: "Katz's Delicatessen", category: "restaurant", city: "New York", rating: 4.6, busy: "very_high", safety: 9, price: "$$" },
-  { name: "El Huequito", category: "restaurant", city: "Mexico City", rating: 4.7, busy: "high", safety: 8.5, price: "$" },
-  { name: "Blue Bottle Coffee", category: "cafe", city: "San Francisco", rating: 4.5, busy: "moderate", safety: 8, price: "$$" },
-  { name: "Hard Rock Cafe", category: "restaurant", city: "Miami", rating: 4.2, busy: "high", safety: 8, price: "$$" }
+  {
+    name: "Katz's Delicatessen",
+    category: "restaurant",
+    city: "New York",
+    rating: 4.6,
+    busy: "very_high",
+    distance: "1.2 km",
+    image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=900&q=80",
+    reserveUrl: "https://www.opentable.com/s?term=Katz%27s%20Delicatessen%20New%20York",
+    uberEatsUrl: "https://www.ubereats.com/search?q=Katz%27s%20Delicatessen%20New%20York",
+    doorDashUrl: "https://www.doordash.com/search/store/katz%27s%20delicatessen/",
+    safety: 9,
+    price: "$$"
+  },
+  {
+    name: "El Huequito",
+    category: "restaurant",
+    city: "Mexico City",
+    rating: 4.7,
+    busy: "high",
+    distance: "3.8 km",
+    image: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=900&q=80",
+    reserveUrl: "https://www.opentable.com/s?term=El%20Huequito%20Mexico%20City",
+    uberEatsUrl: "https://www.ubereats.com/search?q=El%20Huequito%20Mexico%20City",
+    doorDashUrl: "https://www.doordash.com/search/store/el%20huequito/",
+    safety: 8.5,
+    price: "$"
+  },
+  {
+    name: "Blue Bottle Coffee",
+    category: "cafe",
+    city: "San Francisco",
+    rating: 4.5,
+    busy: "moderate",
+    distance: "2.4 km",
+    image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=900&q=80",
+    reserveUrl: "https://www.opentable.com/s?term=Blue%20Bottle%20Coffee%20San%20Francisco",
+    uberEatsUrl: "https://www.ubereats.com/search?q=Blue%20Bottle%20Coffee%20San%20Francisco",
+    doorDashUrl: "https://www.doordash.com/search/store/blue%20bottle%20coffee/",
+    safety: 8,
+    price: "$$"
+  },
+  {
+    name: "Hard Rock Cafe",
+    category: "restaurant",
+    city: "Miami",
+    rating: 4.2,
+    busy: "high",
+    distance: "5.1 km",
+    image: "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80",
+    reserveUrl: "https://www.opentable.com/s?term=Hard%20Rock%20Cafe%20Miami",
+    uberEatsUrl: "https://www.ubereats.com/search?q=Hard%20Rock%20Cafe%20Miami",
+    doorDashUrl: "https://www.doordash.com/search/store/hard%20rock%20cafe/",
+    safety: 8,
+    price: "$$"
+  }
 ];
 
 export const fanZones = [
@@ -27,9 +136,9 @@ export const fanZones = [
     entry: "FREE ENTRY",
     safety: 8,
     actions: [
-      { label: "VIP Packages", tone: "vip", tab: "vip" },
-      { label: "Fan Zone Transportation", tone: "transport", tab: "transport" },
-      { label: "Merchandise", tone: "merch", tab: "merchandise" }
+      { label: "VIP Packages", tone: "vip", tab: "fanzonevip" },
+      { label: "Fan Zone Transportation", tone: "transport", tab: "fanzonetransport" },
+      { label: "Official Merchandise", tone: "merch", tab: "fanzonemerch" }
     ]
   },
   {
@@ -41,9 +150,9 @@ export const fanZones = [
     entry: "VIP AVAILABLE",
     safety: 8,
     actions: [
-      { label: "VIP Packages", tone: "vip", tab: "vip" },
-      { label: "Fan Zone Transportation", tone: "transport", tab: "transport" },
-      { label: "Merchandise", tone: "merch", tab: "merchandise" }
+      { label: "VIP Packages", tone: "vip", tab: "fanzonevip" },
+      { label: "Fan Zone Transportation", tone: "transport", tab: "fanzonetransport" },
+      { label: "Official Merchandise", tone: "merch", tab: "fanzonemerch" }
     ]
   },
   {
@@ -55,9 +164,9 @@ export const fanZones = [
     entry: "FREE ENTRY",
     safety: 7,
     actions: [
-      { label: "VIP Packages", tone: "vip", tab: "vip" },
-      { label: "Fan Zone Transportation", tone: "transport", tab: "transport" },
-      { label: "Merchandise", tone: "merch", tab: "merchandise" }
+      { label: "VIP Packages", tone: "vip", tab: "fanzonevip" },
+      { label: "Fan Zone Transportation", tone: "transport", tab: "fanzonetransport" },
+      { label: "Official Merchandise", tone: "merch", tab: "fanzonemerch" }
     ]
   },
   {
@@ -69,19 +178,14 @@ export const fanZones = [
     entry: "FREE ENTRY",
     safety: 9,
     actions: [
-      { label: "VIP Packages", tone: "vip", tab: "vip" },
-      { label: "Fan Zone Transportation", tone: "transport", tab: "transport" },
-      { label: "Merchandise", tone: "merch", tab: "merchandise" }
+      { label: "VIP Packages", tone: "vip", tab: "fanzonevip" },
+      { label: "Fan Zone Transportation", tone: "transport", tab: "fanzonetransport" },
+      { label: "Official Merchandise", tone: "merch", tab: "fanzonemerch" }
     ]
   }
 ];
 
-export const matches = [
-  { team1: "Mexico", team2: "TBD", stadium: "Estadio Azteca", city: "Mexico City", country: "Mexico", date: "June 11, 2026", time: "TBD", status: "Scheduled", fanZone: "Azteca Fan Fest" },
-  { team1: "Canada", team2: "TBD", stadium: "BMO Field", city: "Toronto", country: "Canada", date: "June 12, 2026", time: "TBD", status: "Scheduled", fanZone: "Toronto Fan Experience" },
-  { team1: "USA", team2: "TBD", stadium: "SoFi Stadium", city: "Los Angeles", country: "USA", date: "June 12, 2026", time: "TBD", status: "Scheduled", fanZone: "SoFi Fan Village" },
-  { team1: "TBD", team2: "TBD", stadium: "MetLife Stadium", city: "New York/New Jersey", country: "USA", date: "July 19, 2026", time: "TBD", status: "Final", fanZone: "Times Square Fan Park" }
-];
+export const matches = [];
 
 export const stadiums = [
   { name: "MetLife Stadium", city: "New York/New Jersey", country: "USA", capacity: "82,500", tip: "Train + shuttle recommended" },

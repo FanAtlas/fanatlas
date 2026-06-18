@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getCountryOptions, worldCup2026Teams } from "../data/onboardingOptions";
+import { getCountryOptions } from "../data/onboardingOptions";
 import { Language } from "../i18n";
 import { useLanguage } from "../LanguageContext";
 import { supabase } from "../lib/supabase";
@@ -8,41 +8,57 @@ type Props = {
   onComplete: () => void;
 };
 
+const destinationCountries = ["USA", "Canada", "Mexico"];
+
 export function OnboardingPage({ onComplete }: Props) {
   const { language, setLanguage } = useLanguage();
   const [step, setStep] = useState(1);
-  const [country, setCountry] = useState("");
-  const [favoriteTeam, setFavoriteTeam] = useState("");
-  const [interests, setInterests] = useState<string[]>([]);
+  const [originCountry, setOriginCountry] = useState("");
+  const [destinationCountry, setDestinationCountry] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const countryOptions = getCountryOptions();
 
-  const toggleInterest = (item: string) => {
-    setInterests((prev) =>
-      prev.includes(item)
-        ? prev.filter((i) => i !== item)
-        : [...prev, item]
-    );
-  };
-
   async function finish() {
-    if (!supabase) return;
+    if (!originCountry || !destinationCountry) {
+      setError("Choose where you are coming from and where you are traveling to.");
+      return;
+    }
 
-    const { data } = await supabase.auth.getUser();
+    if (!supabase) {
+      setError("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    const { data, error: userError } = await supabase.auth.getUser();
     const user = data.user;
 
-    if (!user) return;
+    if (userError || !user) {
+      setSaving(false);
+      setError(userError?.message || "You need to be signed in to finish setup.");
+      return;
+    }
 
-    await supabase.from("profiles").upsert({
+    localStorage.setItem("fanatlas.language", language);
+
+    const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
       email: user.email,
-      username: user.email?.split("@")[0],
+      username: user.email?.split("@")[0] || user.phone || "FanAtlas user",
       language,
-      country,
-      favorite_team: favoriteTeam,
-      interests,
-      notifications: true,
-      onboarding_complete: true
+      origin_country: originCountry,
+      destination_country: destinationCountry
     });
+
+    setSaving(false);
+
+    if (profileError) {
+      setError(profileError.message);
+      return;
+    }
 
     onComplete();
   }
@@ -50,27 +66,50 @@ export function OnboardingPage({ onComplete }: Props) {
   return (
     <div className="onboarding-page">
       <div className="onboarding-card">
+        <div className="auth-logo">FA</div>
+        <h1>FanAtlas Setup</h1>
+        <p>Set your travel basics before entering the app.</p>
+
         {step === 1 && (
           <>
-            <h1>Welcome to FanAtlas 🌎⚽</h1>
-            <p>Your FIFA World Cup 2026 travel companion.</p>
+            <h2>Preferred language</h2>
+            <select
+              value={language}
+              onChange={(event) => {
+                setError("");
+                setLanguage(event.target.value as Language);
+              }}
+            >
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="ar">العربية</option>
+              <option value="pt">Português</option>
+            </select>
             <button className="primary-btn full-width" onClick={() => setStep(2)}>
-              Get Started
+              Continue
             </button>
           </>
         )}
 
         {step === 2 && (
           <>
-            <h2>Select your language</h2>
-            <select value={language} onChange={(e) => setLanguage(e.target.value as Language)}>
-              <option value="en">🇺🇸 English</option>
-              <option value="es">🇲🇽 Español</option>
-              <option value="fr">🇫🇷 Français</option>
-              <option value="ar">🇲🇦 العربية</option>
-              <option value="pt">🇧🇷 Português</option>
+            <h2>Where are you coming from?</h2>
+            <select
+              value={originCountry}
+              onChange={(event) => {
+                setError("");
+                setOriginCountry(event.target.value);
+              }}
+            >
+              <option value="">Select country</option>
+              {countryOptions.map((country) => (
+                <option key={country.name} value={country.name}>
+                  {country.name}
+                </option>
+              ))}
             </select>
-            <button className="primary-btn full-width" onClick={() => setStep(3)}>
+            <button className="primary-btn full-width" disabled={!originCountry} onClick={() => setStep(3)}>
               Continue
             </button>
           </>
@@ -78,52 +117,24 @@ export function OnboardingPage({ onComplete }: Props) {
 
         {step === 3 && (
           <>
-            <h2>Where are you traveling from?</h2>
-            <select value={country} onChange={(e) => setCountry(e.target.value)}>
-              <option value="">Select country</option>
-              {countryOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+            <h2>Where are you traveling to?</h2>
+            <select
+              value={destinationCountry}
+              onChange={(event) => {
+                setError("");
+                setDestinationCountry(event.target.value);
+              }}
+            >
+              <option value="">Select destination</option>
+              {destinationCountries.map((country) => (
+                <option key={country} value={country}>
+                  {country}
                 </option>
               ))}
             </select>
-            <button className="primary-btn full-width" onClick={() => setStep(4)}>
-              Continue
-            </button>
-          </>
-        )}
-
-        {step === 4 && (
-          <>
-            <h2>Who are you supporting?</h2>
-            <select value={favoriteTeam} onChange={(e) => setFavoriteTeam(e.target.value)}>
-              <option value="">Select team</option>
-              {worldCup2026Teams.map((team) => (
-                <option key={team} value={team}>
-                  {team}
-                </option>
-              ))}
-            </select>
-            <button className="primary-btn full-width" onClick={() => setStep(5)}>
-              Continue
-            </button>
-          </>
-        )}
-
-        {step === 5 && (
-          <>
-            <h2>What do you need?</h2>
-            {["Hotels", "Restaurants", "Fan Zones", "eSIM", "Transportation", "Tickets", "AI Assistant"].map((item) => (
-              <button
-                key={item}
-                className={`choice-btn ${interests.includes(item) ? "active" : ""}`}
-                onClick={() => toggleInterest(item)}
-              >
-                {interests.includes(item) ? "✅ " : ""}{item}
-              </button>
-            ))}
-            <button className="primary-btn full-width" onClick={finish}>
-              Finish Setup
+            {error && <p className="onboarding-error">{error}</p>}
+            <button className="primary-btn full-width" disabled={saving || !destinationCountry} onClick={finish}>
+              {saving ? "Saving..." : "Finish Setup"}
             </button>
           </>
         )}

@@ -4,6 +4,8 @@ export type MapDestinationType =
   | "restaurant"
   | "hotel"
   | "hospital"
+  | "police"
+  | "embassy"
   | "cafe"
   | "place";
 
@@ -16,7 +18,7 @@ export type MapDestination = {
   type: MapDestinationType;
 };
 
-const stadiumDestinations: MapDestination[] = [
+export const stadiumDestinations: MapDestination[] = [
   { name: "MetLife Stadium", city: "New York/New Jersey", lat: 40.8135, lng: -74.0745, emoji: "🏟", type: "stadium" },
   { name: "Estadio Azteca", city: "Mexico City", lat: 19.3029, lng: -99.1505, emoji: "🏟", type: "stadium" },
   { name: "SoFi Stadium", city: "Los Angeles", lat: 33.9535, lng: -118.3392, emoji: "🏟", type: "stadium" },
@@ -29,6 +31,7 @@ const stadiumDestinations: MapDestination[] = [
   { name: "NRG Stadium", city: "Houston", lat: 29.6847, lng: -95.4107, emoji: "🏟", type: "stadium" },
   { name: "Mercedes-Benz Stadium", city: "Atlanta", lat: 33.7554, lng: -84.4008, emoji: "🏟", type: "stadium" },
   { name: "Hard Rock Stadium", city: "Miami", lat: 25.9580, lng: -80.2389, emoji: "🏟", type: "stadium" },
+  { name: "Arrowhead Stadium", city: "Kansas City", lat: 39.0489, lng: -94.4839, emoji: "🏟", type: "stadium" },
   { name: "Lincoln Financial Field", city: "Philadelphia", lat: 39.9008, lng: -75.1675, emoji: "🏟", type: "stadium" },
   { name: "Gillette Stadium", city: "Boston", lat: 42.0909, lng: -71.2643, emoji: "🏟", type: "stadium" },
   { name: "Estadio Akron", city: "Guadalajara", lat: 20.6818, lng: -103.4629, emoji: "🏟", type: "stadium" },
@@ -51,7 +54,16 @@ const placeDestinations: MapDestination[] = [
   { name: "Holiday Inn", city: "Los Angeles", lat: 33.9466, lng: -118.3852, emoji: "🏨", type: "hotel" },
   { name: "Marriott Times Square", city: "New York", lat: 40.7586, lng: -73.9851, emoji: "🏨", type: "hotel" },
   { name: "Mount Sinai Hospital", city: "New York", lat: 40.7901, lng: -73.9526, emoji: "🏥", type: "hospital" },
-  { name: "Cedars-Sinai Medical Center", city: "Los Angeles", lat: 34.0755, lng: -118.3808, emoji: "🏥", type: "hospital" }
+  { name: "Cedars-Sinai Medical Center", city: "Los Angeles", lat: 34.0755, lng: -118.3808, emoji: "🏥", type: "hospital" },
+  { name: "Toronto General Hospital", city: "Toronto", lat: 43.6596, lng: -79.3888, emoji: "🏥", type: "hospital" },
+  { name: "Hospital General de Mexico", city: "Mexico City", lat: 19.4107, lng: -99.1506, emoji: "🏥", type: "hospital" },
+  { name: "NYPD Times Square Substation", city: "New York", lat: 40.7587, lng: -73.9851, emoji: "👮", type: "police" },
+  { name: "LAPD Hollywood Station", city: "Los Angeles", lat: 34.0954, lng: -118.3301, emoji: "👮", type: "police" },
+  { name: "Toronto Police Headquarters", city: "Toronto", lat: 43.6535, lng: -79.3841, emoji: "👮", type: "police" },
+  { name: "Mexico City Citizen Security", city: "Mexico City", lat: 19.4326, lng: -99.1332, emoji: "👮", type: "police" },
+  { name: "Embassy of Morocco", city: "Washington, DC", lat: 38.9436, lng: -77.0672, emoji: "🏛", type: "embassy" },
+  { name: "Embassy of France", city: "Washington, DC", lat: 38.9137, lng: -77.0779, emoji: "🏛", type: "embassy" },
+  { name: "U.S. Embassy / Consular Emergency Help", city: "Worldwide", lat: 38.8949, lng: -77.0366, emoji: "🏛", type: "embassy" }
 ];
 
 export const defaultMapDestinations = [
@@ -72,20 +84,54 @@ function findDestination(
   const normalizedName = normalize(name);
   const normalizedCity = normalize(city);
 
-  return destinations.find((destination) => {
-    const destinationName = normalize(destination.name);
-    const destinationCity = normalize(destination.city);
-    return (
-      (normalizedName &&
-        (destinationName.includes(normalizedName) || normalizedName.includes(destinationName))) ||
-      (normalizedCity &&
-        (destinationCity.includes(normalizedCity) || normalizedCity.includes(destinationCity)))
-    );
-  });
+  const cityMatches = normalizedCity
+    ? destinations.filter((destination) => {
+        const destinationCity = normalize(destination.city);
+        return destinationCity === normalizedCity ||
+          destinationCity.includes(normalizedCity) ||
+          normalizedCity.includes(destinationCity);
+      })
+    : [];
+
+  if (normalizedName) {
+    const exactWithCity = cityMatches.find((destination) => normalize(destination.name) === normalizedName);
+    if (exactWithCity) return exactWithCity;
+
+    const exactName = destinations.find((destination) => normalize(destination.name) === normalizedName);
+    if (exactName) return exactName;
+
+    const strongNameWithCity = cityMatches.find((destination) => {
+      const destinationName = normalize(destination.name);
+      return destinationName.includes(normalizedName) || normalizedName.includes(destinationName);
+    });
+    if (strongNameWithCity) return strongNameWithCity;
+
+    const strongNameMatch = destinations.find((destination) => {
+      const destinationName = normalize(destination.name);
+      return destinationName.includes(normalizedName) ||
+        normalizedName.includes(destinationName);
+    });
+    if (strongNameMatch) return strongNameMatch;
+  }
+
+  if (!normalizedCity) return undefined;
+
+  return cityMatches.length === 1 ? cityMatches[0] : undefined;
 }
 
 export function getStadiumDestination(stadium: string, city = "") {
-  return findDestination(stadiumDestinations, stadium, city);
+  const aliases: Record<string, string> = {
+    "boston stadium": "Gillette Stadium",
+    "bc place vancouver": "BC Place",
+    "estadio guadalajara": "Estadio Akron",
+    "los angeles stadium": "SoFi Stadium",
+    "mexico city stadium": "Estadio Azteca",
+    "new york new jersey stadium": "MetLife Stadium",
+    "san francisco bay area stadium": "Levi's Stadium",
+    "toronto stadium": "BMO Field"
+  };
+  const aliased = aliases[normalize(stadium)];
+  return findDestination(stadiumDestinations, aliased || stadium, city);
 }
 
 export function getFanZoneDestination(name: string) {

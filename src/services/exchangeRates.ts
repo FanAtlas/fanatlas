@@ -1,35 +1,23 @@
 export type ExchangeRateResult = {
-  error?: string;
-  mode: "live" | "demo";
+  base: string;
+  provider: string;
   rates: Record<string, number>;
+  timeLastUpdate?: string | number;
+  timeNextUpdate?: string;
 };
 
-export const fallbackRates: Record<string, number> = {
-  USD: 1,
-  CAD: 1.37,
-  MXN: 18.2,
-  EUR: 0.92,
-  GBP: 0.78,
-  MAD: 10.0,
-  BRL: 5.3,
-  JPY: 157,
-  ARS: 925,
-  AUD: 1.52,
-  CHF: 0.9,
-  CNY: 7.24,
-  COP: 3900,
-  EGP: 48.5,
-  JOD: 0.71,
-  KRW: 1380,
-  QAR: 3.64,
-  SAR: 3.75,
-  TRY: 32.5,
-  UYU: 39.2,
-  ZAR: 18.1
-};
+const DEFAULT_EXCHANGE_RATES_URL = "https://open.er-api.com/v6/latest/USD";
+const FALLBACK_EXCHANGE_RATES_URL = "https://api.exchangerate.host/latest";
 
-function normalizeRates(payload: any) {
-  const rates = payload?.rates || payload?.conversion_rates || payload?.data?.rates;
+function getExchangeRateUrls() {
+  const configuredUrl = import.meta.env.VITE_EXCHANGE_RATES_URL;
+  const urls = [configuredUrl || DEFAULT_EXCHANGE_RATES_URL, FALLBACK_EXCHANGE_RATES_URL];
+  return Array.from(new Set(urls));
+}
+
+function normalizeRates(payload: any, provider: string): ExchangeRateResult {
+  const rates = payload?.rates || payload?.conversion_rates;
+  const base = String(payload?.base_code || payload?.base || "USD").toUpperCase();
 
   if (!rates || typeof rates !== "object") {
     throw new Error("Exchange-rate response did not include a rates object.");
@@ -37,50 +25,50 @@ function normalizeRates(payload: any) {
 
   const normalized = Object.fromEntries(
     Object.entries(rates)
-      .map(([code, value]) => ({
-        code: code.toUpperCase(),
-        value: Number(value)
-      }))
-      .filter(({ value }) => Number.isFinite(value) && value > 0)
-      .map(({ code, value }) => [code, value])
+      .map(([code, value]) => [code.toUpperCase(), Number(value)] as [string, number])
+      .filter(([, value]) => Number.isFinite(value) && value > 0)
   );
 
-  if (!normalized.USD) {
-    throw new Error("Exchange-rate response must include USD-based rates.");
+  if (!normalized[base]) {
+    normalized[base] = 1;
+  }
+
+  if (Object.keys(normalized).length < 2) {
+    throw new Error("Exchange-rate response did not include enough currencies.");
   }
 
   return {
-    ...fallbackRates,
-    ...normalized
+    base,
+    provider,
+    rates: normalized,
+    timeLastUpdate: payload?.time_last_update_utc || payload?.time_last_update_unix || payload?.date,
+    timeNextUpdate: payload?.time_next_update_utc
   };
 }
 
 export async function getExchangeRates(): Promise<ExchangeRateResult> {
-  const url = import.meta.env.VITE_EXCHANGE_RATES_URL;
+  const urls = getExchangeRateUrls();
+  let lastError: unknown;
 
-  if (!url) {
-    return {
-      mode: "demo",
-      rates: fallbackRates
-    };
-  }
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json"
+        }
+      });
 
-  try {
-    const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-    if (!response.ok) {
-      throw new Error(`Exchange-rate provider returned ${response.status}.`);
+      const data = await response.json();
+      return normalizeRates(data, url);
+    } catch (error) {
+      lastError = error;
+      console.error("Exchange-rate API error:", error);
     }
-
-    const data = await response.json();
-    const rates = normalizeRates(data);
-
-    return { mode: "live", rates };
-  } catch (error: any) {
-    return {
-      error: error?.message || "Could not load live exchange rates.",
-      mode: "demo",
-      rates: fallbackRates
-    };
   }
+
+  throw lastError || new Error("Unable to load exchange rates.");
 }

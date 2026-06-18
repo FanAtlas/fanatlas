@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FanAtlasMatch } from "../services/worldcup2026";
 import { Tab } from "../main";
 import { getFanZoneDestination, getStadiumDestination, MapDestination } from "../mapDestinations";
+import { reminderDate, scheduleNotification } from "../services/notifications";
+import { fanZones, places } from "../data/mockData";
+import { emptyWeather, FanAtlasWeather, formatWeatherValue, getWeather } from "../services/weather";
 
 type Props = {
   match: FanAtlasMatch | null;
@@ -51,21 +54,93 @@ function citySafetyTips(city: string) {
   ];
 }
 
+function cityKey(city: string) {
+  const normalized = city.toLowerCase();
+  if (normalized.includes("new york") || normalized.includes("jersey")) return "New York";
+  if (normalized.includes("los angeles")) return "Los Angeles";
+  if (normalized.includes("mexico")) return "Mexico City";
+  if (normalized.includes("toronto")) return "Toronto";
+  if (normalized.includes("vancouver")) return "Vancouver";
+  if (normalized.includes("dallas") || normalized.includes("arlington")) return "Dallas";
+  if (normalized.includes("san francisco")) return "San Francisco";
+  if (normalized.includes("miami")) return "Miami";
+  return city.split("/")[0].trim();
+}
+
+function kickoffDate(match: FanAtlasMatch) {
+  const date = match.kickoffUtc ? new Date(match.kickoffUtc) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function timeBefore(date: Date | null, hours: number) {
+  if (!date) return "2-3 hours before kickoff";
+  return new Date(date.getTime() - hours * 60 * 60 * 1000).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function transportationFor(city: string) {
+  const normalized = city.toLowerCase();
+  if (normalized.includes("new york") || normalized.includes("jersey")) return ["NJ Transit or official shuttle", "Avoid unlicensed taxis", "Walk away from stadium exits before rideshare"];
+  if (normalized.includes("mexico")) return ["Metro plus official transfer", "Hotel-arranged taxi", "Verified rideshare pickup"];
+  if (normalized.includes("los angeles")) return ["Official shuttle", "Metro/rideshare combo", "Pre-book return pickup away from SoFi"];
+  if (normalized.includes("toronto")) return ["TTC", "GO Transit", "Downtown walking route"];
+  if (normalized.includes("vancouver")) return ["SkyTrain", "Downtown walk", "Taxi after crowd release"];
+  return ["Official stadium transport", "Hotel shuttle", "Verified rideshare"];
+}
+
+function nearbyHotels(city: string, stadium: string) {
+  const key = cityKey(city);
+  if (stadium.includes("MetLife")) return ["Marriott Times Square", "Moxy Chelsea", "Meadowlands hotel shuttle area"];
+  if (stadium.includes("Azteca")) return ["Ibis Mexico City", "Galeria Plaza Reforma", "Coyoacan hotel area"];
+  if (stadium.includes("SoFi")) return ["Holiday Inn Los Angeles", "Cambria LAX", "Inglewood airport hotels"];
+  if (city.toLowerCase().includes("toronto")) return ["Delta Hotels Toronto", "Downtown Toronto hotels", "Liberty Village stays"];
+  return [`${key} central hotel`, `${key} stadium hotel search`, "Official hotel partner area"];
+}
+
 export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
-  const m =
-    match ||
-    ({
-      team1: "Mexico",
-      team2: "South Africa",
-      stadium: "Estadio Azteca",
-      city: "Mexico City",
-      date: "Jun 11, 2026",
-      time: "13:00",
-      status: "Scheduled",
-      fanZone: "Azteca Fan Fest"
-    } as FanAtlasMatch);
+  if (!match) {
+    return (
+      <>
+        <div className="topbar">
+          <div>
+            <div className="brand">Match Day <span>Assistant</span></div>
+            <div className="subtle">Choose a match to build your plan</div>
+          </div>
+          <button className="small-dark-btn" onClick={() => setTab("matches")}>← Matches</button>
+        </div>
+
+        <div className="matchday-hero">
+          <div className="matchday-label">Match Day Plan</div>
+          <div className="matchday-teams">Select a World Cup match</div>
+          <p>Open the schedule, search or filter the 104 fixtures, then tap Plan Match Day.</p>
+          <button className="secondary-btn full-width" onClick={() => setTab("matches")}>
+            View match schedule
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  const m = match;
 
   const tips = citySafetyTips(m.city);
+  const kickoff = kickoffDate(m);
+  const [weather, setWeather] = useState<FanAtlasWeather>(() => emptyWeather());
+  const [weatherError, setWeatherError] = useState("");
+  const recommendedArrival = timeBefore(kickoff, 2.5);
+  const city = cityKey(m.city);
+  const restaurants = places
+    .filter((place) => m.city.toLowerCase().includes(place.city.toLowerCase()) || place.city.toLowerCase().includes(city.toLowerCase()))
+    .slice(0, 3);
+  const restaurantList = restaurants.length ? restaurants : places.slice(0, 3);
+  const hotels = nearbyHotels(m.city, m.stadium);
+  const zoneList = [
+    ...fanZones.filter((zone) => m.city.toLowerCase().includes(zone.city.toLowerCase()) || zone.name === m.fanZone),
+    ...fanZones
+  ].filter((zone, index, list) => list.findIndex((item) => item.name === zone.name) === index).slice(0, 3);
+  const transport = transportationFor(m.city);
   const checklist = [
     "Passport or government ID",
     "Match ticket saved offline",
@@ -75,13 +150,30 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
     "Hotel address saved"
   ];
   const [checked, setChecked] = useState<string[]>([]);
+  const [notificationMessage, setNotificationMessage] = useState("");
+
+  useEffect(() => {
+    const destination = getStadiumDestination(m.stadium, m.city);
+    if (!destination) return;
+
+    getWeather(destination.lat, destination.lng)
+      .then((result) => {
+        setWeather(result);
+        setWeatherError("");
+      })
+      .catch((error) => {
+        console.error("Match day weather error:", error);
+        setWeather(emptyWeather());
+        setWeatherError("Weather unavailable. Check again before leaving.");
+      });
+  }, [m.city, m.stadium]);
 
   const timeline = [
-    { time: "T-4h", title: "Confirm essentials", detail: "Ticket, ID, phone battery, bag policy, and return route." },
-    { time: "T-3h", title: "Leave early", detail: "Use official transport first and avoid unknown shortcuts." },
-    { time: "T-2h", title: "Eat before entry", detail: "Grab food nearby before stadium lines build up." },
-    { time: "T-90m", title: "Enter stadium zone", detail: "Expect screening, crowds, and walking time to your gate." },
-    { time: "Post", title: "Exit plan", detail: `Use groups and consider ${m.fanZone} only if crowds are manageable.` }
+    { time: "08:00", title: "Leave Hotel", detail: `Confirm ticket, ID, phone battery, and route to ${city}.` },
+    { time: "09:00", title: "Fan Zone", detail: `Start at ${zoneList[0]?.name || m.fanZone} while crowds are still manageable.` },
+    { time: "12:00", title: "Stadium", detail: `Arrive near ${m.stadium}, eat, hydrate, and clear security early.` },
+    { time: "15:00", title: "Match", detail: `${m.team1} vs ${m.team2}. Keep return route and meeting point ready.` },
+    { time: "18:00", title: "Post Match Fan Zone", detail: `Use groups and consider ${m.fanZone} if crowd levels feel safe.` }
   ];
 
   function openStadiumMap() {
@@ -102,6 +194,28 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
     );
   }
 
+  async function addMatchReminder() {
+    const kickoff = m.kickoffUtc ? new Date(m.kickoffUtc).getTime() : NaN;
+    const dueAt = Number.isNaN(kickoff)
+      ? reminderDate(120)
+      : new Date(Math.max(Date.now() + 60000, kickoff - 2 * 60 * 60 * 1000)).toISOString();
+
+    const { permission } = await scheduleNotification({
+      type: "match",
+      title: `${m.team1} vs ${m.team2}`,
+      message: `Match reminder for ${m.stadium}, ${m.city}. Check ticket, route, ID, and arrival plan.`,
+      dueAt,
+      source: "Match Day",
+      actionTab: "matchday"
+    });
+
+    setNotificationMessage(
+      permission === "denied"
+        ? "Match reminder saved in FanAtlas. Browser notifications are blocked."
+        : "Match reminder saved."
+    );
+  }
+
   return (
     <>
       <div className="topbar">
@@ -117,6 +231,24 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
         <div className="matchday-teams">{m.team1} vs {m.team2}</div>
         <p>{m.date} · {m.time}</p>
         <p>🏟 {m.stadium} · {m.city}</p>
+        <div className="matchday-summary-grid">
+          <div>
+            <span>Kickoff</span>
+            <strong>{m.time}</strong>
+          </div>
+          <div>
+            <span>Weather</span>
+            <strong>{formatWeatherValue(weather.temperature, "°C")}</strong>
+          </div>
+          <div>
+            <span>Arrive By</span>
+            <strong>{recommendedArrival}</strong>
+          </div>
+        </div>
+        <button className="secondary-btn full-width" onClick={addMatchReminder}>
+          ⏰ Add match reminder
+        </button>
+        {notificationMessage && <div className="route-status">{notificationMessage}</div>}
         <div className="matchday-progress">
           <span>{checked.length}/{checklist.length} ready</span>
           <div>
@@ -125,7 +257,7 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
         </div>
       </div>
 
-      <h3>Timeline</h3>
+      <h3>Personalized Itinerary</h3>
       <div className="timeline-list">
         {timeline.map((item) => (
           <div className="timeline-item" key={item.time}>
@@ -137,6 +269,76 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
           </div>
         ))}
       </div>
+
+      <div className="matchday-planner-grid">
+        <section className="planner-panel">
+          <h3>Weather</h3>
+          <div className="weather-metrics compact">
+            <span>Temp <strong>{formatWeatherValue(weather.temperature, "°C")}</strong></span>
+            <span>Rain <strong>{formatWeatherValue(weather.rainProbability, "%")}</strong></span>
+            <span>Wind <strong>{formatWeatherValue(weather.windSpeed, " km/h")}</strong></span>
+          </div>
+          <p>{weatherError || weather.recommendation}</p>
+        </section>
+
+        <section className="planner-panel">
+          <h3>Recommended Arrival</h3>
+          <strong>{recommendedArrival}</strong>
+          <p>Plan to be near the stadium about 2-3 hours before kickoff.</p>
+        </section>
+      </div>
+
+      <section className="planner-panel">
+        <h3>Nearby Restaurants</h3>
+        {restaurantList.map((restaurant) => (
+          <div className="planner-row" key={restaurant.name}>
+            <span>🍽</span>
+            <div>
+              <strong>{restaurant.name}</strong>
+              <p>{restaurant.city} · ⭐ {restaurant.rating} · {restaurant.distance}</p>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="planner-panel">
+        <h3>Nearby Hotels</h3>
+        {hotels.map((hotel) => (
+          <div className="planner-row" key={hotel}>
+            <span>🏨</span>
+            <div>
+              <strong>{hotel}</strong>
+              <p>Save address offline and confirm post-match route.</p>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="planner-panel">
+        <h3>Nearby Fan Zones</h3>
+        {zoneList.map((zone) => (
+          <div className="planner-row" key={zone.name}>
+            <span>🎉</span>
+            <div>
+              <strong>{zone.name}</strong>
+              <p>{zone.city} · {zone.hours} · {zone.entry}</p>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="planner-panel">
+        <h3>Transportation</h3>
+        {transport.map((item) => (
+          <div className="planner-row" key={item}>
+            <span>🚆</span>
+            <div>
+              <strong>{item}</strong>
+              <p>Use the in-app map before leaving and again after the match.</p>
+            </div>
+          </div>
+        ))}
+      </section>
 
       <div className="assistant-grid">
         <div className="assistant-card">

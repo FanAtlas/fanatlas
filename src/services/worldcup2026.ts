@@ -1,14 +1,27 @@
+export type MatchStatus = "Upcoming" | "Live" | "Finished";
+
 export type FanAtlasMatch = {
   id: string;
-  team1: string;
-  team2: string;
+  matchNumber: number;
+  homeTeam: string;
+  awayTeam: string;
+  group?: string;
+  stage: string;
+  date: string;
+  kickoffTime: string;
   stadium: string;
   city: string;
-  country?: string;
-  date: string;
+  country: string;
+  status: MatchStatus;
+  homeScore?: number | null;
+  awayScore?: number | null;
+  team1: string;
+  team2: string;
   time: string;
-  status: string;
+  stadiumTime?: string;
+  userLocalTime?: string;
   score?: string;
+  kickoffUtc?: string;
   fanZone: string;
 };
 
@@ -21,14 +34,47 @@ export type FanAtlasStadium = {
   tip: string;
 };
 
-function asArray(payload: any): any[] {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.games)) return payload.games;
-  if (Array.isArray(payload?.stadiums)) return payload.stadiums;
-  if (Array.isArray(payload?.teams)) return payload.teams;
+export type WorldCupTeam = {
+  id: string;
+  name: string;
+  fifaCode?: string;
+  group?: string;
+};
+
+export type WorldCupGroup = {
+  id: string;
+  name: string;
+  teams: unknown[];
+};
+
+export type WorldCupApiMeta = {
+  games: number;
+  groups: number;
+  stadiums: number;
+  teams: number;
+};
+
+const API_BASE = "https://worldcup26.ir/get";
+
+export const worldCup2026ApiEndpoints = {
+  games: `${API_BASE}/games`,
+  groups: `${API_BASE}/groups`,
+  stadiums: `${API_BASE}/stadiums`,
+  teams: `${API_BASE}/teams`
+};
+
+let meta: WorldCupApiMeta = {
+  games: 0,
+  groups: 0,
+  stadiums: 0,
+  teams: 0
+};
+
+function asArray(payload: any, resource: "games" | "groups" | "stadiums" | "teams") {
+  if (Array.isArray(payload?.data?.[resource])) return payload.data[resource];
+  if (Array.isArray(payload?.[resource])) return payload[resource];
   if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.response)) return payload.response;
-  if (Array.isArray(payload?.result)) return payload.result;
+  if (Array.isArray(payload)) return payload;
   return [];
 }
 
@@ -42,65 +88,141 @@ function get(obj: any, keys: string[], fallback = "") {
   return fallback;
 }
 
-function parseWorldCupDate(localDate: string) {
-  if (!localDate || localDate === "TBD") {
-    return { date: "TBD", time: "TBD" };
+function toNumber(value: unknown) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+async function fetchJson(resource: "games" | "groups" | "stadiums" | "teams") {
+  const url = worldCup2026ApiEndpoints[resource];
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const text = await response.text();
+    const trimmed = text.trim();
+
+    if (trimmed.startsWith("export default") || trimmed.startsWith("export ") || trimmed.startsWith("<")) {
+      throw new Error(`Invalid JSON response from ${url}`);
+    }
+
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("World Cup API error:", error);
+    throw error;
+  }
+}
+
+async function fetchRows(resource: "games" | "groups" | "stadiums" | "teams") {
+  const json = await fetchJson(resource);
+  const rows = asArray(json, resource);
+  meta = { ...meta, [resource]: rows.length };
+  return rows;
+}
+
+function normalizeStage(type: string) {
+  const normalized = type.trim().toLowerCase();
+  if (!normalized || normalized === "group") return "Group Stage";
+  if (normalized === "round_of_32" || normalized === "round of 32") return "Round of 32";
+  if (normalized === "round_of_16" || normalized === "round of 16") return "Round of 16";
+  if (normalized === "quarterfinal" || normalized === "quarter-final") return "Quarterfinal";
+  if (normalized === "semifinal" || normalized === "semi-final") return "Semifinal";
+  if (normalized === "third_place" || normalized === "third place") return "Third Place";
+  if (normalized === "final") return "Final";
+  return type;
+}
+
+function normalizeCountry(country: string) {
+  if (country === "United States") return "USA";
+  return country || "";
+}
+
+function parseLocalDate(value: string) {
+  if (!value) {
+    return {
+      date: "Date unavailable",
+      kickoffTime: "Time unavailable",
+      kickoffUtc: undefined,
+      userLocalTime: undefined
+    };
   }
 
-  // API format example: 06/11/2026 13:00
-  const [datePart, timePart] = localDate.split(" ");
+  const [datePart, timePart = ""] = value.split(" ");
+  const [month, day, year] = datePart.split("/").map(Number);
+  const [hour = 0, minute = 0] = timePart.split(":").map(Number);
 
-  if (!datePart) {
-    return { date: localDate, time: timePart || "TBD" };
+  if (!month || !day || !year) {
+    return {
+      date: value,
+      kickoffTime: timePart || "Time unavailable",
+      kickoffUtc: undefined,
+      userLocalTime: undefined
+    };
   }
 
-  const pieces = datePart.split("/");
-  if (pieces.length !== 3) {
-    return { date: datePart, time: timePart || "TBD" };
-  }
-
-  const [month, day, year] = pieces;
-  const date = new Date(Number(year), Number(month) - 1, Number(day));
-
-  const readableDate = Number.isNaN(date.getTime())
-    ? datePart
-    : date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-      });
+  const localDate = new Date(year, month - 1, day, hour, minute);
+  const readableDate = localDate.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+  const readableTime = timePart
+    ? localDate.toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit"
+      })
+    : "Time unavailable";
 
   return {
     date: readableDate,
-    time: timePart || "TBD"
+    kickoffTime: readableTime,
+    kickoffUtc: Number.isNaN(localDate.getTime()) ? undefined : localDate.toISOString(),
+    userLocalTime: readableTime === "Time unavailable" ? undefined : `User local time: ${readableTime}`
   };
 }
 
+function normalizeStatus(game: any): MatchStatus {
+  const finished = get(game, ["finished"], "").toUpperCase();
+  const elapsed = get(game, ["time_elapsed"], "notstarted").toLowerCase();
+
+  if (finished === "TRUE") return "Finished";
+  if (elapsed && elapsed !== "notstarted" && elapsed !== "finished") return "Live";
+  return "Upcoming";
+}
+
 function fanZoneForCity(city: string) {
-  const normalized = (city || "").toLowerCase();
+  const normalized = city.toLowerCase();
 
   if (normalized.includes("new york") || normalized.includes("jersey")) return "Times Square Fan Park";
-  if (normalized.includes("los angeles") || normalized.includes("inglewood")) return "SoFi Fan Village";
+  if (normalized.includes("los angeles")) return "SoFi Fan Village";
   if (normalized.includes("mexico")) return "Azteca Fan Fest";
   if (normalized.includes("toronto")) return "Toronto Fan Experience";
-  if (normalized.includes("dallas") || normalized.includes("arlington")) return "AT&T Fan Hub";
-  if (normalized.includes("miami")) return "Hard Rock Fan Zone";
   if (normalized.includes("vancouver")) return "Vancouver Waterfront Fan Zone";
-  if (normalized.includes("seattle")) return "Seattle Waterfront Fan Zone";
-  if (normalized.includes("atlanta")) return "Atlanta Fan Plaza";
-  if (normalized.includes("philadelphia")) return "Philadelphia Fan Fest";
-  if (normalized.includes("houston")) return "Houston Fan Fest";
-  if (normalized.includes("kansas")) return "Kansas City Soccer Village";
   if (normalized.includes("boston")) return "Boston Fan Zone";
   if (normalized.includes("san francisco") || normalized.includes("bay area")) return "Bay Area Fan Zone";
   if (normalized.includes("guadalajara")) return "Guadalajara Fan Fest";
+  if (normalized.includes("dallas")) return "AT&T Fan Hub";
+  if (normalized.includes("miami")) return "Hard Rock Fan Zone";
+  if (normalized.includes("seattle")) return "Seattle Fan Zone";
+  if (normalized.includes("houston")) return "Houston Fan Fest";
+  if (normalized.includes("atlanta")) return "Atlanta Fan Plaza";
+  if (normalized.includes("philadelphia")) return "Philadelphia Fan Fest";
+  if (normalized.includes("kansas")) return "Kansas City Soccer Village";
   if (normalized.includes("monterrey")) return "Monterrey Fan Zone";
 
   return "Nearby Fan Zone";
 }
 
 function stadiumTip(city: string) {
-  const normalized = (city || "").toLowerCase();
+  const normalized = city.toLowerCase();
 
   if (normalized.includes("mexico")) return "Hydrate and prepare for altitude.";
   if (normalized.includes("los angeles")) return "Expect traffic. Use rideshare zones or shuttles.";
@@ -112,92 +234,112 @@ function stadiumTip(city: string) {
   return "Use official transport and arrive early.";
 }
 
-async function fetchResource(resource: "games" | "stadiums") {
-  const res = await fetch(`/api/worldcup2026?resource=${resource}`);
+function normalizeStadium(row: any): FanAtlasStadium {
+  const city = get(row, ["city_en", "city", "host_city"], "Host City");
+  const name = get(row, ["fifa_name", "name_en", "name", "stadium"], "World Cup Stadium");
 
-  if (!res.ok) {
-    throw new Error(`Could not load World Cup 2026 ${resource}`);
-  }
+  return {
+    id: get(row, ["id", "_id", "stadium_id"], name),
+    name,
+    city,
+    country: normalizeCountry(get(row, ["country_en", "country"], "")),
+    capacity: get(row, ["capacity"], "TBD"),
+    tip: stadiumTip(city)
+  };
+}
 
-  const payload = await res.json();
+function normalizeMatch(game: any, stadiumById: Map<string, FanAtlasStadium>): FanAtlasMatch {
+  const stadiumId = get(game, ["stadium_id", "stadiumId"], "");
+  const stadium = stadiumById.get(stadiumId);
+  const parsedDate = parseLocalDate(get(game, ["local_date"], ""));
+  const status = normalizeStatus(game);
+  const homeScore = status === "Finished" ? toNumber(get(game, ["home_score", "homeScore"], "")) : null;
+  const awayScore = status === "Finished" ? toNumber(get(game, ["away_score", "awayScore"], "")) : null;
+  const homeTeam = get(game, ["home_team_name_en", "homeTeam", "home_team.name"], "Team unavailable");
+  const awayTeam = get(game, ["away_team_name_en", "awayTeam", "away_team.name"], "Team unavailable");
+  const city = stadium?.city || get(game, ["city", "host_city"], "Host City");
+  const score = status === "Finished" && homeScore !== null && awayScore !== null
+    ? `${homeScore} - ${awayScore}`
+    : undefined;
 
-  // Vercel function returns:
-  // { source, resource, data: { games: [...] } }
-  // or { source, resource, data: { stadiums: [...] } }
-  return payload?.data || payload;
+  return {
+    id: get(game, ["id", "_id"], crypto.randomUUID()),
+    matchNumber: Number(get(game, ["id", "matchNumber", "match_number"], "")) || 0,
+    homeTeam,
+    awayTeam,
+    group: get(game, ["group"], ""),
+    stage: normalizeStage(get(game, ["type", "stage"], "")),
+    date: parsedDate.date,
+    kickoffTime: parsedDate.kickoffTime,
+    stadium: stadium?.name || get(game, ["stadium", "stadium_name"], "Stadium unavailable"),
+    city,
+    country: stadium?.country || normalizeCountry(get(game, ["country"], "")),
+    status,
+    homeScore,
+    awayScore,
+    team1: homeTeam,
+    team2: awayTeam,
+    time: parsedDate.kickoffTime,
+    stadiumTime: parsedDate.kickoffTime,
+    userLocalTime: parsedDate.userLocalTime,
+    score,
+    kickoffUtc: parsedDate.kickoffUtc,
+    fanZone: fanZoneForCity(city)
+  };
 }
 
 export async function getWorldCup2026Stadiums(): Promise<FanAtlasStadium[]> {
-  const payload = await fetchResource("stadiums");
-  const rows = asArray(payload);
-
-  return rows.map((item: any, index: number) => {
-    const id = get(item, ["id", "_id", "stadium_id"], String(index));
-    const city = get(item, ["city_en", "city", "host_city", "location"], "Host City");
-    const name = get(item, ["name_en", "stadium_name_en", "name", "stadium", "stadium_name"], "World Cup Stadium");
-    const country = get(item, ["country_en", "country"], "");
-    const capacity = get(item, ["capacity"], "TBD");
-
-    return {
-      id,
-      name,
-      city,
-      country,
-      capacity,
-      tip: stadiumTip(city)
-    };
-  });
+  const rows = await fetchRows("stadiums");
+  return rows.map(normalizeStadium);
 }
 
 export async function getWorldCup2026Games(): Promise<FanAtlasMatch[]> {
-  const [gamesPayload, stadiumRows] = await Promise.all([
-    fetchResource("games"),
-    getWorldCup2026Stadiums().catch(() => [])
+  const [gameRows, stadiumRows] = await Promise.all([
+    fetchRows("games"),
+    getWorldCup2026Stadiums()
+  ]);
+  const stadiumById = new Map(stadiumRows.map((stadium) => [stadium.id, stadium]));
+
+  return gameRows
+    .map((game) => normalizeMatch(game, stadiumById))
+    .filter((match) => match.homeTeam !== "Team unavailable" && match.awayTeam !== "Team unavailable");
+}
+
+export async function getWorldCup2026Teams(): Promise<WorldCupTeam[]> {
+  const rows = await fetchRows("teams");
+  return rows.map((team: any) => ({
+    id: get(team, ["id", "_id"], ""),
+    name: get(team, ["name_en", "name"], "Team unavailable"),
+    fifaCode: get(team, ["fifa_code"], ""),
+    group: get(team, ["groups", "group"], "")
+  }));
+}
+
+export async function getWorldCup2026Groups(): Promise<WorldCupGroup[]> {
+  const rows = await fetchRows("groups");
+  return rows.map((group: any) => ({
+    id: get(group, ["_id", "id", "name"], ""),
+    name: get(group, ["name"], ""),
+    teams: Array.isArray(group?.teams) ? group.teams : []
+  }));
+}
+
+export async function getWorldCup2026ApiMeta(): Promise<WorldCupApiMeta> {
+  const [games, stadiums, teams, groups] = await Promise.all([
+    fetchRows("games"),
+    fetchRows("stadiums"),
+    fetchRows("teams"),
+    fetchRows("groups")
   ]);
 
-  const games = asArray(gamesPayload);
+  return {
+    games: games.length,
+    groups: groups.length,
+    stadiums: stadiums.length,
+    teams: teams.length
+  };
+}
 
-  const stadiumById = new Map<string, FanAtlasStadium>();
-  stadiumRows.forEach((stadium) => {
-    stadiumById.set(String(stadium.id), stadium);
-  });
-
-  return games.map((item: any, index: number) => {
-    const team1 = get(item, ["home_team_name_en", "home_team.name", "home.name", "home_team", "homeTeam"], "TBD");
-    const team2 = get(item, ["away_team_name_en", "away_team.name", "away.name", "away_team", "awayTeam"], "TBD");
-
-    const stadiumId = get(item, ["stadium_id"], "");
-    const stadiumInfo = stadiumById.get(String(stadiumId));
-
-    const stadium = stadiumInfo?.name || `Stadium #${stadiumId || "TBD"}`;
-    const city = stadiumInfo?.city || "Host City";
-
-    const localDate = get(item, ["local_date", "date", "match_date", "datetime", "kickoff"], "TBD");
-    const parsed = parseWorldCupDate(localDate);
-
-    const homeScore = get(item, ["home_score"], "");
-    const awayScore = get(item, ["away_score"], "");
-    const score = homeScore !== "" && awayScore !== "" ? `${homeScore} - ${awayScore}` : undefined;
-
-    const finished = get(item, ["finished"], "FALSE").toLowerCase();
-    const elapsed = get(item, ["time_elapsed"], "notstarted");
-
-    let status = "Scheduled";
-    if (finished === "true") status = "Finished";
-    else if (elapsed && elapsed !== "notstarted") status = elapsed;
-
-    return {
-      id: get(item, ["id", "_id", "match_id", "game_id"], String(index)),
-      team1,
-      team2,
-      stadium,
-      city,
-      country: stadiumInfo?.country || "",
-      date: parsed.date,
-      time: parsed.time,
-      status,
-      score,
-      fanZone: fanZoneForCity(city)
-    };
-  });
+export function getLastWorldCup2026ApiMeta() {
+  return meta;
 }
