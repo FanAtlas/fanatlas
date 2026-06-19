@@ -1,5 +1,6 @@
 import { Coins, Languages, ListChecks, MapPin, Monitor, Smartphone, WalletCards, BookOpen, MessageSquareText } from "lucide-react";
 import { BackButton } from "../components/BackButton";
+import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 
 const tools = [
@@ -15,20 +16,22 @@ const tools = [
 ];
 
 export function TravelToolsPage({ onBack, setTab }: { onBack: () => void; setTab: (tab: Tab) => void }) {
+  const { language, t } = useLanguage();
+
   return (
-    <div className="travel-tools-page">
+    <div className="travel-tools-page" dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="topbar">
         <BackButton onBack={onBack} />
         <div>
-          <div className="brand">Travel <span>Tools</span></div>
-          <div className="subtle">Fast access to essentials for any trip.</div>
+          <div className="brand">{t.travelTools}</div>
+          <div className="subtle">{t.travelToolsSubtitle}</div>
         </div>
       </div>
 
       <section className="travel-tools-hero">
-        <span>Essentials</span>
-        <h1>Everything you need before and during travel.</h1>
-        <p>Internet, money, language help, checklists, expenses, offline guides, and more.</p>
+        <span>{t.travelEssentials}</span>
+        <h1>{t.travelToolsHero}</h1>
+        <p>{t.travelToolsHeroDesc}</p>
       </section>
 
       <div className="travel-tools-grid">
@@ -37,7 +40,7 @@ export function TravelToolsPage({ onBack, setTab }: { onBack: () => void; setTab
           return (
             <button className="travel-tool-card" key={tool.label} onClick={() => setTab(tool.tab)}>
               <Icon size={22} />
-              <strong>{tool.label}</strong>
+              <strong>{tool.label === "Currency" ? t.currency : tool.label === "Translator" ? t.voiceTranslator : tool.label === "Travel Guides" ? t.travelGuides : tool.label === "TV Mode" ? t.tvMode : tool.label}</strong>
               <span>{tool.description}</span>
             </button>
           );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { BackButton } from "../components/BackButton";
 
 type ChecklistCategory = {
   title: string;
@@ -35,7 +36,7 @@ function readCheckedItems() {
   }
 }
 
-export function ChecklistPage() {
+export function ChecklistPage({ onBack }: { onBack: () => void }) {
   const [checkedItems, setCheckedItems] = useState<string[]>(() => readCheckedItems());
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export function ChecklistPage() {
   return (
     <div className="checklist-page">
       <div className="topbar">
+        <BackButton onBack={onBack} />
         <div>
           <div className="brand">Travel <span>Checklist</span></div>
           <div className="subtle">Before travel, arrival, and match day essentials</div>

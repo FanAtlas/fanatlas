@@ -138,7 +138,7 @@ export function StadiumDetailPage({ onBack, stadium, setMapDestination, setTab }
       .catch((error) => {
         console.error("Stadium weather error:", error);
         setWeather(emptyWeather());
-        setWeatherError("Weather unavailable. Check again before leaving.");
+        setWeatherError("Weather unavailable. Review conditions again before departure.");
       });
   }, [destination.lat, destination.lng]);
 

@@ -113,7 +113,7 @@ export function TransportationPage({
 }) {
   const [selectedStadiumName, setSelectedStadiumName] = useState(stadiumDestinations[0].name);
   const [startLocation, setStartLocation] = useState<[number, number]>(defaultStart);
-  const [locationStatus, setLocationStatus] = useState("Using demo start: Times Square Fan Park.");
+  const [locationStatus, setLocationStatus] = useState("Using Times Square Fan Park as the start point.");
   const [selectedModeId, setSelectedModeId] = useState("uber");
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>(() => loadSavedRoutes());
 
@@ -139,7 +139,7 @@ export function TransportationPage({
         setLocationStatus("Using your current location.");
       },
       () => {
-        setLocationStatus("Location unavailable. Using demo start: Times Square Fan Park.");
+        setLocationStatus("Location unavailable. Using Times Square Fan Park as the start point.");
       }
     );
   }, []);

@@ -207,8 +207,8 @@ export function HotelsPage({
       <div className="hotel-search-hero">
         <Hotel size={30} />
         <div>
-          <h1>Search Hotels Near This Stadium</h1>
-          <p>Compare hotel partners by rating, price, and walking or rideshare distance.</p>
+          <h1>{t.searchHotelsNearStadium}</h1>
+          <p>{t.compareHotels}</p>
         </div>
       </div>
 
@@ -227,7 +227,7 @@ export function HotelsPage({
         </label>
 
         <button className="primary-btn full-width" onClick={() => setSearchedStadium(selectedStadium)}>
-          <Search size={17} /> Search Hotels Near This Stadium
+          <Search size={17} /> {t.searchHotelsNearStadium}
         </button>
       </div>
 
@@ -322,7 +322,7 @@ export function HotelsPage({
 
       <div className="action-note">
         <Hotel size={18} />
-        <span>Revenue-ready: booking URLs are generated through hotel affiliate environment variables.</span>
+        <span>Compare hotel options, confirm details with the booking provider, and save your stay before match day.</span>
       </div>
     </div>
   );

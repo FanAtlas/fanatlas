@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { BackButton } from "../components/BackButton";
 import { getExchangeRates } from "../services/exchangeRates";
 
 type ExpenseCategory = "Hotels" | "Food" | "Tickets" | "Transportation" | "Shopping";
@@ -51,7 +52,7 @@ function convertAmount(amount: number, from: string, to: string, rates: Record<s
   return amount * (rates[to] / rates[from]);
 }
 
-export function ExpenseTrackerPage() {
+export function ExpenseTrackerPage({ onBack }: { onBack: () => void }) {
   const [amount, setAmount] = useState("25");
   const [category, setCategory] = useState<ExpenseCategory>("Food");
   const [currency, setCurrency] = useState("USD");
@@ -140,6 +141,7 @@ export function ExpenseTrackerPage() {
   return (
     <div className="expense-page">
       <div className="topbar">
+        <BackButton onBack={onBack} />
         <div>
           <div className="brand">Expenses <span>{loadingRates ? "Loading" : "Trip"}</span></div>
           <div className="subtle">Track daily spend and trip budget across currencies</div>

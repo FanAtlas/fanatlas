@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { BackButton } from "../components/BackButton";
 
 type PhraseLanguage = "English" | "Spanish" | "French" | "Arabic" | "Portuguese";
 type PhraseCategory = "Medical" | "Police" | "Transportation" | "Hotel" | "Restaurant";
@@ -133,9 +134,9 @@ const phrases: Phrase[] = [
   }
 ];
 
-export function PhrasebookPage() {
+export function PhrasebookPage({ onBack }: { onBack: () => void }) {
   const [activeCategory, setActiveCategory] = useState<PhraseCategory>("Medical");
-  const [language, setLanguage] = useState<PhraseLanguage>("English");
+  const [phraseLanguage, setPhraseLanguage] = useState<PhraseLanguage>("English");
   const [status, setStatus] = useState("");
   const visiblePhrases = useMemo(() => phrases.filter((phrase) => phrase.category === activeCategory), [activeCategory]);
 
@@ -147,7 +148,7 @@ export function PhrasebookPage() {
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = languageCodes[language];
+    utterance.lang = languageCodes[phraseLanguage];
     utterance.rate = 0.9;
     utterance.onend = () => setStatus("");
     utterance.onerror = () => setStatus("Audio playback failed. Try another phrase or browser.");
@@ -156,8 +157,9 @@ export function PhrasebookPage() {
   }
 
   return (
-    <div className="phrasebook-page" dir={language === "Arabic" ? "rtl" : "ltr"}>
+    <div className="phrasebook-page" dir={phraseLanguage === "Arabic" ? "rtl" : "ltr"}>
       <div className="topbar">
+        <BackButton onBack={onBack} />
         <div>
           <div className="brand">Emergency <span>Phrasebook</span></div>
           <div className="subtle">Medical, police, transport, hotel, and restaurant phrases</div>
@@ -173,7 +175,7 @@ export function PhrasebookPage() {
       <div className="phrasebook-controls">
         <label>
           <span>Language</span>
-          <select className="input" value={language} onChange={(event) => setLanguage(event.target.value as PhraseLanguage)}>
+          <select className="input" value={phraseLanguage} onChange={(event) => setPhraseLanguage(event.target.value as PhraseLanguage)}>
             {languages.map((item) => <option key={item}>{item}</option>)}
           </select>
         </label>
@@ -197,9 +199,9 @@ export function PhrasebookPage() {
         {visiblePhrases.map((phrase) => (
           <article className="phrase-card" key={phrase.key}>
             <span>{activeCategory}</span>
-            <strong>{phrase.translations[language]}</strong>
-            {language !== "English" && <p>{phrase.translations.English}</p>}
-            <button className="secondary-btn" onClick={() => playPhrase(phrase.translations[language])}>
+            <strong>{phrase.translations[phraseLanguage]}</strong>
+            {phraseLanguage !== "English" && <p>{phrase.translations.English}</p>}
+            <button className="secondary-btn" onClick={() => playPhrase(phrase.translations[phraseLanguage])}>
               Play Audio
             </button>
           </article>
@@ -207,7 +209,7 @@ export function PhrasebookPage() {
       </div>
 
       <div className="action-note">
-        <span>Audio architecture uses browser speech synthesis now and can later swap to hosted TTS files or a server-side voice API.</span>
+        <span>Tip: save your key phrases before heading to busy areas or low-signal venues.</span>
       </div>
     </div>
   );

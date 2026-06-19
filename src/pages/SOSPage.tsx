@@ -17,6 +17,7 @@ type EmergencyLocation = MapDestination & {
 };
 
 const fallbackLocation: [number, number] = [40.758, -73.9855];
+const NEARBY_RADIUS_KM = 150;
 
 const hospitals: EmergencyLocation[] = [
   {
@@ -371,14 +372,20 @@ export function SOSPage({
   }), [embassy]);
 
   const nearbyLocations = useMemo(() => {
-    const origin = userLocation || fallbackLocation;
+    if (!userLocation) {
+      return locations[activeCategory].slice(0, 3).map((location) => ({
+        ...location,
+        distance: null as number | null
+      }));
+    }
 
     return locations[activeCategory]
       .map((location) => ({
         ...location,
-        distance: distanceKm(origin, location)
+        distance: distanceKm(userLocation, location) as number | null
       }))
-      .sort((a, b) => a.distance - b.distance);
+      .filter((location) => (location.distance ?? Infinity) <= NEARBY_RADIUS_KM)
+      .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }, [activeCategory, locations, userLocation]);
 
   function locateAndShow(category: EmergencyCategory) {
@@ -386,8 +393,8 @@ export function SOSPage({
     setLocationError("");
 
     if (!navigator.geolocation) {
-      setLocationError("Geolocation is not supported. Showing nearest available host-city locations.");
-      setUserLocation(fallbackLocation);
+      setLocationError("Enable location for nearby results.");
+      setUserLocation(null);
       return;
     }
 
@@ -396,8 +403,8 @@ export function SOSPage({
         setUserLocation([position.coords.latitude, position.coords.longitude]);
       },
       () => {
-        setLocationError("Location permission denied. Showing nearest available host-city locations.");
-        setUserLocation(fallbackLocation);
+        setLocationError("Enable location for nearby results.");
+        setUserLocation(null);
       }
     );
   }
@@ -446,14 +453,21 @@ export function SOSPage({
       )}
 
       <div className="card-dark">
-        <strong>Nearby {activeCategory === "embassy" ? "consular help" : activeCategory}</strong>
+        <strong>{userLocation ? "Nearby" : "Host-city"} {activeCategory === "embassy" ? "consular help" : activeCategory}</strong>
         <p className="subtle">
-          {userLocation ? "Sorted from your current location." : "Tap a category to use your location."}
+          {userLocation ? "Sorted from your current location." : "Enable location for nearby results."}
           {activeCategory === "embassy" && country ? ` Based on onboarding country: ${country}.` : ""}
         </p>
       </div>
 
       <div className="sos-location-list">
+        {userLocation && nearbyLocations.length === 0 && (
+          <div className="card-dark">
+            <strong>No nearby results found.</strong>
+            <p className="subtle">Use the emergency number above or try a different category.</p>
+          </div>
+        )}
+
         {nearbyLocations.map((location) => (
           <div className="sos-location-card" key={`${location.category}-${location.name}`}>
             <div className="sos-location-main">
@@ -462,7 +476,7 @@ export function SOSPage({
                 <strong>{location.name}</strong>
                 <p>{location.city} · {location.address}</p>
                 <p>{location.note}</p>
-                <small>{location.distance.toFixed(1)} km away</small>
+                <small>{location.distance === null ? "Enable location for nearby results." : `${location.distance.toFixed(1)} km away`}</small>
               </div>
             </div>
 

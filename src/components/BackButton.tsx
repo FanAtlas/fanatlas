@@ -1,7 +1,25 @@
-export function BackButton({ onBack }: { onBack: () => void }) {
+import { useLanguage } from "../LanguageContext";
+
+export function BackButton({ onBack }: { onBack?: () => void }) {
+  const { t } = useLanguage();
+
+  function handleBack() {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.assign("/");
+  }
+
   return (
-    <button className="back-btn" onClick={onBack} type="button">
-      ← Back
+    <button className="back-btn" onClick={handleBack} type="button">
+      ← {t.back}
     </button>
   );
 }

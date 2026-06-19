@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BackButton } from "../components/BackButton";
 
 type CountryKey = "USA" | "Canada" | "Mexico";
 
@@ -53,7 +54,7 @@ function readOfflineCountries() {
   }
 }
 
-export function OfflineGuidePage() {
+export function OfflineGuidePage({ onBack }: { onBack: () => void }) {
   const [selectedCountry, setSelectedCountry] = useState<CountryKey>("USA");
   const [offlineCountries, setOfflineCountries] = useState<string[]>(() => readOfflineCountries());
   const guide = guides.find((item) => item.country === selectedCountry) || guides[0];
@@ -76,6 +77,7 @@ export function OfflineGuidePage() {
   return (
     <div className="offline-guide-page">
       <div className="topbar">
+        <BackButton onBack={onBack} />
         <div>
           <div className="brand">Offline <span>Guides</span></div>
           <div className="subtle">USA, Canada, and Mexico travel essentials</div>

@@ -12,7 +12,7 @@ export function FanZonesPage({ onBack, setTab }: { onBack: () => void; setTab: (
   const actionLabels: Record<string, string> = {
     "VIP Packages": t.vipPackages,
     "Fan Zone Transportation": t.transportation,
-    "Official Merchandise": "Official Merchandise"
+    "Official Merchandise": t.officialMerchandise
   };
 
   async function addFanZoneReminder(zone: typeof fanZones[number]) {
@@ -67,7 +67,7 @@ export function FanZonesPage({ onBack, setTab }: { onBack: () => void; setTab: (
           <p>🛡 {t.safetyScore}: {zone.safety}/10</p>
 
           <button className="secondary-btn full-width" onClick={() => addFanZoneReminder(zone)}>
-            Add Fan Zone reminder
+            {t.addFanZoneReminder}
           </button>
 
           <div className="fanzone-actions">

@@ -6,7 +6,7 @@ export const crowdAlerts = [
     category: "stadium",
     congestion: 92,
     status: "Very High",
-    source: "FanAtlas demo sensor model",
+    source: "FanAtlas crowd guidance",
     recommendation: "Arrive early and use train or official shuttle."
   },
   {
@@ -16,7 +16,7 @@ export const crowdAlerts = [
     category: "stadium",
     congestion: 64,
     status: "High",
-    source: "FanAtlas demo sensor model",
+    source: "FanAtlas crowd guidance",
     recommendation: "Expect rideshare delays near stadium exits."
   },
   {
@@ -26,7 +26,7 @@ export const crowdAlerts = [
     category: "fan-zone",
     congestion: 74,
     status: "High",
-    source: "FanAtlas demo sensor model",
+    source: "FanAtlas crowd guidance",
     recommendation: "Use side streets and set a meetup point."
   },
   {
@@ -36,7 +36,7 @@ export const crowdAlerts = [
     category: "fan-zone",
     congestion: 48,
     status: "Medium",
-    source: "FanAtlas demo sensor model",
+    source: "FanAtlas crowd guidance",
     recommendation: "Hydrate and enter before peak screens fill."
   },
   {
@@ -46,7 +46,7 @@ export const crowdAlerts = [
     category: "restaurant",
     congestion: 88,
     status: "Very High",
-    source: "FanAtlas demo reservation model",
+    source: "FanAtlas dining guidance",
     recommendation: "Reserve ahead or choose off-peak dining."
   },
   {
@@ -56,7 +56,7 @@ export const crowdAlerts = [
     category: "restaurant",
     congestion: 28,
     status: "Low",
-    source: "FanAtlas demo reservation model",
+    source: "FanAtlas dining guidance",
     recommendation: "Good low-crowd stop before transit."
   }
 ];

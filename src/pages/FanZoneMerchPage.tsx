@@ -1,9 +1,15 @@
 import { BadgeCheck, PackageCheck, Shirt, ShoppingBag } from "lucide-react";
+import { BackButton } from "../components/BackButton";
 import { Tab } from "../main";
 import { trackRevenueClick } from "../services/revenueTracking";
 
 function merchCheckoutUrl(productName: string) {
-  const baseUrl = import.meta.env.VITE_FANZONE_MERCH_AFFILIATE_URL || "https://store.fifa.com/";
+  const baseUrl = import.meta.env.VITE_FANZONE_MERCH_AFFILIATE_URL;
+
+  if (!baseUrl) {
+    return "";
+  }
+
   const params = new URLSearchParams({
     product: productName,
     source: "fanatlas",
@@ -13,7 +19,7 @@ function merchCheckoutUrl(productName: string) {
   return `${baseUrl}?${params.toString()}`;
 }
 
-export function FanZoneMerchPage({ setTab }: { setTab: (tab: Tab) => void }) {
+export function FanZoneMerchPage({ onBack, setTab }: { onBack: () => void; setTab: (tab: Tab) => void }) {
   const products = [
     {
       name: "Official Match Scarf",
@@ -31,13 +37,12 @@ export function FanZoneMerchPage({ setTab }: { setTab: (tab: Tab) => void }) {
       details: "Pins, lanyard, tote, and limited fan-zone badge for multi-city travelers."
     }
   ];
+  const hasMerchStore = Boolean(import.meta.env.VITE_FANZONE_MERCH_AFFILIATE_URL);
 
   return (
     <>
       <div className="topbar">
-        <button className="small-dark-btn" onClick={() => setTab("fanzones")}>
-          ← Fan Zones
-        </button>
+        <BackButton onBack={onBack} />
         <div className="brand">Official <span>Merchandise</span></div>
       </div>
 
@@ -61,22 +66,28 @@ export function FanZoneMerchPage({ setTab }: { setTab: (tab: Tab) => void }) {
             </div>
             <span>{item.price}</span>
           </div>
-          <a
-            className="buy-btn full-width"
-            href={merchCheckoutUrl(item.name)}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => trackRevenueClick({
-              type: "merchandise",
-              product: item.name,
-              provider: "Official Merchandise",
-              amount: item.price,
-              url: merchCheckoutUrl(item.name),
-              source: "Fan Zone Merchandise Page"
-            })}
-          >
-            Shop Official Merchandise
-          </a>
+          {hasMerchStore ? (
+            <a
+              className="buy-btn full-width"
+              href={merchCheckoutUrl(item.name)}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackRevenueClick({
+                type: "merchandise",
+                product: item.name,
+                provider: "Official Merchandise",
+                amount: item.price,
+                url: merchCheckoutUrl(item.name),
+                source: "Fan Zone Merchandise Page"
+              })}
+            >
+              Shop Merchandise
+            </a>
+          ) : (
+            <button className="buy-btn full-width disabled" type="button" disabled>
+              Merchandise store coming soon
+            </button>
+          )}
         </div>
       ))}
 
@@ -86,7 +97,7 @@ export function FanZoneMerchPage({ setTab }: { setTab: (tab: Tab) => void }) {
 
       <div className="action-note">
         <PackageCheck size={18} />
-        <span>Merchandise checkout URLs use VITE_FANZONE_MERCH_AFFILIATE_URL with FanAtlas tracking parameters.</span>
+        <span>Official merchandise and fan gear for World Cup travelers.</span>
       </div>
     </>
   );

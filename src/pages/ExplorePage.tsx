@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Coins, Languages, ListChecks, MapPin, Monitor, Shield, Smartphone, WalletCards, MessageSquareText } from "lucide-react";
 import { fanZones, places } from "../data/mockData";
 import { useLanguage } from "../LanguageContext";
+import { LegalFooter } from "../components/LegalFooter";
+import { languages } from "../i18n";
 import { Tab } from "../main";
 import { getFanZoneDestination, getPlaceDestination, MapDestination } from "../mapDestinations";
 
@@ -92,7 +94,7 @@ export function ExplorePage({
   setTab: (tab: Tab) => void;
   setSelectedRestaurant?: (restaurant: any) => void;
 }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [active, setActive] = useState<ExploreCategory>(() => normalizeCategory(initialCategory));
   const [query, setQuery] = useState("");
 
@@ -109,7 +111,7 @@ export function ExplorePage({
 
   function openRestaurant(restaurant: any) {
     if (!setSelectedRestaurant) {
-      window.alert("Restaurant details coming soon.");
+      window.alert(`${t.restaurantDetails} ${t.comingSoon}.`);
       return;
     }
 
@@ -135,15 +137,16 @@ export function ExplorePage({
       <div className="topbar">
         <div>
           <div className="brand">Explore <span>Global</span></div>
-          <div className="subtle">Find places, food, stays, events, and travel tools.</div>
+          <div className="subtle">{t.exploreSubtitle}</div>
         </div>
+        <div className="language-pill">{languages[language]}</div>
       </div>
 
       <label className="explore-search">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search city, restaurant, hotel, event..."
+          placeholder={t.searchCityRestaurantHotelEvent}
         />
       </label>
 
@@ -154,7 +157,7 @@ export function ExplorePage({
             key={category}
             onClick={() => setActive(category)}
           >
-            {category}
+            {category === "All" ? "All" : category === "Restaurants" ? t.restaurants : category === "Hotels" ? t.hotels : category === "Attractions" ? t.attractions : category === "Events" ? t.events : category === "Fan Zones" ? t.fanZones : t.safetyNearby}
           </button>
         ))}
       </div>
@@ -162,8 +165,8 @@ export function ExplorePage({
       {active === "All" && (
         <section className="explore-section">
           <div className="section-row">
-            <h3>Travel Essentials</h3>
-            <button className="mini-btn" onClick={() => setTab("traveltools")}>All Tools</button>
+            <h3>{t.travelEssentials}</h3>
+            <button className="mini-btn" onClick={() => setTab("traveltools")}>{t.allTools}</button>
           </div>
           <div className="essentials-grid">
             {essentials.map((item) => {
@@ -183,13 +186,13 @@ export function ExplorePage({
         <span>Featured destination</span>
         <h1>New York / New Jersey</h1>
         <p>World Cup stadium, fan zones, restaurants and hotels nearby.</p>
-        <button className="secondary-btn" onClick={() => setTab("map")}>Open Map</button>
+        <button className="secondary-btn" onClick={() => setTab("map")}>{t.open} {t.map}</button>
       </section>
 
       {show("Restaurants") && (
         <section className="explore-section">
           <div className="section-row">
-            <h3>Restaurants</h3>
+            <h3>{t.restaurants}</h3>
             <span className="subtle">{filteredRestaurants.length} places</span>
           </div>
           <div className="explore-card-scroll">
@@ -201,7 +204,7 @@ export function ExplorePage({
                   <p>{restaurant.city} · ⭐ {restaurant.rating} · {restaurant.distance}</p>
                   <span>{restaurant.busy.replace("_", " ")} busy</span>
                 </div>
-                <button className="primary-btn" onClick={() => openRestaurant(restaurant)}>View details</button>
+                <button className="primary-btn" onClick={() => openRestaurant(restaurant)}>{t.viewDetails}</button>
               </article>
             ))}
           </div>
@@ -210,7 +213,7 @@ export function ExplorePage({
 
       {show("Hotels") && (
         <section className="explore-section">
-          <h3>Hotels</h3>
+          <h3>{t.hotels}</h3>
           <div className="explore-card-scroll">
             {hotelCards.map((hotel) => (
               <article className="explore-image-card" key={hotel.name}>
@@ -220,7 +223,7 @@ export function ExplorePage({
                   <p>{hotel.city} · ⭐ {hotel.rating} · {hotel.distance}</p>
                   <span>{hotel.price}</span>
                 </div>
-                <button className="primary-btn" onClick={() => setTab("hotels")}>Search hotels</button>
+                <button className="primary-btn" onClick={() => setTab("hotels")}>{t.searchHotels}</button>
               </article>
             ))}
           </div>
@@ -229,7 +232,7 @@ export function ExplorePage({
 
       {show("Attractions") && (
         <section className="explore-section">
-          <h3>Attractions</h3>
+          <h3>{t.attractions}</h3>
           <div className="explore-card-scroll">
             {attractions.map((place) => (
               <article className="explore-image-card" key={place.name}>
@@ -239,7 +242,7 @@ export function ExplorePage({
                   <p>{place.city}</p>
                   <span>{place.detail}</span>
                 </div>
-                <button className="secondary-btn" onClick={() => navigatePlace(place.name, place.city)}>Navigate</button>
+                <button className="secondary-btn" onClick={() => navigatePlace(place.name, place.city)}>{t.navigate}</button>
               </article>
             ))}
           </div>
@@ -248,7 +251,7 @@ export function ExplorePage({
 
       {show("Events") && (
         <section className="explore-section">
-          <h3>Fan Zones / Events</h3>
+          <h3>{t.fanZones} / {t.events}</h3>
           <div className="event-card-list">
             {fanZones.map((zone) => (
               <article className="event-card" key={zone.name}>
@@ -258,7 +261,7 @@ export function ExplorePage({
                   <span>{zone.entry}</span>
                 </div>
                 <div className="event-actions">
-                  <button className="secondary-btn" onClick={() => navigateFanZone(zone.name)}>View</button>
+                  <button className="secondary-btn" onClick={() => navigateFanZone(zone.name)}>{t.viewDetails}</button>
                   <button className="secondary-btn" onClick={() => setTab("fanzonevip")}>VIP</button>
                   <button className="secondary-btn" onClick={() => setTab("fanzonetransport")}>Transport</button>
                 </div>
@@ -270,14 +273,14 @@ export function ExplorePage({
 
       {show("Fan Zones") && active === "Fan Zones" && (
         <section className="explore-section">
-          <button className="primary-btn full-width" onClick={() => setTab("fanzones")}>Open Fan Zones</button>
+          <button className="primary-btn full-width" onClick={() => setTab("fanzones")}>{t.open} {t.fanZones}</button>
         </section>
       )}
 
       {show("Safety") && (
         <section className="explore-section safety-explore-section">
           <div className="section-row">
-            <h3>Safety Nearby</h3>
+            <h3>{t.safetyNearby}</h3>
             <button className="mini-btn" onClick={() => setTab("sos")}>SOS</button>
           </div>
           <div className="safety-grid">
@@ -291,6 +294,8 @@ export function ExplorePage({
           </div>
         </section>
       )}
+
+      <LegalFooter setTab={setTab} />
     </div>
   );
 }

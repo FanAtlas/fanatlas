@@ -15,7 +15,7 @@ function recommendationFor(
   if (temperature !== null && temperature >= 30) return "High heat expected. Hydrate early and wear sunscreen.";
   if (windSpeed !== null && windSpeed >= 35) return "Windy conditions. Secure hats, scarves, and loose items.";
   if (temperature !== null && temperature <= 10) return "Cool weather expected. Bring a warm layer.";
-  return "Weather looks manageable. Check again before leaving.";
+  return "Weather looks manageable. Review conditions again before departure.";
 }
 
 export function emptyWeather(): FanAtlasWeather {
@@ -23,7 +23,7 @@ export function emptyWeather(): FanAtlasWeather {
     temperature: null,
     rainProbability: null,
     windSpeed: null,
-    recommendation: "Weather unavailable. Check again before leaving.",
+    recommendation: "Weather unavailable. Review conditions again before departure.",
     updatedAt: ""
   };
 }

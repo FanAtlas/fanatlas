@@ -15,6 +15,7 @@ type AdminContentItem = {
 };
 
 const STORAGE_KEY = "fanatlas.adminContent";
+const ADMIN_EMAIL = "kadsimohamedads@gmail.com";
 const sections: AdminSection[] = ["Fan Zones", "Hotels", "Restaurants", "City Guides", "Alerts"];
 
 const seedContent: AdminContentItem[] = [
@@ -83,7 +84,7 @@ export function AdminPage({ onBack }: { onBack: () => void }) {
   const [adminError, setAdminError] = useState("");
   const [content, setContent] = useState<AdminContentItem[]>(() => readAdminContent());
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loadingRole, setLoadingRole] = useState(true);
+  const [loadingAccess, setLoadingAccess] = useState(true);
   const [draft, setDraft] = useState({
     city: "",
     status: "Draft" as "Draft" | "Published",
@@ -96,10 +97,10 @@ export function AdminPage({ onBack }: { onBack: () => void }) {
   }, [content]);
 
   useEffect(() => {
-    async function loadRole() {
+    async function loadAccess() {
       if (!supabase) {
-        setAdminError("Supabase is not configured. Admin access requires an authenticated admin profile.");
-        setLoadingRole(false);
+        setAdminError("Supabase is not configured. Admin access requires the approved owner account.");
+        setLoadingAccess(false);
         return;
       }
 
@@ -108,29 +109,21 @@ export function AdminPage({ onBack }: { onBack: () => void }) {
         const user = userData.user;
         if (!user) {
           setAdminError("Sign in with an admin account to access content tools.");
-          setLoadingRole(false);
+          setLoadingAccess(false);
           return;
         }
 
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        const allowed = data?.role === "admin";
+        const allowed = user.email?.toLowerCase() === ADMIN_EMAIL;
         setIsAdmin(allowed);
-        setAdminError(allowed ? "" : "Your profile is not assigned the admin role.");
+        setAdminError(allowed ? "" : "This account is not allowed to access admin tools.");
       } catch (error: any) {
-        setAdminError(error?.message || "Unable to verify admin role.");
+        setAdminError(error?.message || "Unable to verify admin access.");
       } finally {
-        setLoadingRole(false);
+        setLoadingAccess(false);
       }
     }
 
-    loadRole();
+    loadAccess();
   }, []);
 
   const visibleContent = useMemo(() => (
@@ -167,14 +160,14 @@ export function AdminPage({ onBack }: { onBack: () => void }) {
     setContent((current) => current.filter((item) => item.id !== id));
   }
 
-  if (loadingRole) {
+  if (loadingAccess) {
     return (
       <div className="admin-page">
         <div className="topbar">
           <BackButton onBack={onBack} />
           <div className="brand">Admin <span>Tools</span></div>
         </div>
-        <div className="route-status">Checking admin role...</div>
+        <div className="route-status">Checking admin access...</div>
       </div>
     );
   }
@@ -192,7 +185,7 @@ export function AdminPage({ onBack }: { onBack: () => void }) {
         <section className="admin-locked">
           <h1>Admin access required</h1>
           <p>{adminError || "Your account does not have permission to manage FanAtlas content."}</p>
-          <small>Set `profiles.role` to `admin` for approved content managers.</small>
+          <small>Use the approved owner email to access admin tools.</small>
         </section>
       </div>
     );

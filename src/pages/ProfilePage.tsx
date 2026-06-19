@@ -3,24 +3,19 @@ import {
   AlertTriangle,
   BadgeCheck,
   BarChart3,
-  Bell,
   Globe2,
   Heart,
   Languages,
   LogOut,
-  Map,
-  Monitor,
   Shield,
-  Sparkles,
   Ticket,
-  UserRound
+  Wrench
 } from "lucide-react";
 import { Language, languages } from "../i18n";
 import { useLanguage } from "../LanguageContext";
+import { LegalFooter } from "../components/LegalFooter";
 import { supabase } from "../lib/supabase";
 import { Tab } from "../main";
-import { MapDestination } from "../mapDestinations";
-import { getPremiumSubscription, isPremiumActive, premiumEventName } from "../services/premium";
 
 type Profile = {
   email: string;
@@ -41,17 +36,16 @@ const defaultProfile: Profile = {
 };
 
 export function ProfilePage({
-  setMapDestination,
+  isAdmin,
   setTab
 }: {
-  setMapDestination: (destination: MapDestination | null) => void;
+  isAdmin: boolean;
   setTab: (tab: Tab) => void;
 }) {
   const { language, setLanguage, t } = useLanguage();
   const [profile, setProfile] = useState<Profile>(defaultProfile);
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
-  const [premiumActive, setPremiumActive] = useState(() => isPremiumActive());
 
   useEffect(() => {
     let mounted = true;
@@ -104,20 +98,6 @@ export function ProfilePage({
     };
   }, []);
 
-  useEffect(() => {
-    function refreshPremium() {
-      setPremiumActive(isPremiumActive(getPremiumSubscription()));
-    }
-
-    window.addEventListener(premiumEventName(), refreshPremium);
-    window.addEventListener("storage", refreshPremium);
-
-    return () => {
-      window.removeEventListener(premiumEventName(), refreshPremium);
-      window.removeEventListener("storage", refreshPremium);
-    };
-  }, []);
-
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -144,9 +124,6 @@ export function ProfilePage({
         <div className="avatar">{initials}</div>
         <div className="profile-hero-copy">
           <span><BadgeCheck size={14} /> Signed in</span>
-          {premiumActive && (
-            <span className="premium-badge-inline"><Sparkles size={13} /> Premium</span>
-          )}
           <h2>{displayName}</h2>
           <p>{profile.email || t.signedIn}</p>
         </div>
@@ -170,15 +147,6 @@ export function ProfilePage({
       )}
 
       <section className="profile-section">
-        <button className="profile-row" onClick={() => setTab("offline")}>
-          <span className="profile-row-icon"><Globe2 size={19} /></span>
-          <span>
-            <strong>Country</strong>
-            <small>{profile.country || "Not set"}</small>
-          </span>
-          <em>›</em>
-        </button>
-
         <button className="profile-row" onClick={() => setTab("matches")}>
           <span className="profile-row-icon"><Heart size={19} /></span>
           <span>
@@ -197,10 +165,10 @@ export function ProfilePage({
               onChange={(event) => setLanguage(event.target.value as Language)}
             >
               <option value="en">🇺🇸 English</option>
-              <option value="es">🇲🇽 Español</option>
               <option value="fr">🇫🇷 Français</option>
+              <option value="es">🇪🇸 Español</option>
               <option value="ar">🇲🇦 العربية</option>
-              <option value="pt">🇧🇷 Português</option>
+              <option value="pt">🇵🇹 Português</option>
             </select>
           </span>
           <em>›</em>
@@ -215,11 +183,6 @@ export function ProfilePage({
         </div>
       )}
 
-      <button className="profile-premium-row" onClick={() => setTab("premium")}>
-        <span><Sparkles size={20} /> {t.premium}</span>
-        <strong>{premiumActive ? "Manage plan" : t.upgradePlan} →</strong>
-      </button>
-
       <section className="profile-section">
         <button className="profile-row" onClick={() => setTab("tickets")}>
           <span className="profile-row-icon"><Ticket size={19} /></span>
@@ -230,53 +193,31 @@ export function ProfilePage({
           <em>›</em>
         </button>
 
-        <button className="profile-row" onClick={() => setTab("notifications")}>
-          <span className="profile-row-icon"><Bell size={19} /></span>
+        {isAdmin && (
+          <button className="profile-row" onClick={() => setTab("revenue")}>
+            <span className="profile-row-icon"><BarChart3 size={19} /></span>
+            <span>
+              <strong>Revenue Tracking</strong>
+              <small>Affiliate clicks, top products, and top stadiums</small>
+            </span>
+            <em>›</em>
+          </button>
+        )}
+
+        <button className="profile-row" onClick={() => setTab("traveltools")}>
+          <span className="profile-row-icon"><Wrench size={19} /></span>
           <span>
-            <strong>Notifications</strong>
-            <small>Match, hotel, ticket, fan zone, SOS, and arrival reminders</small>
+            <strong>{t.travelTools}</strong>
+            <small>eSIM, currency, translator, checklist, expenses, and guides</small>
           </span>
           <em>›</em>
         </button>
 
-        <button className="profile-row" onClick={() => setTab("revenue")}>
-          <span className="profile-row-icon"><BarChart3 size={19} /></span>
-          <span>
-            <strong>Revenue Tracking</strong>
-            <small>Affiliate clicks, top products, and top stadiums</small>
-          </span>
-          <em>›</em>
-        </button>
-
-        <button
-          className="profile-row"
-          onClick={() => {
-            setMapDestination(null);
-            setTab("map");
-          }}
-        >
-          <span className="profile-row-icon"><Map size={19} /></span>
+        <button className="profile-row" onClick={() => setTab("offline")}>
+          <span className="profile-row-icon"><Globe2 size={19} /></span>
           <span>
             <strong>{t.offlineContent}</strong>
-            <small>{t.offlineContentDesc}</small>
-          </span>
-          <em>›</em>
-        </button>
-
-        <button className="profile-row" onClick={() => setTab("tv")}>
-          <span className="profile-row-icon"><Monitor size={19} /></span>
-          <span>
-            <strong>{t.connectTv}</strong>
-            <small>{t.connectTvDesc}</small>
-          </span>
-          <em>›</em>
-        </button>
-
-        <button className="profile-row" onClick={() => setTab("translator")}>
-          <span className="profile-row-icon"><UserRound size={19} /></span>
-          <span>
-            <strong>{t.voiceTranslator}</strong>
-            <small>{t.tenLanguages}</small>
+            <small>Save country guides and emergency details for offline access</small>
           </span>
           <em>›</em>
         </button>
@@ -294,6 +235,8 @@ export function ProfilePage({
       <button className="signout" onClick={signOut}>
         <LogOut size={18} /> {t.signOut}
       </button>
+
+      <LegalFooter setTab={setTab} />
     </div>
   );
 }

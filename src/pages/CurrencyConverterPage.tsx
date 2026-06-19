@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BackButton } from "../components/BackButton";
+import { useLanguage } from "../LanguageContext";
 import { getExchangeRates } from "../services/exchangeRates";
 
 const AUTO_REFRESH_MS = 30 * 60 * 1000;
@@ -86,6 +87,7 @@ function formatUpdatedTime(value: string | number) {
 }
 
 export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
+  const { language, t } = useLanguage();
   const [amount, setAmount] = useState(100);
   const [converted, setConverted] = useState<ConversionResult | null>(null);
   const [error, setError] = useState("");
@@ -167,14 +169,14 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
   const display = converted || currentConversion;
 
   return (
-    <>
+    <div dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="topbar">
         <BackButton onBack={onBack} />
         <div className="brand">
-          Currency <span>{loading ? "Loading" : "Live"}</span>
+          {t.currency} <span>{loading ? "Loading" : t.live}</span>
         </div>
         <button className="mini-btn" onClick={loadRates} disabled={loading}>
-          Refresh
+          {t.refresh}
         </button>
       </div>
 
@@ -196,7 +198,7 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
 
         <div className="grid-2 currency-selector-grid">
           <label>
-            <span className="subtle">From</span>
+            <span className="subtle">{t.from}</span>
             <select className="input" value={from} onChange={(e) => setFrom(e.target.value)} disabled={codes.length === 0}>
               {codes.map((code) => (
                 <option key={code}>{code}</option>
@@ -205,7 +207,7 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
           </label>
 
           <label>
-            <span className="subtle">To</span>
+            <span className="subtle">{t.to}</span>
             <select className="input" value={to} onChange={(e) => setTo(e.target.value)} disabled={codes.length === 0}>
               {codes.map((code) => (
                 <option key={code}>{code}</option>
@@ -219,7 +221,7 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
             Swap
           </button>
           <button className="primary-btn" onClick={convert} disabled={loading || !currentConversion}>
-            Convert
+            {t.convert}
           </button>
         </div>
 
@@ -239,6 +241,6 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
           {" "}Auto-refreshes every 30 minutes.
         </p>
       </div>
-    </>
+    </div>
   );
 }

@@ -1,7 +1,9 @@
 import { BackButton } from "../components/BackButton";
+import { useLanguage } from "../LanguageContext";
 import { trackRevenueClick } from "../services/revenueTracking";
 
 export function ESimPage({ onBack }: { onBack: () => void }) {
+  const { language, t } = useLanguage();
   const esimPlans = [
     {
       provider: "Airalo",
@@ -52,19 +54,19 @@ export function ESimPage({ onBack }: { onBack: () => void }) {
   ];
 
   return (
-    <>
+    <div dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="topbar">
         <BackButton onBack={onBack} />
         <div>
           <div className="brand">eSIM</div>
-          <div className="subtle">Travel internet packages for World Cup fans</div>
+          <div className="subtle">{t.esimSubtitle}</div>
         </div>
       </div>
 
       <div className="esim-hero">
         <span className="feature-emoji">📶</span>
         <div>
-          <h3>Stay connected</h3>
+          <h3>{t.stayConnected}</h3>
           <p>Compare travel eSIM plans for USA, Canada, and Mexico before you land.</p>
         </div>
       </div>
@@ -107,7 +109,7 @@ export function ESimPage({ onBack }: { onBack: () => void }) {
               source: "eSIM Page"
             })}
           >
-            View Plan
+            {t.viewPlan}
           </a>
         </div>
       ))}
@@ -120,6 +122,6 @@ export function ESimPage({ onBack }: { onBack: () => void }) {
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

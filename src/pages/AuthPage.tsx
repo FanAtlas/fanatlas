@@ -1,9 +1,11 @@
 import { FormEvent, useState } from "react";
+import { LegalFooter } from "../components/LegalFooter";
 import { supabase } from "../lib/supabase";
+import type { Tab } from "../main";
 
 type AuthMode = "login" | "signup";
 
-export function AuthPage() {
+export function AuthPage({ setTab }: { setTab: (tab: Tab) => void }) {
   const [credential, setCredential] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<AuthMode>("login");
@@ -17,7 +19,7 @@ export function AuthPage() {
     setMessage("");
 
     if (!supabase) {
-      setError("Supabase is not connected. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+      setError("Sign in is temporarily unavailable. Please try again later.");
       return;
     }
 
@@ -117,6 +119,8 @@ export function AuthPage() {
             Already a Customer? Login
           </button>
         )}
+
+        <LegalFooter setTab={setTab} />
       </form>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BackButton } from "../components/BackButton";
 import { FanAtlasMatch } from "../services/worldcup2026";
 import { Tab } from "../main";
 import { getFanZoneDestination, getStadiumDestination, MapDestination } from "../mapDestinations";
@@ -8,6 +9,7 @@ import { emptyWeather, FanAtlasWeather, formatWeatherValue, getWeather } from ".
 
 type Props = {
   match: FanAtlasMatch | null;
+  onBack: () => void;
   setMapDestination: (destination: MapDestination | null) => void;
   setTab: (tab: Tab) => void;
 };
@@ -99,16 +101,16 @@ function nearbyHotels(city: string, stadium: string) {
   return [`${key} central hotel`, `${key} stadium hotel search`, "Official hotel partner area"];
 }
 
-export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
+export function MatchDayPage({ match, onBack, setMapDestination, setTab }: Props) {
   if (!match) {
     return (
       <>
         <div className="topbar">
+          <BackButton onBack={onBack} />
           <div>
             <div className="brand">Match Day <span>Assistant</span></div>
             <div className="subtle">Choose a match to build your plan</div>
           </div>
-          <button className="small-dark-btn" onClick={() => setTab("matches")}>← Matches</button>
         </div>
 
         <div className="matchday-hero">
@@ -164,7 +166,7 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
       .catch((error) => {
         console.error("Match day weather error:", error);
         setWeather(emptyWeather());
-        setWeatherError("Weather unavailable. Check again before leaving.");
+        setWeatherError("Weather unavailable. Review conditions again before departure.");
       });
   }, [m.city, m.stadium]);
 
@@ -219,11 +221,11 @@ export function MatchDayPage({ match, setMapDestination, setTab }: Props) {
   return (
     <>
       <div className="topbar">
+        <BackButton onBack={onBack} />
         <div>
           <div className="brand">Match Day <span>Assistant</span></div>
           <div className="subtle">{m.team1} vs {m.team2}</div>
         </div>
-        <button className="small-dark-btn" onClick={() => setTab("matches")}>← Back</button>
       </div>
 
       <div className="matchday-hero">

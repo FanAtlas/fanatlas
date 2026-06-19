@@ -1,4 +1,5 @@
 import { Crown, ShieldCheck, Sparkles, Star, Users } from "lucide-react";
+import { BackButton } from "../components/BackButton";
 import { Tab } from "../main";
 import { trackRevenueClick } from "../services/revenueTracking";
 
@@ -13,7 +14,7 @@ function vipCheckoutUrl(packageName: string) {
   return `${baseUrl}?${params.toString()}`;
 }
 
-export function FanZoneVIPPage({ setTab }: { setTab: (tab: Tab) => void }) {
+export function FanZoneVIPPage({ onBack, setTab }: { onBack: () => void; setTab: (tab: Tab) => void }) {
   const packages = [
     {
       name: "Pitchside Lounge",
@@ -35,9 +36,7 @@ export function FanZoneVIPPage({ setTab }: { setTab: (tab: Tab) => void }) {
   return (
     <>
       <div className="topbar">
-        <button className="small-dark-btn" onClick={() => setTab("fanzones")}>
-          ← Fan Zones
-        </button>
+        <BackButton onBack={onBack} />
         <div className="brand">VIP <span>Fan Zones</span></div>
       </div>
 
@@ -84,7 +83,7 @@ export function FanZoneVIPPage({ setTab }: { setTab: (tab: Tab) => void }) {
 
       <div className="action-note">
         <ShieldCheck size={18} />
-        <span>VIP checkout URLs use VITE_FANZONE_VIP_AFFILIATE_URL with FanAtlas tracking parameters.</span>
+        <span>Premium fan-zone experiences for travelers who want extra comfort on match day.</span>
       </div>
 
       <div className="action-note">
@@ -94,7 +93,7 @@ export function FanZoneVIPPage({ setTab }: { setTab: (tab: Tab) => void }) {
 
       <div className="action-note">
         <Sparkles size={18} />
-        <span>Keep users inside FanAtlas until checkout links are configured.</span>
+        <span>Review the package details before continuing to checkout.</span>
       </div>
     </>
   );

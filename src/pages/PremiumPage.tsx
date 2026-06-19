@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, Bot, Crown, Download, Languages, ShieldOff, Sparkles, Trophy } from "lucide-react";
+import { BackButton } from "../components/BackButton";
 import { Tab } from "../main";
 import {
   activatePremium,
@@ -69,7 +70,7 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-export function PremiumPage({ setTab }: { setTab: (tab: Tab) => void }) {
+export function PremiumPage({ onBack, setTab }: { onBack: () => void; setTab: (tab: Tab) => void }) {
   const [subscription, setSubscription] = useState<PremiumSubscription>(() => getPremiumSubscription());
   const active = isPremiumActive(subscription);
 
@@ -98,11 +99,11 @@ export function PremiumPage({ setTab }: { setTab: (tab: Tab) => void }) {
   return (
     <div className="premium-page">
       <div className="topbar">
+        <BackButton onBack={onBack} />
         <div>
           <div className="brand">FanAtlas <span>Premium</span></div>
           <div className="subtle">Ad-free travel tools for World Cup 2026</div>
         </div>
-        <button className="small-dark-btn" onClick={() => setTab("profile")}>Back</button>
       </div>
 
       <section className="premium-hero-panel">

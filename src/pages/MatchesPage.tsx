@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  getWorldCup2026Games,
+  getWorldCup2026GamesWithFallback,
   getWorldCup2026Groups,
-  getWorldCup2026Stadiums,
+  getWorldCup2026StadiumsWithFallback,
   getWorldCup2026Teams,
   FanAtlasMatch,
   FanAtlasStadium
 } from "../services/worldcup2026";
+import { savedWorldCup2026Matches, savedWorldCup2026Stadiums } from "../data/worldCup2026Schedule";
 import { FavoriteButton } from "../components/FavoriteButton";
 import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
@@ -60,6 +61,7 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
   const [sourceKey, setSourceKey] = useState<"loading" | "ready" | "empty" | "unavailable">("loading");
   const [error, setError] = useState("");
   const [apiCounts, setApiCounts] = useState({ games: 0, groups: 0, stadiums: 0, teams: 0 });
+  const [usingSavedSchedule, setUsingSavedSchedule] = useState(false);
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -76,12 +78,16 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
     async function loadWorldCupData() {
       try {
         setLoading(true);
-        const [games, venues, teams, groups] = await Promise.all([
-          getWorldCup2026Games(),
-          getWorldCup2026Stadiums(),
-          getWorldCup2026Teams(),
-          getWorldCup2026Groups()
+        const [gameResult, venueResult, teams, groups] = await Promise.all([
+          getWorldCup2026GamesWithFallback(),
+          getWorldCup2026StadiumsWithFallback(),
+          getWorldCup2026Teams().catch(() => []),
+          getWorldCup2026Groups().catch(() => [])
         ]);
+        const games = gameResult.matches;
+        const venues = venueResult.stadiums;
+
+        setUsingSavedSchedule(gameResult.source === "saved" || venueResult.source === "saved");
         setApiCounts({
           games: games.length,
           groups: groups.length,
@@ -99,11 +105,12 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
           setSourceKey("empty");
         }
       } catch (err: any) {
-        setMatches([]);
-        setStadiums([]);
+        setMatches(savedWorldCup2026Matches);
+        setStadiums(savedWorldCup2026Stadiums);
+        setUsingSavedSchedule(true);
         setApiCounts({ games: 0, groups: 0, stadiums: 0, teams: 0 });
-        setError("Live schedule unavailable. Please try again.");
-        setSourceKey("unavailable");
+        setError("");
+        setSourceKey("ready");
       } finally {
         setLoading(false);
       }
@@ -174,20 +181,24 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
         <div className="language-pill">🏆 {t.live}</div>
       </div>
 
-      {loading && <div className="card-dark"><strong>{t.loadingWorldCupData}</strong><p className="subtle">{t.checkingJsonSource}</p></div>}
+      {loading && <div className="card-dark"><strong>{t.loadingWorldCupData}</strong><p className="subtle">Loading the latest schedule.</p></div>}
 
-      {error && <div className="alert-card danger"><div><strong>{t.fixturesUnavailable}</strong><p>{error}</p></div></div>}
+      {error && <div className="alert-card danger"><div><strong>Schedule unavailable</strong><p>{error}</p></div></div>}
+
+      {usingSavedSchedule && !error && (
+        <div className="alert-card warning">
+          <div>
+            <strong>Showing saved World Cup schedule. Live updates will refresh when available.</strong>
+          </div>
+        </div>
+      )}
 
       <div className="feature-card green">
         <span className="feature-emoji">⚽</span>
         <div>
           <h3>{t.matchDayAssistant}</h3>
           <p>{t.chooseMatchDesc}</p>
-          {apiCounts.games > 0 && (
-            <small>
-              Live API loaded {apiCounts.games} games, {apiCounts.stadiums} stadiums, {apiCounts.teams} teams, and {apiCounts.groups} groups.
-            </small>
-          )}
+          <small>Choose a match to plan routes, timing, food, hotels, fan zones, and safety.</small>
         </div>
       </div>
 
@@ -243,7 +254,9 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
                   {m.group && <span>{m.group}</span>}
                 </div>
                 <h2>{m.homeTeam} vs {m.awayTeam}</h2>
-                <p>{m.date} · {m.kickoffTime}</p>
+                <p>{m.date}</p>
+                <p>Stadium local time: {m.stadiumTime || m.kickoffTime}</p>
+                <p>{m.userLocalTime || `Your local time: ${m.kickoffTime}`}</p>
               </div>
               <div className={`match-status-pill ${status.toLowerCase()}`}>
                 {shouldShowScore(m) && <strong>{m.score}</strong>}

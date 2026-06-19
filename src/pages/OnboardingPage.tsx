@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getCountryOptions } from "../data/onboardingOptions";
-import { Language } from "../i18n";
+import { Language, languages } from "../i18n";
 import { useLanguage } from "../LanguageContext";
 import { supabase } from "../lib/supabase";
 
@@ -26,7 +26,7 @@ export function OnboardingPage({ onComplete }: Props) {
     }
 
     if (!supabase) {
-      setError("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+      setError("Setup is temporarily unavailable. Please try again later.");
       return;
     }
 
@@ -42,7 +42,7 @@ export function OnboardingPage({ onComplete }: Props) {
       return;
     }
 
-    localStorage.setItem("fanatlas.language", language);
+    localStorage.setItem("fanatlas_language", language);
 
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
@@ -66,6 +66,7 @@ export function OnboardingPage({ onComplete }: Props) {
   return (
     <div className="onboarding-page">
       <div className="onboarding-card">
+        <div className="onboarding-language-current language-pill">{languages[language]}</div>
         <div className="auth-logo">FA</div>
         <h1>FanAtlas Setup</h1>
         <p>Set your travel basics before entering the app.</p>
@@ -80,11 +81,11 @@ export function OnboardingPage({ onComplete }: Props) {
                 setLanguage(event.target.value as Language);
               }}
             >
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="fr">Français</option>
-              <option value="ar">العربية</option>
-              <option value="pt">Português</option>
+              <option value="en">🇺🇸 English</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="ar">🇲🇦 العربية</option>
+              <option value="pt">🇵🇹 Português</option>
             </select>
             <button className="primary-btn full-width" onClick={() => setStep(2)}>
               Continue

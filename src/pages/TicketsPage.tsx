@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FileText, Image, QrCode, Ticket as TicketIcon } from "lucide-react";
 import { BackButton } from "../components/BackButton";
+import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 import { FanAtlasMatch } from "../services/worldcup2026";
 import { reminderDate, scheduleNotification } from "../services/notifications";
@@ -90,6 +91,7 @@ function ticketToMatch(ticket: Ticket): FanAtlasMatch {
 }
 
 export function TicketsPage({ onBack, setSelectedMatch, setTab }: TicketsPageProps) {
+  const { language, t } = useLanguage();
   const [tickets, setTickets] = useState<Ticket[]>(() => loadTickets());
   const [ticket, setTicket] = useState<DraftTicket>(emptyTicket);
   const [error, setError] = useState("");
@@ -155,12 +157,12 @@ export function TicketsPage({ onBack, setSelectedMatch, setTab }: TicketsPagePro
   }
 
   return (
-    <>
+    <div dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="topbar">
         <BackButton onBack={onBack} />
         <div>
           <div className="brand">
-            My Tickets <span>2026</span>
+            {t.ticketsTitle} <span>2026</span>
           </div>
           <div className="subtle">
             Upload PDF, screenshot, QR, seat and match details
@@ -239,7 +241,7 @@ export function TicketsPage({ onBack, setSelectedMatch, setTab }: TicketsPagePro
         {error && <div className="route-status error">{error}</div>}
 
         <button className="primary-btn full-width" onClick={saveTicket}>
-          Save Ticket
+          {t.save}
         </button>
       </div>
 
@@ -260,7 +262,7 @@ export function TicketsPage({ onBack, setSelectedMatch, setTab }: TicketsPagePro
               <div className="ticket-icon"><TicketIcon size={22} /></div>
               <div>
                 <h3>{savedTicket.match}</h3>
-                <p>{savedTicket.date} · {savedTicket.time || "Time TBD"}</p>
+                <p>{savedTicket.date} · {savedTicket.time || "Kickoff time unavailable"}</p>
               </div>
             </div>
 
@@ -293,6 +295,6 @@ export function TicketsPage({ onBack, setSelectedMatch, setTab }: TicketsPagePro
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

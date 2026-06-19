@@ -118,7 +118,7 @@ function buildDemoRoute(
   const km = distanceKm(origin, destination);
   const speed = travelMode === "walking" ? 4.8 : travelMode === "driving" ? 32 : 24;
   const minutes = Math.max(4, Math.round((km / speed) * 60));
-  const transitPrefix = travelMode === "transit" ? "Transit demo: " : "";
+  const transitPrefix = travelMode === "transit" ? "Transit estimate: " : "";
 
   return {
     route: straightLineRoute(origin, destination),

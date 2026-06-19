@@ -41,6 +41,9 @@ import { MeetupPage } from "./pages/MeetupPage";
 import { PhrasebookPage } from "./pages/PhrasebookPage";
 import { AdminPage } from "./pages/AdminPage";
 import { TravelToolsPage } from "./pages/TravelToolsPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
+import { TermsPage } from "./pages/TermsPage";
+import { SupportPage } from "./pages/SupportPage";
 
 import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
@@ -49,7 +52,9 @@ import { LanguageContext } from "./LanguageContext";
 import { MapDestination } from "./mapDestinations";
 import { getDueNotifications, markNotificationDelivered } from "./services/notifications";
 
-const LANGUAGE_STORAGE_KEY = "fanatlas.language";
+const LANGUAGE_STORAGE_KEY = "fanatlas_language";
+const LEGACY_LANGUAGE_STORAGE_KEY = "fanatlas.language";
+const ADMIN_EMAIL = "kadsimohamedads@gmail.com";
 
 export type Tab =
   | "home"
@@ -88,14 +93,33 @@ export type Tab =
   | "traveltools"
   | "admin"
   | "notificationSettings"
-  | "revenue";
+  | "revenue"
+  | "privacy"
+  | "terms"
+  | "support";
 
 function isLanguage(value: string | null): value is Language {
   return value === "en" || value === "es" || value === "fr" || value === "ar" || value === "pt";
 }
 
+function browserLanguage(): Language {
+  const code = navigator.language.slice(0, 2).toLowerCase();
+  return isLanguage(code) ? code : "en";
+}
+
+function initialLanguage(): Language {
+  const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  if (isLanguage(storedLanguage)) return storedLanguage;
+
+  const legacyLanguage = localStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY);
+  if (isLanguage(legacyLanguage)) return legacyLanguage;
+
+  return browserLanguage();
+}
+
 function App() {
   const [session, setSession] = useState<any>(null);
+  const [isAdminEmail, setIsAdminEmail] = useState(false);
   const [tab, setTab] = useState<Tab>("home");
   const [previousTab, setPreviousTab] = useState<Tab | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
@@ -103,12 +127,14 @@ function App() {
   const [selectedStadium, setSelectedStadium] = useState<MapDestination | null>(null);
   const [exploreCategory, setExploreCategory] = useState("fanzones");
   const [selectedMapDestination, setSelectedMapDestination] = useState<MapDestination | null>(null);
-  const [language, setLanguageState] = useState<Language>(() => {
-    const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    return isLanguage(storedLanguage) ? storedLanguage : "en";
-  });
+  const [language, setLanguageState] = useState<Language>(() => initialLanguage());
 
   const t = text[language];
+
+  function updateAdminAccess(nextSession: any) {
+    const email = nextSession?.user?.email?.toLowerCase() || "";
+    setIsAdminEmail(email === ADMIN_EMAIL);
+  }
 
   function applyLanguage(language: Language) {
     setLanguageState(language);
@@ -135,12 +161,14 @@ function App() {
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+      updateAdminAccess(data.session);
     });
 
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      updateAdminAccess(session);
       if (session?.user) {
         setTab("home");
       }
@@ -150,6 +178,11 @@ function App() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+  }, [language]);
 
   useEffect(() => {
     function deliverDueNotifications() {
@@ -169,10 +202,6 @@ function App() {
     return () => window.clearInterval(timer);
   }, []);
 
-  if (!session) {
-    return <AuthPage />;
-  }
-
   function navigateTo(nextTab: Tab) {
     if (nextTab !== tab) {
       setPreviousTab(tab);
@@ -184,6 +213,25 @@ function App() {
     const target = previousTab && previousTab !== tab ? previousTab : "home";
     setPreviousTab("home");
     setTab(target);
+  }
+
+  function goHome() {
+    setPreviousTab("home");
+    setTab("home");
+  }
+
+  if (!session) {
+    const publicPage =
+      tab === "privacy" ? <PrivacyPage onBack={goHome} /> :
+      tab === "terms" ? <TermsPage onBack={goHome} /> :
+      tab === "support" ? <SupportPage onBack={goHome} /> :
+      <AuthPage setTab={navigateTo} />;
+
+    return (
+      <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        {publicPage}
+      </LanguageContext.Provider>
+    );
   }
 
   const render = () => {
@@ -239,21 +287,30 @@ function App() {
     if (tab === "profile") {
       return (
         <ProfilePage
-          setMapDestination={setSelectedMapDestination}
+          isAdmin={isAdminEmail}
           setTab={navigateTo}
         />
       );
     }
     if (tab === "ai") return <AIChatPage onBack={goBack} />;
     if (tab === "guides") return <TravelGuidesPage onBack={goBack} setTab={navigateTo} />;
-    if (tab === "offline") return <OfflineGuidePage />;
+    if (tab === "offline") return <OfflineGuidePage onBack={goBack} />;
     if (tab === "cityguide") return <CityGuidePage />;
-    if (tab === "expenses") return <ExpenseTrackerPage />;
-    if (tab === "checklist") return <ChecklistPage />;
+    if (tab === "expenses") return <ExpenseTrackerPage onBack={goBack} />;
+    if (tab === "checklist") return <ChecklistPage onBack={goBack} />;
     if (tab === "meetups") return <MeetupPage />;
-    if (tab === "phrasebook") return <PhrasebookPage />;
+    if (tab === "phrasebook") return <PhrasebookPage onBack={goBack} />;
     if (tab === "traveltools") return <TravelToolsPage onBack={goBack} setTab={navigateTo} />;
-    if (tab === "admin") return <AdminPage onBack={goBack} />;
+    if (tab === "privacy") return <PrivacyPage onBack={goHome} />;
+    if (tab === "terms") return <TermsPage onBack={goHome} />;
+    if (tab === "support") return <SupportPage onBack={goHome} />;
+    if (tab === "admin") {
+      return isAdminEmail ? (
+        <AdminPage onBack={goBack} />
+      ) : (
+        <AccessDenied onHome={() => navigateTo("home")} />
+      );
+    }
     if (tab === "currency") return <CurrencyConverterPage onBack={goBack} />;
     if (tab === "translator") return <VoiceTranslatorPage onBack={goBack} />;
     if (tab === "tickets") {
@@ -268,8 +325,14 @@ function App() {
     if (tab === "tv") return <TVConnectPage />;
     if (tab === "notifications") return <NotificationsPage setTab={navigateTo} />;
     if (tab === "notificationSettings") return <NotificationSettingsPage setTab={navigateTo} />;
-    if (tab === "revenue") return <RevenueDashboardPage />;
-    if (tab === "premium") return <PremiumPage setTab={navigateTo} />;
+    if (tab === "revenue") {
+      return isAdminEmail ? (
+        <RevenueDashboardPage />
+      ) : (
+        <AccessDenied onHome={() => navigateTo("home")} />
+      );
+    }
+    if (tab === "premium") return <PremiumPage onBack={goBack} setTab={navigateTo} />;
     if (tab === "favorites") {
       return (
         <FavoritesPage
@@ -302,16 +365,17 @@ function App() {
     }
     if (tab === "esim") return <ESimPage onBack={goBack} />;
     if (tab === "fanzones") return <FanZonesPage onBack={goBack} setTab={navigateTo} />;
-    if (tab === "fanzonevip") return <FanZoneVIPPage setTab={navigateTo} />;
+    if (tab === "fanzonevip") return <FanZoneVIPPage onBack={goBack} setTab={navigateTo} />;
     if (tab === "fanzonetransport") {
       return (
         <FanZoneTransportPage
+          onBack={goBack}
           setMapDestination={setSelectedMapDestination}
           setTab={navigateTo}
         />
       );
     }
-    if (tab === "fanzonemerch") return <FanZoneMerchPage setTab={navigateTo} />;
+    if (tab === "fanzonemerch") return <FanZoneMerchPage onBack={goBack} setTab={navigateTo} />;
     if (tab === "vip") return <VIPPackagesPage setTab={navigateTo} />;
     if (tab === "transport") {
       return (
@@ -327,6 +391,7 @@ function App() {
       return (
         <MatchDayPage
           match={selectedMatch}
+          onBack={goBack}
           setMapDestination={setSelectedMapDestination}
           setTab={navigateTo}
         />
@@ -371,7 +436,7 @@ function App() {
         t
       }}
     >
-      <div className="app-shell">
+      <div className="app-shell" dir={language === "ar" ? "rtl" : "ltr"}>
         <main className="screen">{render()}</main>
 
         <nav className="bottom-nav">
@@ -395,6 +460,21 @@ function App() {
         </nav>
       </div>
     </LanguageContext.Provider>
+  );
+}
+
+function AccessDenied({ onHome }: { onHome: () => void }) {
+  return (
+    <div className="page">
+      <div className="topbar">
+        <div className="brand">FanAtlas <span>Access</span></div>
+      </div>
+      <section className="card-dark">
+        <strong>Access denied</strong>
+        <p className="subtle">Admin and revenue tools are restricted to the approved FanAtlas owner account.</p>
+        <button className="primary-btn" onClick={onHome}>Go Home</button>
+      </section>
+    </div>
   );
 }
 

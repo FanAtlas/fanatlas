@@ -1,3 +1,5 @@
+import { savedWorldCup2026Matches, savedWorldCup2026Stadiums } from "../data/worldCup2026Schedule";
+
 export type MatchStatus = "Upcoming" | "Live" | "Finished";
 
 export type FanAtlasMatch = {
@@ -55,6 +57,7 @@ export type WorldCupApiMeta = {
 };
 
 const API_BASE = "https://worldcup26.ir/get";
+const LIVE_API_TIMEOUT_MS = 3000;
 
 export const worldCup2026ApiEndpoints = {
   games: `${API_BASE}/games`,
@@ -69,6 +72,22 @@ let meta: WorldCupApiMeta = {
   stadiums: 0,
   teams: 0
 };
+
+function withTimeout<T>(promise: Promise<T>, ms = LIVE_API_TIMEOUT_MS): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("World Cup API timeout")), ms);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
 
 function asArray(payload: any, resource: "games" | "groups" | "stadiums" | "teams") {
   if (Array.isArray(payload?.data?.[resource])) return payload.data[resource];
@@ -243,7 +262,7 @@ function normalizeStadium(row: any): FanAtlasStadium {
     name,
     city,
     country: normalizeCountry(get(row, ["country_en", "country"], "")),
-    capacity: get(row, ["capacity"], "TBD"),
+    capacity: get(row, ["capacity"], "Capacity unavailable"),
     tip: stadiumTip(city)
   };
 }
@@ -303,6 +322,28 @@ export async function getWorldCup2026Games(): Promise<FanAtlasMatch[]> {
   return gameRows
     .map((game) => normalizeMatch(game, stadiumById))
     .filter((match) => match.homeTeam !== "Team unavailable" && match.awayTeam !== "Team unavailable");
+}
+
+export async function getWorldCup2026GamesWithFallback(): Promise<{ matches: FanAtlasMatch[]; source: "live" | "saved" }> {
+  try {
+    const matches = await withTimeout(getWorldCup2026Games());
+    if (matches.length > 0) return { matches, source: "live" };
+    throw new Error("Live schedule returned no games.");
+  } catch (error) {
+    console.error("Using saved World Cup schedule:", error);
+    return { matches: savedWorldCup2026Matches, source: "saved" };
+  }
+}
+
+export async function getWorldCup2026StadiumsWithFallback(): Promise<{ stadiums: FanAtlasStadium[]; source: "live" | "saved" }> {
+  try {
+    const stadiums = await withTimeout(getWorldCup2026Stadiums());
+    if (stadiums.length > 0) return { stadiums, source: "live" };
+    throw new Error("Live stadium source returned no rows.");
+  } catch (error) {
+    console.error("Using saved World Cup stadiums:", error);
+    return { stadiums: savedWorldCup2026Stadiums, source: "saved" };
+  }
 }
 
 export async function getWorldCup2026Teams(): Promise<WorldCupTeam[]> {

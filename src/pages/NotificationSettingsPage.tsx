@@ -31,7 +31,7 @@ export function NotificationSettingsPage({ setTab }: { setTab: (tab: Tab) => voi
         {enabledCount > 0 ? <Bell size={25} /> : <BellOff size={25} />}
         <div>
           <strong>{enabledCount} of {notificationCategories.length} categories enabled</strong>
-          <p>No paid notification services are connected yet. This prepares the local/browser notification architecture.</p>
+          <p>Choose which trip reminders and travel alerts you want FanAtlas to surface.</p>
         </div>
       </div>
 
