@@ -2973,6 +2973,37 @@
   margin-bottom: 12px;
 }
 
+.ai-usage-card {
+  background: rgba(34,211,238,.1);
+  border: 1px solid rgba(34,211,238,.22);
+  border-radius: 14px;
+  color: #c8f7ff;
+  margin: 10px 0 12px;
+  padding: 12px;
+}
+
+.ai-usage-card strong {
+  display: block;
+  font-size: 13px;
+}
+
+.ai-usage-card p {
+  color: #9fb2cf;
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 5px 0 0;
+}
+
+.ai-usage-card.limit-reached {
+  background: rgba(127,29,29,.25);
+  border-color: rgba(248,113,113,.35);
+  color: #fecaca;
+}
+
+.ai-usage-card.limit-reached p {
+  color: #fecaca;
+}
+
 .ai-prompt-grid.grid {
   grid-template-columns: 1fr 1fr;
 }

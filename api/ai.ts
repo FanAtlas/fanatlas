@@ -1,10 +1,26 @@
+import { createClient } from "@supabase/supabase-js";
+
 declare const process: {
   env: Record<string, string | undefined>;
 };
 
+const FREE_AI_MESSAGES_LIMIT = 20;
+const MAX_USER_MESSAGE_LENGTH = 800;
+const MAX_CONVERSATION_MESSAGES = 8;
+const AI_MODEL = "gpt-4o-mini";
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+};
+
+type AiUsageRow = {
+  id: string;
+  user_id: string;
+  month: string;
+  messages_used: number;
+  messages_limit: number;
+  created_at?: string;
 };
 
 const supportedLanguages: Record<string, string> = {
@@ -43,7 +59,139 @@ function normalizeMessages(raw: any, singleMessage: any): ChatMessage[] {
       content: String(message?.content || message?.text || "").trim()
     }))
     .filter((message) => message.content)
-    .slice(-16);
+    .slice(-MAX_CONVERSATION_MESSAGES);
+}
+
+function currentUsageMonth() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function usagePayload(row: AiUsageRow) {
+  return {
+    month: row.month,
+    messagesUsed: Number(row.messages_used || 0),
+    messagesLimit: Number(row.messages_limit || FREE_AI_MESSAGES_LIMIT),
+    limitReached: Number(row.messages_used || 0) >= Number(row.messages_limit || FREE_AI_MESSAGES_LIMIT)
+  };
+}
+
+function bearerToken(req: any) {
+  const header = String(req.headers?.authorization || req.headers?.Authorization || "");
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || "";
+}
+
+function supabaseClient(key: string, token?: string) {
+  const url = process.env.VITE_SUPABASE_URL || "";
+
+  return createClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    },
+    global: token
+      ? {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      : undefined
+  });
+}
+
+async function getUsageForRequest(req: any) {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
+  const anonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+  if (!supabaseUrl || !anonKey) {
+    return {
+      errorStatus: 503,
+      error: "AI usage tracking is not configured."
+    };
+  }
+
+  const token = bearerToken(req);
+  if (!token) {
+    return {
+      errorStatus: 401,
+      error: "Please log in to use the AI Travel Assistant."
+    };
+  }
+
+  const authClient = supabaseClient(anonKey, token);
+  const { data: userData, error: userError } = await authClient.auth.getUser(token);
+  const user = userData?.user;
+
+  if (userError || !user) {
+    return {
+      errorStatus: 401,
+      error: "Please log in to use the AI Travel Assistant."
+    };
+  }
+
+  const db = serviceKey ? supabaseClient(serviceKey) : authClient;
+  const month = currentUsageMonth();
+
+  const { data: existingRows, error: readError } = await db
+    .from("user_ai_usage")
+    .select("id,user_id,month,messages_used,messages_limit,created_at")
+    .eq("user_id", user.id)
+    .eq("month", month)
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (readError) {
+    return {
+      errorStatus: 500,
+      error: "AI usage tracking is unavailable."
+    };
+  }
+
+  const existing = Array.isArray(existingRows) ? existingRows[0] as AiUsageRow | undefined : undefined;
+  if (existing) {
+    return { db, user, usage: existing };
+  }
+
+  const { data: created, error: insertError } = await db
+    .from("user_ai_usage")
+    .insert({
+      user_id: user.id,
+      month,
+      messages_used: 0,
+      messages_limit: FREE_AI_MESSAGES_LIMIT
+    })
+    .select("id,user_id,month,messages_used,messages_limit,created_at")
+    .single();
+
+  if (insertError || !created) {
+    return {
+      errorStatus: 500,
+      error: "AI usage tracking is unavailable."
+    };
+  }
+
+  return { db, user, usage: created as AiUsageRow };
+}
+
+async function incrementUsage(db: any, usage: AiUsageRow) {
+  const nextUsed = Number(usage.messages_used || 0) + 1;
+
+  const { data, error } = await db
+    .from("user_ai_usage")
+    .update({ messages_used: nextUsed })
+    .eq("id", usage.id)
+    .select("id,user_id,month,messages_used,messages_limit,created_at")
+    .single();
+
+  if (error || !data) {
+    return {
+      ...usage,
+      messages_used: nextUsed
+    };
+  }
+
+  return data as AiUsageRow;
 }
 
 function contextPrompt(body: any) {
@@ -64,18 +212,42 @@ function contextPrompt(body: any) {
 }
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== "POST") {
+  if (req.method !== "POST" && req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) {
-    return res.status(503).json({ error: "OpenAI key is not configured." });
+  const usageResult = await getUsageForRequest(req);
+  if ("error" in usageResult) {
+    return res.status(usageResult.errorStatus).json({ error: usageResult.error });
+  }
+
+  if (req.method === "GET") {
+    return res.status(200).json({ usage: usagePayload(usageResult.usage) });
   }
 
   const messages = normalizeMessages(req.body?.messages, req.body?.message);
   if (!messages.length) {
     return res.status(400).json({ error: "Message is required." });
+  }
+
+  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
+  if (latestUserMessage && latestUserMessage.content.length > MAX_USER_MESSAGE_LENGTH) {
+    return res.status(400).json({
+      error: "Please shorten your message.",
+      usage: usagePayload(usageResult.usage)
+    });
+  }
+
+  if (Number(usageResult.usage.messages_used || 0) >= Number(usageResult.usage.messages_limit || FREE_AI_MESSAGES_LIMIT)) {
+    return res.status(429).json({
+      error: "You have reached your monthly AI limit. Upgrade to Premium to continue.",
+      usage: usagePayload(usageResult.usage)
+    });
+  }
+
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) {
+    return res.status(503).json({ error: "OpenAI key is not configured.", usage: usagePayload(usageResult.usage) });
   }
 
   try {
@@ -86,9 +258,9 @@ export default async function handler(req: any, res: any) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        model: AI_MODEL,
         temperature: 0.35,
-        max_tokens: 800,
+        max_tokens: 500,
         messages: [
           {
             role: "system",
@@ -108,20 +280,38 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!response.ok) {
+      const openAiMessage = String(data?.error?.message || responseText || "");
+      const openAiCode = String(data?.error?.code || "");
+      const isQuotaError =
+        response.status === 429 &&
+        /quota|billing|insufficient/i.test(`${openAiMessage} ${openAiCode}`);
+
       return res.status(response.status).json({
-        error: data?.error?.message || responseText || "OpenAI request failed."
+        error: isQuotaError
+          ? "AI Travel Assistant is temporarily unavailable. Please try again later."
+          : "AI Travel Assistant is temporarily unavailable. Please try again later.",
+        usage: usagePayload(usageResult.usage)
       });
     }
 
     const answer = data?.choices?.[0]?.message?.content?.trim();
     if (!answer) {
-      return res.status(502).json({ error: "OpenAI returned an empty answer." });
+      return res.status(502).json({
+        error: "AI Travel Assistant is temporarily unavailable. Please try again later.",
+        usage: usagePayload(usageResult.usage)
+      });
     }
 
-    return res.status(200).json({ answer });
+    const nextUsage = await incrementUsage(usageResult.db, usageResult.usage);
+
+    return res.status(200).json({
+      answer,
+      usage: usagePayload(nextUsage)
+    });
   } catch (error: any) {
     return res.status(500).json({
-      error: error?.message || "Server error generating AI answer."
+      error: "AI Travel Assistant is temporarily unavailable. Please try again later.",
+      usage: usagePayload(usageResult.usage)
     });
   }
 }

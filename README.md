@@ -33,7 +33,7 @@ VITE_EXCHANGE_RATES_URL=
 
 # Backend/serverless only. Never expose this with a VITE_ prefix.
 OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4.1-mini
+SUPABASE_SERVICE_ROLE_KEY=
 VITE_API_FOOTBALL_KEY=
 ```
 
@@ -69,17 +69,30 @@ If both endpoints fail or return invalid data, the app shows: "Unable to load ex
 
 `OPENAI_API_KEY` is read only by `api/ai.ts`, intended for a backend/serverless runtime such as Vercel. It is never read by frontend code.
 
+The AI route also reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` on the server to verify the user's Supabase auth token and check monthly usage in `user_ai_usage`.
+
+`SUPABASE_SERVICE_ROLE_KEY` is optional. Add it only as a server/backend environment variable when RLS policies prevent the API route from reading or updating `user_ai_usage`. Never expose it with a `VITE_` prefix.
+
+The AI model is fixed in the backend to `gpt-4o-mini` to control costs.
+
 For local `.env`:
 
 ```bash
 OPENAI_API_KEY=your_openai_key
-OPENAI_MODEL=gpt-4.1-mini
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Optional server/backend only:
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 For Vercel:
 
 ```text
-Project Settings → Environment Variables → OPENAI_API_KEY
+Project Settings → Environment Variables:
+OPENAI_API_KEY
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+Optional: SUPABASE_SERVICE_ROLE_KEY
 ```
 
 Plain `npm run dev` runs Vite only, so `/api/ai` may be unavailable locally unless a local serverless runtime is also serving the `api/` directory. For live local backend testing, run the app with a platform that serves Vercel functions, such as Vercel CLI. If the server key is missing, the chat shows: "OpenAI key is not configured."
