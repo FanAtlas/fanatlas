@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BackButton } from "../components/BackButton";
 import { useLanguage } from "../LanguageContext";
-import { AiUsage, AssistantMessage, askTravelAssistant, getTravelAssistantUsage } from "../services/openai";
+import { AssistantMessage, askTravelAssistant } from "../services/openai";
 
 type ChatMessage = AssistantMessage & {
   id: string;
@@ -11,8 +11,6 @@ const CHAT_STORAGE_KEY = "fanatlas.aiChat.history";
 const MAX_USER_MESSAGE_LENGTH = 800;
 
 const directUserMessages = new Set([
-  "Please log in to use the AI Travel Assistant.",
-  "You have reached your monthly AI limit. Upgrade to Premium to continue.",
   "Please shorten your message.",
   "AI Travel Assistant is temporarily unavailable. Please try again later."
 ]);
@@ -61,8 +59,6 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("OpenAI Assistant");
-  const [usage, setUsage] = useState<AiUsage | null>(null);
-  const [usageMessage, setUsageMessage] = useState("");
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -72,17 +68,6 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [loading, messages]);
-
-  useEffect(() => {
-    getTravelAssistantUsage()
-      .then((nextUsage) => {
-        setUsage(nextUsage);
-        setUsageMessage("");
-      })
-      .catch((error: any) => {
-        setUsageMessage(error?.message || "AI usage is unavailable.");
-      });
-  }, []);
 
   const apiMessages = useMemo(
     () => messages
@@ -96,7 +81,7 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
 
   async function send(text?: string) {
     const content = (text || input).trim();
-    if (!content || loading || usage?.limitReached) return;
+    if (!content || loading) return;
 
     if (content.length > MAX_USER_MESSAGE_LENGTH) {
       setMessages((current) => [...current, createMessage("assistant", "Please shorten your message.")]);
@@ -119,13 +104,9 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
         language
       });
       setMessages((current) => [...current, createMessage("assistant", result.answer)]);
-      if (result.usage) setUsage(result.usage);
       setStatus("OpenAI Assistant");
     } catch (error: any) {
       const message = error?.message || "Check the backend configuration and try again.";
-      if (message === "You have reached your monthly AI limit. Upgrade to Premium to continue.") {
-        setUsage((current) => current ? { ...current, limitReached: true } : current);
-      }
       setMessages((current) => [
         ...current,
         createMessage(
@@ -176,15 +157,8 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
         </button>
       </div>
 
-      <div className={`ai-usage-card ${usage?.limitReached ? "limit-reached" : ""}`}>
-        <strong>
-          AI Messages: {usage ? `${usage.messagesUsed} / ${usage.messagesLimit}` : "-- / --"} used this month
-        </strong>
-        <p>
-          {usage?.limitReached
-            ? "You have reached your monthly AI limit. Upgrade to Premium to continue."
-            : usageMessage || "Free users get 20 AI messages each month."}
-        </p>
+      <div className="ai-usage-card">
+        <strong>Beta: AI assistant has limited availability.</strong>
       </div>
 
       <div className="grid ai-prompt-grid">
@@ -193,7 +167,7 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
             className="secondary-btn"
             key={prompt}
             onClick={() => send(prompt)}
-            disabled={loading || Boolean(usage?.limitReached)}
+            disabled={loading}
           >
             {prompt}
           </button>
@@ -222,11 +196,11 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
           className="input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          disabled={loading || Boolean(usage?.limitReached)}
+          disabled={loading}
           maxLength={MAX_USER_MESSAGE_LENGTH + 1}
           placeholder="Ask FanAtlas..."
         />
-        <button className="primary-btn" type="submit" disabled={loading || !input.trim() || Boolean(usage?.limitReached)}>
+        <button className="primary-btn" type="submit" disabled={loading || !input.trim()}>
           Send
         </button>
       </form>
