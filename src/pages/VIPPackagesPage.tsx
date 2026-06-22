@@ -1,7 +1,9 @@
 import { Crown, Star, Users } from "lucide-react";
+import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 
 export function VIPPackagesPage({ setTab }: { setTab: (tab: Tab) => void }) {
+  const { t } = useLanguage();
   const packages = [
     {
       name: "Pitchside Lounge",
@@ -24,7 +26,7 @@ export function VIPPackagesPage({ setTab }: { setTab: (tab: Tab) => void }) {
     <>
       <div className="topbar">
         <button className="small-dark-btn" onClick={() => setTab("fanzones")}>
-          ← Fan Zones
+          {t.backToFanZones}
         </button>
         <div className="brand">VIP <span>Packages</span></div>
       </div>

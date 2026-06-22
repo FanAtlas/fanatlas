@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bus, Car, CarTaxiFront, MapPin, Navigation, Save, TrainFront } from "lucide-react";
+import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 import { MapDestination, stadiumDestinations } from "../mapDestinations";
 
@@ -111,6 +112,7 @@ export function TransportationPage({
   setMapDestination: (destination: MapDestination | null) => void;
   setTab: (tab: Tab) => void;
 }) {
+  const { t } = useLanguage();
   const [selectedStadiumName, setSelectedStadiumName] = useState(stadiumDestinations[0].name);
   const [startLocation, setStartLocation] = useState<[number, number]>(defaultStart);
   const [locationStatus, setLocationStatus] = useState("Using Times Square Fan Park as the start point.");
@@ -167,7 +169,7 @@ export function TransportationPage({
     <div className="transport-hub-page">
       <div className="topbar">
         <button className="small-dark-btn" onClick={() => setTab("fanzones")}>
-          ← Fan Zones
+          {t.backToFanZones}
         </button>
         <div className="brand">Transportation <span>Hub</span></div>
       </div>

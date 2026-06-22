@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Bell, BellOff } from "lucide-react";
+import { BackButton } from "../components/BackButton";
 import { Tab } from "../main";
 import {
   FanAtlasNotificationCategory,
@@ -24,7 +25,7 @@ export function NotificationSettingsPage({ setTab }: { setTab: (tab: Tab) => voi
           <div className="brand">Notification <span>Settings</span></div>
           <div className="subtle">Enable or disable alert categories</div>
         </div>
-        <button className="small-dark-btn" onClick={() => setTab("notifications")}>Back</button>
+        <BackButton onBack={() => setTab("notifications")} />
       </div>
 
       <div className="notification-settings-hero">

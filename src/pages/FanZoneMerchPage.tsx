@@ -1,5 +1,6 @@
 import { BadgeCheck, PackageCheck, Shirt, ShoppingBag } from "lucide-react";
 import { BackButton } from "../components/BackButton";
+import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 import { trackRevenueClick } from "../services/revenueTracking";
 
@@ -20,6 +21,7 @@ function merchCheckoutUrl(productName: string) {
 }
 
 export function FanZoneMerchPage({ onBack, setTab }: { onBack: () => void; setTab: (tab: Tab) => void }) {
+  const { t } = useLanguage();
   const products = [
     {
       name: "Official Match Scarf",
@@ -92,7 +94,7 @@ export function FanZoneMerchPage({ onBack, setTab }: { onBack: () => void; setTa
       ))}
 
       <button className="primary-btn full-width" onClick={() => setTab("fanzones")}>
-        Back To Fan Zones
+        {t.backToFanZones}
       </button>
 
       <div className="action-note">

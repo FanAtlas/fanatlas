@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  getWorldCup2026GamesWithFallback,
+  getWorldCup2026Games,
   getWorldCup2026Groups,
   getWorldCup2026StadiumsWithFallback,
   getWorldCup2026Teams,
@@ -20,6 +20,8 @@ type Props = {
   setSelectedMatch: (match: FanAtlasMatch) => void;
 };
 
+const MATCHES_CACHE_KEY = "fanatlas_matches_cache";
+
 function getMatchTone(city: string) {
   const c = city.toLowerCase();
   if (c.includes("mexico") || c.includes("guadalajara") || c.includes("monterrey")) return "mexico";
@@ -36,6 +38,65 @@ function shouldShowScore(match: FanAtlasMatch) {
 
 function getComputedStatus(match: FanAtlasMatch) {
   return match.status || "Upcoming";
+}
+
+function readCachedMatches() {
+  try {
+    const cached = localStorage.getItem(MATCHES_CACHE_KEY);
+    if (!cached) return null;
+
+    const parsed = JSON.parse(cached);
+    return Array.isArray(parsed) && parsed.length > 0
+      ? parsed as FanAtlasMatch[]
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheMatches(matches: FanAtlasMatch[]) {
+  try {
+    localStorage.setItem(MATCHES_CACHE_KEY, JSON.stringify(matches));
+  } catch {
+    // Non-critical: private browsing or storage limits should not block matches.
+  }
+}
+
+function matchIdentity(match: FanAtlasMatch) {
+  return [
+    match.matchNumber || "",
+    match.homeTeam || match.team1,
+    match.awayTeam || match.team2,
+    match.stadium
+  ].join("|").toLowerCase();
+}
+
+function mergeLiveStatus(currentMatches: FanAtlasMatch[], liveMatches: FanAtlasMatch[]) {
+  const liveById = new Map(liveMatches.map((match) => [match.id, match]));
+  const liveByNumber = new Map(liveMatches.map((match) => [match.matchNumber, match]));
+  const liveByIdentity = new Map(liveMatches.map((match) => [matchIdentity(match), match]));
+
+  return currentMatches.map((match) => {
+    const live = liveById.get(match.id) ||
+      liveByNumber.get(match.matchNumber) ||
+      liveByIdentity.get(matchIdentity(match));
+
+    if (!live) return match;
+
+    const hasRealScore = live.status === "Finished" &&
+      live.homeScore !== null &&
+      live.homeScore !== undefined &&
+      live.awayScore !== null &&
+      live.awayScore !== undefined;
+
+    return {
+      ...match,
+      status: live.status,
+      homeScore: hasRealScore ? live.homeScore : null,
+      awayScore: hasRealScore ? live.awayScore : null,
+      score: hasRealScore ? `${live.homeScore} - ${live.awayScore}` : undefined
+    };
+  });
 }
 
 function countdown(match: FanAtlasMatch) {
@@ -55,66 +116,56 @@ function countdown(match: FanAtlasMatch) {
 
 export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, setSelectedMatch }: Props) {
   const { language, t } = useLanguage();
-  const [matches, setMatches] = useState<FanAtlasMatch[]>([]);
-  const [stadiums, setStadiums] = useState<FanAtlasStadium[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sourceKey, setSourceKey] = useState<"loading" | "ready" | "empty" | "unavailable">("loading");
+  const [matches, setMatches] = useState<FanAtlasMatch[]>(() => readCachedMatches() || savedWorldCup2026Matches);
+  const [stadiums, setStadiums] = useState<FanAtlasStadium[]>(savedWorldCup2026Stadiums);
+  const [updatingLiveSchedule, setUpdatingLiveSchedule] = useState(false);
   const [error, setError] = useState("");
   const [apiCounts, setApiCounts] = useState({ games: 0, groups: 0, stadiums: 0, teams: 0 });
-  const [usingSavedSchedule, setUsingSavedSchedule] = useState(false);
+  const [usingSavedSchedule, setUsingSavedSchedule] = useState(() => !readCachedMatches());
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  const source =
-    sourceKey === "ready"
-      ? t.worldCupFixtures
-      : sourceKey === "empty"
-        ? t.noFixturesSource
-        : sourceKey === "unavailable"
-          ? t.fixturesUnavailableSource
-          : t.loadingSchedule;
+  const source = usingSavedSchedule
+    ? "Saved World Cup schedule. Live status updates refresh in the background."
+    : t.worldCupFixtures;
 
   useEffect(() => {
     async function loadWorldCupData() {
+      setUpdatingLiveSchedule(true);
       try {
-        setLoading(true);
-        const [gameResult, venueResult, teams, groups] = await Promise.all([
-          getWorldCup2026GamesWithFallback(),
+        const [liveMatches, venueResult, teams, groups] = await Promise.all([
+          getWorldCup2026Games(),
           getWorldCup2026StadiumsWithFallback(),
           getWorldCup2026Teams().catch(() => []),
           getWorldCup2026Groups().catch(() => [])
         ]);
-        const games = gameResult.matches;
         const venues = venueResult.stadiums;
 
-        setUsingSavedSchedule(gameResult.source === "saved" || venueResult.source === "saved");
+        if (liveMatches.length > 0) {
+          cacheMatches(liveMatches);
+          setMatches((currentMatches) => mergeLiveStatus(
+            currentMatches.length > 0 ? currentMatches : savedWorldCup2026Matches,
+            liveMatches
+          ));
+          setUsingSavedSchedule(false);
+        }
+
         setApiCounts({
-          games: games.length,
+          games: liveMatches.length,
           groups: groups.length,
           stadiums: venues.length,
           teams: teams.length
         });
         setError("");
-        if (games.length > 0) {
-          setMatches(games);
-          setSourceKey("ready");
-        }
         if (venues.length > 0) setStadiums(venues);
-        if (games.length === 0) {
-          setMatches([]);
-          setSourceKey("empty");
-        }
-      } catch (err: any) {
-        setMatches(savedWorldCup2026Matches);
-        setStadiums(savedWorldCup2026Stadiums);
-        setUsingSavedSchedule(true);
+      } catch {
         setApiCounts({ games: 0, groups: 0, stadiums: 0, teams: 0 });
         setError("");
-        setSourceKey("ready");
       } finally {
-        setLoading(false);
+        setUpdatingLiveSchedule(false);
       }
     }
+
     loadWorldCupData();
   }, []);
 
@@ -181,7 +232,9 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
         <div className="language-pill">🏆 {t.live}</div>
       </div>
 
-      {loading && <div className="card-dark"><strong>{t.loadingWorldCupData}</strong><p className="subtle">Loading the latest schedule.</p></div>}
+      {updatingLiveSchedule && (
+        <div className="match-update-banner">Updating live schedule...</div>
+      )}
 
       {error && <div className="alert-card danger"><div><strong>Schedule unavailable</strong><p>{error}</p></div></div>}
 
@@ -233,7 +286,7 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
       </div>
 
       <div className="matches-list">
-        {!loading && filteredMatches.length === 0 && !error && (
+        {filteredMatches.length === 0 && !error && (
           <div className="card-dark">
             <strong>{t.noFixturesAvailable}</strong>
             <p className="subtle">{matches.length === 0 ? t.noFixtureRows : "No matches match your filters."}</p>

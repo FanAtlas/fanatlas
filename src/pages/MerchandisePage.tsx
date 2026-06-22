@@ -1,7 +1,9 @@
 import { BadgeCheck, Shirt, ShoppingBag } from "lucide-react";
+import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 
 export function MerchandisePage({ setTab }: { setTab: (tab: Tab) => void }) {
+  const { t } = useLanguage();
   const products = [
     {
       name: "Official Match Scarf",
@@ -24,7 +26,7 @@ export function MerchandisePage({ setTab }: { setTab: (tab: Tab) => void }) {
     <>
       <div className="topbar">
         <button className="small-dark-btn" onClick={() => setTab("fanzones")}>
-          ← Fan Zones
+          {t.backToFanZones}
         </button>
         <div className="brand">Official <span>Merch</span></div>
       </div>

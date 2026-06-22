@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bell, BellRing, Check, Clock, Trash2 } from "lucide-react";
+import { BackButton } from "../components/BackButton";
 import { Tab } from "../main";
 import {
   clearReadNotifications,
@@ -98,7 +99,7 @@ export function NotificationsPage({ setTab }: { setTab: (tab: Tab) => void }) {
         </div>
         <div className="notification-top-actions">
           <button className="small-dark-btn" onClick={() => setTab("notificationSettings")}>Settings</button>
-          <button className="small-dark-btn" onClick={() => setTab("profile")}>Back</button>
+          <BackButton onBack={() => setTab("profile")} />
         </div>
       </div>
 

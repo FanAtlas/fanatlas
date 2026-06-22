@@ -1,7 +1,7 @@
 import { useLanguage } from "../LanguageContext";
 
 export function BackButton({ onBack }: { onBack?: () => void }) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
 
   function handleBack() {
     if (onBack) {
@@ -19,7 +19,7 @@ export function BackButton({ onBack }: { onBack?: () => void }) {
 
   return (
     <button className="back-btn" onClick={handleBack} type="button">
-      ← {t.back}
+      {language === "ar" ? `${t.back} →` : `← ${t.back}`}
     </button>
   );
 }
