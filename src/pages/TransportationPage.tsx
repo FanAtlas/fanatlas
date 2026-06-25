@@ -3,6 +3,7 @@ import { Bus, Car, CarTaxiFront, MapPin, Navigation, Save, TrainFront } from "lu
 import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 import { MapDestination, stadiumDestinations } from "../mapDestinations";
+import { useLocation } from "../LocationContext";
 
 type TransportMode = {
   id: string;
@@ -113,6 +114,7 @@ export function TransportationPage({
   setTab: (tab: Tab) => void;
 }) {
   const { t } = useLanguage();
+  const { location, status: globalLocationStatus } = useLocation();
   const [selectedStadiumName, setSelectedStadiumName] = useState(stadiumDestinations[0].name);
   const [startLocation, setStartLocation] = useState<[number, number]>(defaultStart);
   const [locationStatus, setLocationStatus] = useState("Using Times Square Fan Park as the start point.");
@@ -135,16 +137,13 @@ export function TransportationPage({
   }, [savedRoutes]);
 
   useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
-      (position) => {
-        setStartLocation([position.coords.latitude, position.coords.longitude]);
-        setLocationStatus("Using your current location.");
-      },
-      () => {
-        setLocationStatus("Location unavailable. Using Times Square Fan Park as the start point.");
-      }
-    );
-  }, []);
+    if (location) {
+      setStartLocation([location.latitude, location.longitude]);
+      setLocationStatus("Using your current location.");
+    } else if (globalLocationStatus !== "requesting") {
+      setLocationStatus("Location unavailable. Using Times Square Fan Park as the start point.");
+    }
+  }, [globalLocationStatus, location]);
 
   function saveRoute() {
     const route: SavedRoute = {

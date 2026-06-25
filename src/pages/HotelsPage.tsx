@@ -7,8 +7,10 @@ import { getPlaceDestination, MapDestination } from "../mapDestinations";
 import { reminderDate, scheduleNotification } from "../services/notifications";
 import { FavoriteButton } from "../components/FavoriteButton";
 import { trackRevenueClick } from "../services/revenueTracking";
+import { useLocation } from "../LocationContext";
+import { directionsUrl, distanceKm, formatDistance } from "../lib/location";
 
-type HotelOffer = {
+export type HotelOffer = {
   id: string;
   name: string;
   city: string;
@@ -31,7 +33,7 @@ const stadiums = [
   "AT&T Stadium"
 ];
 
-const hotelOffers: HotelOffer[] = [
+export const hotelOffers: HotelOffer[] = [
   {
     id: "nyc-marriott-times-square",
     name: "Marriott Times Square",
@@ -167,15 +169,22 @@ export function HotelsPage({
   setTab: (tab: Tab) => void;
 }) {
   const { language, t } = useLanguage();
+  const { location, status: locationStatus } = useLocation();
   const [selectedStadium, setSelectedStadium] = useState(stadiums[0]);
   const [searchedStadium, setSearchedStadium] = useState(stadiums[0]);
   const [notificationMessage, setNotificationMessage] = useState("");
-  const offers = useMemo(
-    () => hotelOffers
+  const offers = useMemo(() => {
+    if (location) {
+      return hotelOffers
+        .map((offer) => ({ ...offer, userDistanceKm: distanceKm(location, offer) }))
+        .sort((a, b) => a.userDistanceKm - b.userDistanceKm);
+    }
+
+    return hotelOffers
       .filter((offer) => offer.stadium === searchedStadium)
-      .sort((a, b) => a.distanceKm - b.distanceKm),
-    [searchedStadium]
-  );
+      .map((offer) => ({ ...offer, userDistanceKm: offer.distanceKm }))
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+  }, [location, searchedStadium]);
 
   async function addHotelReminder(offer: HotelOffer) {
     const { permission } = await scheduleNotification({
@@ -231,8 +240,12 @@ export function HotelsPage({
         </button>
       </div>
 
+      {locationStatus !== "available" && locationStatus !== "requesting" && (
+        <div className="location-fallback">Enable location for nearby recommendations.</div>
+      )}
+
       <div className="section-row">
-        <h3>{searchedStadium}</h3>
+        <h3>{location ? "Hotels near me" : searchedStadium}</h3>
         <span className="section-badge">{offers.length} hotels</span>
       </div>
 
@@ -272,7 +285,7 @@ export function HotelsPage({
 
               <div className="hotel-offer-meta">
                 <span><Star size={14} /> {offer.rating}</span>
-                <span><MapPin size={14} /> {offer.distanceKm.toFixed(1)} km</span>
+                <span><MapPin size={14} /> {formatDistance(offer.userDistanceKm)} from you</span>
                 <strong>{offer.price}</strong>
               </div>
 
@@ -291,8 +304,16 @@ export function HotelsPage({
                     setTab("map");
                   }}
                 >
-                  {t.navigate}
+                  Quick directions
                 </button>
+                <a
+                  className="secondary-btn"
+                  href={directionsUrl(offer)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open maps
+                </a>
                 <button className="secondary-btn" onClick={() => addHotelReminder(offer)}>
                   Remind me
                 </button>

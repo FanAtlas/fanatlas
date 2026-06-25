@@ -4,6 +4,7 @@ import { useLanguage } from "../LanguageContext";
 import { supabase } from "../lib/supabase";
 import { Tab } from "../main";
 import { MapDestination } from "../mapDestinations";
+import { useLocation } from "../LocationContext";
 
 type EmergencyCategory = "hospital" | "police" | "embassy";
 
@@ -335,10 +336,15 @@ export function SOSPage({
   setTab: (tab: Tab) => void;
 }) {
   const { language, t } = useLanguage();
+  const { location, status: locationStatus } = useLocation();
   const [activeCategory, setActiveCategory] = useState<EmergencyCategory>("hospital");
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  const [locationError, setLocationError] = useState("");
   const [country, setCountry] = useState("");
+  const userLocation: [number, number] | null = location
+    ? [location.latitude, location.longitude]
+    : null;
+  const locationError = locationStatus !== "available" && locationStatus !== "requesting"
+    ? "Enable location for nearby results."
+    : "";
 
   useEffect(() => {
     async function loadCountry() {
@@ -358,10 +364,6 @@ export function SOSPage({
     }
 
     loadCountry();
-  }, []);
-
-  useEffect(() => {
-    locateAndShow("hospital");
   }, []);
 
   const embassy = embassyDirectory[country] || fallbackEmbassy(country);
@@ -390,23 +392,6 @@ export function SOSPage({
 
   function locateAndShow(category: EmergencyCategory) {
     setActiveCategory(category);
-    setLocationError("");
-
-    if (!navigator.geolocation) {
-      setLocationError("Enable location for nearby results.");
-      setUserLocation(null);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation([position.coords.latitude, position.coords.longitude]);
-      },
-      () => {
-        setLocationError("Enable location for nearby results.");
-        setUserLocation(null);
-      }
-    );
   }
 
   function openDirections(location: EmergencyLocation) {

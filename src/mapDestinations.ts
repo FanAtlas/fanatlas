@@ -45,7 +45,7 @@ export const fanZoneDestinations: MapDestination[] = [
   { name: "Toronto Fan Experience", city: "Toronto", lat: 43.6426, lng: -79.3871, emoji: "🎉", type: "fan-zone" }
 ];
 
-const placeDestinations: MapDestination[] = [
+export const placeDestinations: MapDestination[] = [
   { name: "Katz's Delicatessen", city: "New York", lat: 40.7223, lng: -73.9874, emoji: "🍽", type: "restaurant" },
   { name: "El Huequito", city: "Mexico City", lat: 19.4322, lng: -99.1410, emoji: "🍽", type: "restaurant" },
   { name: "Blue Bottle Coffee", city: "San Francisco", lat: 37.7762, lng: -122.4230, emoji: "☕", type: "cafe" },

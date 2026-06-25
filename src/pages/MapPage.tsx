@@ -8,9 +8,10 @@ import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 import { defaultMapDestinations, MapDestination, MapDestinationType } from "../mapDestinations";
 import { reminderDate, scheduleNotification } from "../services/notifications";
+import { useLocation } from "../LocationContext";
+import { distanceKm } from "../lib/location";
 
 type TravelMode = "walking" | "driving" | "transit" | "rideshare";
-type LocationStatus = "pending" | "allowed" | "blocked" | "unsupported";
 type CategoryFilter = "All" | "Stadiums" | "Hotels" | "Restaurants" | "Fan Zones" | "Hospitals" | "Embassies";
 
 const categoryFilters: CategoryFilter[] = [
@@ -53,10 +54,12 @@ function FitRoute({ route }: { route: [number, number][] }) {
 
 function FocusMap({
   destination,
-  userLocation
+  userLocation,
+  focusRequest
 }: {
   destination: MapDestination | null;
   userLocation: [number, number] | null;
+  focusRequest: number;
 }) {
   const map = useMap();
 
@@ -66,7 +69,7 @@ function FocusMap({
     } else if (userLocation) {
       map.setView(userLocation, 11, { animate: true });
     }
-  }, [destination, map, userLocation]);
+  }, [destination, focusRequest, map, userLocation]);
 
   return null;
 }
@@ -86,21 +89,6 @@ function formatStep(step: any) {
   const modifier = step.maneuver?.modifier ? ` ${step.maneuver.modifier}` : "";
   const street = step.name ? ` on ${step.name}` : "";
   return `${type}${modifier}${street}`;
-}
-
-function distanceKm(origin: [number, number], destination: MapDestination) {
-  const earthRadiusKm = 6371;
-  const toRad = (value: number) => (value * Math.PI) / 180;
-  const dLat = toRad(destination.lat - origin[0]);
-  const dLng = toRad(destination.lng - origin[1]);
-  const lat1 = toRad(origin[0]);
-  const lat2 = toRad(destination.lat);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return earthRadiusKm * c;
 }
 
 function categoryLabel(type: MapDestinationType) {
@@ -129,8 +117,11 @@ export function MapPage({
   setTab: (tab: Tab) => void;
 }) {
   const { language } = useLanguage();
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
+  const { location, status: locationStatus } = useLocation();
+  const userLocation: [number, number] | null = location
+    ? [location.latitude, location.longitude]
+    : null;
+  const [focusRequest, setFocusRequest] = useState(0);
   const [selectedPlace, setSelectedPlace] = useState<MapDestination | null>(null);
   const [route, setRoute] = useState<[number, number][]>([]);
   const [steps, setSteps] = useState<string[]>([]);
@@ -159,25 +150,11 @@ export function MapPage({
         `${place.name} ${place.city} ${categoryLabel(place.type)}`.toLowerCase().includes(normalizedQuery);
 
       return matchesCategory && matchesSearch;
+    }).sort((a, b) => {
+      if (!location) return 0;
+      return distanceKm(location, a) - distanceKm(location, b);
     });
-  }, [category, search]);
-
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationStatus("unsupported");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
-        setLocationStatus("allowed");
-      },
-      () => {
-        setLocationStatus("blocked");
-      }
-    );
-  }, []);
+  }, [category, location, search]);
 
   useEffect(() => {
     if (initialDestination) {
@@ -259,27 +236,15 @@ export function MapPage({
   }
 
   function useMyLocation() {
-    if (!navigator.geolocation) {
-      setLocationStatus("unsupported");
-      setRouteError("Location disabled. Enable location for route previews.");
+    if (!userLocation) {
+      setRouteError("Enable location for nearby recommendations.");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const nextLocation: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-        setUserLocation(nextLocation);
-        setLocationStatus("allowed");
-
-        if (selectedPlace) {
-          buildRoute(selectedPlace, mode, nextLocation);
-        }
-      },
-      () => {
-        setLocationStatus("blocked");
-        setRouteError("Location disabled. Enable location for route previews.");
-      }
-    );
+    setSelectedPlace(null);
+    setRoute([]);
+    setSteps([]);
+    setFocusRequest((request) => request + 1);
   }
 
   async function addStadiumArrivalReminder() {
@@ -321,11 +286,11 @@ export function MapPage({
 
       <div className="map-location-status">
         <span>
-          {locationStatus === "allowed"
+          {locationStatus === "available"
             ? "Using your current location"
-            : "Location disabled. Enable location for route previews."}
+            : "Enable location for nearby recommendations."}
         </span>
-        <button type="button" onClick={useMyLocation}>Use location</button>
+        <button type="button" onClick={useMyLocation}>Use My Location</button>
       </div>
 
       <div className="map-preview-card">
@@ -335,7 +300,7 @@ export function MapPage({
             attribution="© OpenStreetMap"
           />
 
-          <FocusMap destination={selectedPlace} userLocation={userLocation} />
+          <FocusMap destination={selectedPlace} userLocation={userLocation} focusRequest={focusRequest} />
 
           {userLocation && (
             <Marker position={userLocation} icon={createIcon("📍")}>
@@ -477,7 +442,7 @@ export function MapPage({
 
         <div className="destination-list">
           {filteredDestinations.map((place) => {
-            const km = userLocation ? distanceKm(userLocation, place) : null;
+            const km = location ? distanceKm(location, place) : null;
 
             return (
               <button

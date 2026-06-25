@@ -51,6 +51,7 @@ import { Language, text } from "./i18n";
 import { LanguageContext } from "./LanguageContext";
 import { MapDestination } from "./mapDestinations";
 import { getDueNotifications, markNotificationDelivered } from "./services/notifications";
+import { LocationProvider } from "./LocationContext";
 
 const LANGUAGE_STORAGE_KEY = "fanatlas_language";
 const LEGACY_LANGUAGE_STORAGE_KEY = "fanatlas.language";
@@ -478,4 +479,8 @@ function AccessDenied({ onHome }: { onHome: () => void }) {
   );
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <LocationProvider>
+    <App />
+  </LocationProvider>
+);

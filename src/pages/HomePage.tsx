@@ -8,6 +8,10 @@ import { Tab } from "../main";
 import { getFanZoneDestination, getStadiumDestination, MapDestination } from "../mapDestinations";
 import { FanAtlasMatch, getWorldCup2026Games } from "../services/worldcup2026";
 import { InstallBanner } from "./InstallBanner";
+import { useLocation } from "../LocationContext";
+import { distanceKm, formatDistance } from "../lib/location";
+import { fanZoneDestinations, getPlaceDestination, placeDestinations } from "../mapDestinations";
+import { hotelOffers } from "./HotelsPage";
 
 function getNextMatch(matches: FanAtlasMatch[]) {
   return matches.find((match) => match.status !== "Finished") || matches[0] || null;
@@ -25,6 +29,7 @@ export function HomePage({
   setTab: (tab: Tab) => void;
 }) {
   const { language, setLanguage, t } = useLanguage();
+  const { location, status: locationStatus } = useLocation();
   const [matches, setMatches] = useState<FanAtlasMatch[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -38,6 +43,21 @@ export function HomePage({
   }, []);
 
   const nextMatch = useMemo(() => getNextMatch(matches), [matches]);
+  const nearbyGroups = useMemo(() => {
+    if (!location) return null;
+
+    const sortNearby = <T extends { lat: number; lng: number }>(items: T[]) =>
+      items
+        .map((item) => ({ ...item, userDistanceKm: distanceKm(location, item) }))
+        .sort((a, b) => a.userDistanceKm - b.userDistanceKm)
+        .slice(0, 3);
+
+    return {
+      fanZones: sortNearby(fanZoneDestinations),
+      restaurants: sortNearby(placeDestinations.filter((place) => place.type === "restaurant" || place.type === "cafe")),
+      hotels: sortNearby(hotelOffers)
+    };
+  }, [location]);
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [];
@@ -173,6 +193,72 @@ export function HomePage({
           );
         })}
       </div>
+
+      <section className="nearby-section">
+        <div className="section-row">
+          <div>
+            <h3>Near You</h3>
+            {location && <span className="subtle">{location.city || location.country || "Based on your location"}</span>}
+          </div>
+        </div>
+
+        {!nearbyGroups && locationStatus !== "requesting" && (
+          <div className="location-fallback">Enable location for nearby recommendations.</div>
+        )}
+
+        {nearbyGroups && (
+          <div className="nearby-groups">
+            <div className="nearby-group">
+              <strong>Fan zones</strong>
+              {nearbyGroups.fanZones.map((item) => (
+                <button key={item.name} onClick={() => {
+                  setMapDestination(getFanZoneDestination(item.name) || null);
+                  setTab("map");
+                }}>
+                  <span>🎉 {item.name}</span>
+                  <small>{formatDistance(item.userDistanceKm)}</small>
+                </button>
+              ))}
+            </div>
+
+            <div className="nearby-group">
+              <strong>Restaurants</strong>
+              {nearbyGroups.restaurants.map((item) => (
+                <button key={item.name} onClick={() => {
+                  const restaurant = places.find((place) => place.name === item.name);
+                  if (restaurant) {
+                    setSelectedRestaurant(restaurant);
+                    setTab("restaurant");
+                  }
+                }}>
+                  <span>🍽 {item.name}</span>
+                  <small>{formatDistance(item.userDistanceKm)}</small>
+                </button>
+              ))}
+            </div>
+
+            <div className="nearby-group">
+              <strong>Hotels</strong>
+              {nearbyGroups.hotels.map((item) => (
+                <button key={item.id} onClick={() => {
+                  setMapDestination(getPlaceDestination(item.name, item.city) || {
+                    name: item.name,
+                    city: item.city,
+                    lat: item.lat,
+                    lng: item.lng,
+                    emoji: "🏨",
+                    type: "hotel"
+                  });
+                  setTab("map");
+                }}>
+                  <span>🏨 {item.name}</span>
+                  <small>{formatDistance(item.userDistanceKm)}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
 
       <section className="home-worldcup-card">
         <div className="section-row">
