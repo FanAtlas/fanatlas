@@ -16,6 +16,10 @@ export type MapDestination = {
   lng: number;
   emoji: string;
   type: MapDestinationType;
+  address?: string;
+  openingHours?: string;
+  crowdLevel?: string;
+  safetyNotes?: string;
 };
 
 export const stadiumDestinations: MapDestination[] = [

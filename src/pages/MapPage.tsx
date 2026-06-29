@@ -11,7 +11,7 @@ import { reminderDate, scheduleNotification } from "../services/notifications";
 import { useLocation } from "../LocationContext";
 import { distanceKm } from "../lib/location";
 
-type TravelMode = "walking" | "driving" | "transit" | "rideshare";
+type TravelMode = "walking" | "driving";
 type CategoryFilter = "All" | "Stadiums" | "Hotels" | "Restaurants" | "Fan Zones" | "Hospitals" | "Embassies";
 
 const categoryFilters: CategoryFilter[] = [
@@ -40,36 +40,30 @@ const createIcon = (emoji: string) =>
     iconSize: [40, 40]
   });
 
-function FitRoute({ route }: { route: [number, number][] }) {
+function FitPreview({
+  destination,
+  focusRequest,
+  route,
+  userLocation
+}: {
+  destination: MapDestination | null;
+  focusRequest: number;
+  route: [number, number][];
+  userLocation: [number, number] | null;
+}) {
   const map = useMap();
 
   useEffect(() => {
     if (route.length > 1) {
       map.fitBounds(L.latLngBounds(route), { padding: [34, 34] });
-    }
-  }, [route, map]);
-
-  return null;
-}
-
-function FocusMap({
-  destination,
-  userLocation,
-  focusRequest
-}: {
-  destination: MapDestination | null;
-  userLocation: [number, number] | null;
-  focusRequest: number;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (destination) {
+    } else if (destination && userLocation) {
+      map.fitBounds(L.latLngBounds([userLocation, [destination.lat, destination.lng]]), { padding: [34, 34] });
+    } else if (destination) {
       map.setView([destination.lat, destination.lng], 13, { animate: true });
     } else if (userLocation) {
-      map.setView(userLocation, 11, { animate: true });
+      map.setView(userLocation, 12, { animate: true });
     }
-  }, [destination, focusRequest, map, userLocation]);
+  }, [destination, focusRequest, map, route, userLocation]);
 
   return null;
 }
@@ -84,17 +78,44 @@ function hasDestinationMarker(destination: MapDestination | null) {
   ));
 }
 
-function formatStep(step: any) {
-  const type = step.maneuver?.type || "Continue";
-  const modifier = step.maneuver?.modifier ? ` ${step.maneuver.modifier}` : "";
-  const street = step.name ? ` on ${step.name}` : "";
-  return `${type}${modifier}${street}`;
-}
-
 function categoryLabel(type: MapDestinationType) {
   if (type === "fan-zone") return "Fan Zone";
   if (type === "cafe") return "Restaurant";
   return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function destinationDetails(destination: MapDestination, nearbyDistance: string | null) {
+  const crowdByType: Partial<Record<MapDestinationType, string>> = {
+    stadium: "High on match days",
+    "fan-zone": "High during live matches",
+    restaurant: "Moderate to high at meal times",
+    cafe: "Moderate",
+    hotel: "Low to moderate",
+    hospital: "Emergency services",
+    police: "Emergency services",
+    embassy: "Appointment recommended",
+    place: "Varies by time of day"
+  };
+
+  const safetyByType: Partial<Record<MapDestinationType, string>> = {
+    stadium: "Arrive early, check bag policy, and confirm your gate before leaving.",
+    "fan-zone": "Set a meetup point and expect crowding near screens after matches.",
+    restaurant: "Reserve ahead and confirm late-night transportation before dining.",
+    cafe: "Keep bags close in busy areas.",
+    hotel: "Confirm check-in details and route before match day.",
+    hospital: "Call emergency services first for urgent medical help.",
+    police: "Use official emergency numbers for immediate safety issues.",
+    embassy: "Check official hours and bring identification.",
+    place: "Use well-lit routes and check local conditions before going."
+  };
+
+  return [
+    { label: "Address", value: destination.address || destination.city },
+    { label: "Distance", value: nearbyDistance },
+    { label: "Opening hours", value: destination.openingHours },
+    { label: "Crowd level", value: destination.crowdLevel || crowdByType[destination.type] },
+    { label: "Safety notes", value: destination.safetyNotes || safetyByType[destination.type] }
+  ].filter((item): item is { label: string; value: string } => Boolean(item.value));
 }
 
 function mapLinks(destination: MapDestination) {
@@ -124,7 +145,6 @@ export function MapPage({
   const [focusRequest, setFocusRequest] = useState(0);
   const [selectedPlace, setSelectedPlace] = useState<MapDestination | null>(null);
   const [route, setRoute] = useState<[number, number][]>([]);
-  const [steps, setSteps] = useState<string[]>([]);
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
   const [mode, setMode] = useState<TravelMode>("driving");
@@ -137,6 +157,8 @@ export function MapPage({
 
   const showSelectedMarker = selectedPlace && !hasDestinationMarker(selectedPlace);
   const externalLinks = selectedPlace ? mapLinks(selectedPlace) : null;
+  const selectedDistance = selectedPlace && location ? `${distanceKm(location, selectedPlace).toFixed(1)} km` : null;
+  const selectedDetails = selectedPlace ? destinationDetails(selectedPlace, selectedDistance) : [];
   const mapCenter: [number, number] = selectedPlace
     ? [selectedPlace.lat, selectedPlace.lng]
     : userLocation || [39.8283, -98.5795];
@@ -162,7 +184,6 @@ export function MapPage({
     } else {
       setSelectedPlace(null);
       setRoute([]);
-      setSteps([]);
       setDistance("");
       setDuration("");
       setRouteError("");
@@ -181,19 +202,12 @@ export function MapPage({
     setRouteError("");
     setNotificationMessage("");
     setRoute([]);
-    setSteps([]);
     setDistance("");
     setDuration("");
 
-    if (travelMode === "transit" || travelMode === "rideshare") {
-      setRouteLoading(false);
-      setRouteError(`${travelMode === "transit" ? "Transit" : "Rideshare"} preview is a placeholder. Open turn-by-turn navigation in your preferred maps app.`);
-      return;
-    }
-
     if (!origin) {
       setRouteLoading(false);
-      setRouteError("Location disabled. Enable location for route previews.");
+      setRouteError("Route preview unavailable.");
       return;
     }
 
@@ -212,19 +226,25 @@ export function MapPage({
       if (!data.routes?.length) throw new Error("Route preview unavailable.");
 
       const routeData = data.routes[0];
+      if (
+        typeof routeData.distance !== "number" ||
+        typeof routeData.duration !== "number" ||
+        !routeData.geometry?.coordinates?.length
+      ) {
+        throw new Error("Route preview unavailable.");
+      }
+
       const coordinates = routeData.geometry.coordinates.map(
         ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
       );
-      const routeSteps = routeData.legs?.[0]?.steps?.map(formatStep) || [];
 
       if (requestId !== routeRequestId.current) return;
       setRoute(coordinates);
-      setSteps(routeSteps.slice(0, 8));
       setDistance(`${(routeData.distance / 1000).toFixed(1)} km`);
       setDuration(`${Math.round(routeData.duration / 60)} min`);
     } catch {
       if (requestId !== routeRequestId.current) return;
-      setRouteError("Route preview unavailable. Open your preferred map app for directions.");
+      setRouteError("Route preview unavailable.");
     } finally {
       if (requestId === routeRequestId.current) setRouteLoading(false);
     }
@@ -243,7 +263,9 @@ export function MapPage({
 
     setSelectedPlace(null);
     setRoute([]);
-    setSteps([]);
+    setDistance("");
+    setDuration("");
+    setRouteError("");
     setFocusRequest((request) => request + 1);
   }
 
@@ -280,8 +302,8 @@ export function MapPage({
 
       <header className="map-hub-header">
         <span>FanAtlas Map</span>
-        <h1>Smart Directions</h1>
-        <p>Preview routes in FanAtlas, then open turn-by-turn navigation in your preferred maps app.</p>
+        <h1>Route Preview</h1>
+        <p>Plan the trip in FanAtlas, then open turn-by-turn navigation in Apple Maps, Google Maps, or Waze.</p>
       </header>
 
       <div className="map-location-status">
@@ -300,7 +322,12 @@ export function MapPage({
             attribution="© OpenStreetMap"
           />
 
-          <FocusMap destination={selectedPlace} userLocation={userLocation} focusRequest={focusRequest} />
+          <FitPreview
+            destination={selectedPlace}
+            focusRequest={focusRequest}
+            route={route}
+            userLocation={userLocation}
+          />
 
           {userLocation && (
             <Marker position={userLocation} icon={createIcon("📍")}>
@@ -328,7 +355,6 @@ export function MapPage({
           {route.length > 0 && (
             <>
               <Polyline positions={route} />
-              <FitRoute route={route} />
             </>
           )}
         </MapContainer>
@@ -354,35 +380,23 @@ export function MapPage({
               disabled={routeLoading}
               onClick={() => buildRoute(selectedPlace, "walking")}
             >
-              Walk
+              Walking
             </button>
             <button
               className={`travel-mode ${mode === "driving" ? "active" : ""}`}
               disabled={routeLoading}
               onClick={() => buildRoute(selectedPlace, "driving")}
             >
-              Drive
-            </button>
-            <button
-              className={`travel-mode ${mode === "transit" ? "active" : ""}`}
-              disabled={routeLoading}
-              onClick={() => buildRoute(selectedPlace, "transit")}
-            >
-              Transit
-            </button>
-            <button
-              className={`travel-mode ${mode === "rideshare" ? "active" : ""}`}
-              disabled={routeLoading}
-              onClick={() => buildRoute(selectedPlace, "rideshare")}
-            >
-              Rideshare
+              Driving
             </button>
           </div>
 
-          <div className="route-summary">
-            <p>ETA: <strong>{duration || "Preview unavailable"}</strong></p>
-            <p>Distance: <strong>{distance || (userLocation ? "Preview unavailable" : "Enable location")}</strong></p>
-          </div>
+          {distance && duration && (
+            <div className="route-summary">
+              <p>Distance <strong>{distance}</strong></p>
+              <p>ETA <strong>{duration}</strong></p>
+            </div>
+          )}
 
           {selectedPlace.type === "stadium" && (
             <div className="map-stadium-actions">
@@ -399,15 +413,19 @@ export function MapPage({
             </div>
           )}
 
-          {steps.length > 0 && (
-            <div className="route-steps">
-              <h3>Preview route in FanAtlas</h3>
-              {steps.map((step, index) => (
-                <div className="route-step" key={index}>
-                  <span>{index + 1}</span>
-                  <p>{step}</p>
-                </div>
-              ))}
+          <div className="map-info-grid">
+            {selectedDetails.map((item) => (
+              <div className="map-info-card" key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
+
+          {route.length > 0 && (
+            <div className="route-note-card">
+              <strong>Preview route in FanAtlas</strong>
+              <p>This is a planning preview. Use Apple Maps, Google Maps, or Waze for live navigation, traffic, closures, and rerouting.</p>
             </div>
           )}
 
