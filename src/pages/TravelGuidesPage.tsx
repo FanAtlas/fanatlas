@@ -5,34 +5,34 @@ import { Tab } from "../main";
 export function TravelGuidesPage({ onBack, setTab }: { onBack: () => void; setTab: (tab: Tab) => void }) {
   const phases = ["Before Travel", "After Arrival", "During Stay"];
   return (
-    <>
-      <div className="header">
+    <div className="travel-guides-page">
+      <div className="topbar">
         <BackButton onBack={onBack} />
         <div>
-          <div className="logo">Travel Guides</div>
+          <div className="brand">Travel <span>Guides</span></div>
           <div className="subtle">What to do before, after arrival, and during stay</div>
         </div>
       </div>
 
-      <button className="feature-card blue" onClick={() => setTab("cityguide")}>
+      <button className="fan-card destination-guide-card" onClick={() => setTab("cityguide")}>
         <div className="feature-emoji">CG</div>
         <div>
-          <h3>Host City Guides</h3>
-          <p>Attractions, restaurants, safety, transportation, fan zones, and hotels for every 2026 host city.</p>
+          <h3>Destination Guides</h3>
+          <p>Attractions, restaurants, safety, transportation, events, and hotels for your destination.</p>
         </div>
       </button>
 
       {phases.map((phase) => (
-        <section key={phase}>
+        <section className="travel-guide-section" key={phase}>
           <h3>{phase}</h3>
           {guides.filter(g => g.phase === phase).map((g) => (
-            <div className="card" key={g.title}>
+            <div className="fan-card" key={g.title}>
               <p className="small-title">{g.title}</p>
               <p className="subtle">{g.content}</p>
             </div>
           ))}
         </section>
       ))}
-    </>
+    </div>
   );
 }

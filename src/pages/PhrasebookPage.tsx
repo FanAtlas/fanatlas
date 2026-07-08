@@ -175,7 +175,7 @@ export function PhrasebookPage({ onBack }: { onBack: () => void }) {
       <div className="phrasebook-controls">
         <label>
           <span>Language</span>
-          <select className="input" value={phraseLanguage} onChange={(event) => setPhraseLanguage(event.target.value as PhraseLanguage)}>
+          <select className="fan-select" value={phraseLanguage} onChange={(event) => setPhraseLanguage(event.target.value as PhraseLanguage)}>
             {languages.map((item) => <option key={item}>{item}</option>)}
           </select>
         </label>
@@ -184,7 +184,7 @@ export function PhrasebookPage({ onBack }: { onBack: () => void }) {
       <div className="chip-scroll">
         {categories.map((category) => (
           <button
-            className={`chip ${activeCategory === category ? "active" : ""}`}
+            className={`fan-tab ${activeCategory === category ? "active" : ""}`}
             key={category}
             onClick={() => setActiveCategory(category)}
           >
@@ -197,11 +197,11 @@ export function PhrasebookPage({ onBack }: { onBack: () => void }) {
 
       <div className="phrasebook-list">
         {visiblePhrases.map((phrase) => (
-          <article className="phrase-card" key={phrase.key}>
+          <article className="fan-card phrase-card" key={phrase.key}>
             <span>{activeCategory}</span>
             <strong>{phrase.translations[phraseLanguage]}</strong>
             {phraseLanguage !== "English" && <p>{phrase.translations.English}</p>}
-            <button className="secondary-btn" onClick={() => playPhrase(phrase.translations[phraseLanguage])}>
+            <button className="fan-button-secondary" onClick={() => playPhrase(phrase.translations[phraseLanguage])}>
               Play Audio
             </button>
           </article>

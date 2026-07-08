@@ -12,6 +12,9 @@ export type TravelAssistantContext = {
   city?: string;
   stadium?: string;
   language?: string;
+  originCountry?: string;
+  destinationCountry?: string;
+  destinationCity?: string;
 };
 
 export async function askTravelAssistant(

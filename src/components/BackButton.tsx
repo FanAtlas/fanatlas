@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useLanguage } from "../LanguageContext";
 
 export function BackButton({ onBack }: { onBack?: () => void }) {
@@ -19,7 +20,8 @@ export function BackButton({ onBack }: { onBack?: () => void }) {
 
   return (
     <button className="back-btn" onClick={handleBack} type="button">
-      {language === "ar" ? `${t.back} →` : `← ${t.back}`}
+      {language === "ar" ? <ArrowRight size={17} /> : <ArrowLeft size={17} />}
+      <span>{t.back}</span>
     </button>
   );
 }

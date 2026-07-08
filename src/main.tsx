@@ -44,6 +44,8 @@ import { TravelToolsPage } from "./pages/TravelToolsPage";
 import { PrivacyPage } from "./pages/PrivacyPage";
 import { TermsPage } from "./pages/TermsPage";
 import { SupportPage } from "./pages/SupportPage";
+import { LandingPage } from "./pages/LandingPage";
+import { TravelLocationPage } from "./pages/TravelLocationPage";
 
 import { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
@@ -52,10 +54,12 @@ import { LanguageContext } from "./LanguageContext";
 import { MapDestination } from "./mapDestinations";
 import { getDueNotifications, markNotificationDelivered } from "./services/notifications";
 import { LocationProvider } from "./LocationContext";
+import { TravelLocationProvider } from "./TravelLocationContext";
 
 const LANGUAGE_STORAGE_KEY = "fanatlas_language";
 const LEGACY_LANGUAGE_STORAGE_KEY = "fanatlas.language";
 const ADMIN_EMAIL = "kadsimohamedads@gmail.com";
+type PublicRoute = "/" | "/app" | "/privacy" | "/terms" | "/support";
 
 export type Tab =
   | "home"
@@ -97,7 +101,8 @@ export type Tab =
   | "revenue"
   | "privacy"
   | "terms"
-  | "support";
+  | "support"
+  | "travelLocation";
 
 function isLanguage(value: string | null): value is Language {
   return value === "en" || value === "es" || value === "fr" || value === "ar" || value === "pt";
@@ -122,6 +127,7 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [isAdminEmail, setIsAdminEmail] = useState(false);
   const [tab, setTab] = useState<Tab>("home");
+  const [route, setRoute] = useState<PublicRoute>(() => routeFromPath(window.location.pathname));
   const [previousTab, setPreviousTab] = useState<Tab | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
@@ -131,6 +137,19 @@ function App() {
   const [language, setLanguageState] = useState<Language>(() => initialLanguage());
 
   const t = text[language];
+
+  function routeFromPath(pathname: string): PublicRoute {
+    if (pathname === "/app") return "/app";
+    if (pathname === "/privacy") return "/privacy";
+    if (pathname === "/terms") return "/terms";
+    if (pathname === "/support") return "/support";
+    return "/";
+  }
+
+  function navigateRoute(nextRoute: PublicRoute) {
+    window.history.pushState({}, "", nextRoute);
+    setRoute(nextRoute);
+  }
 
   function updateAdminAccess(nextSession: any) {
     const email = nextSession?.user?.email?.toLowerCase() || "";
@@ -181,6 +200,15 @@ function App() {
   }, []);
 
   useEffect(() => {
+    function handlePopState() {
+      setRoute(routeFromPath(window.location.pathname));
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
   }, [language]);
@@ -204,6 +232,10 @@ function App() {
   }, []);
 
   function navigateTo(nextTab: Tab) {
+    if (route !== "/app") {
+      navigateRoute("/app");
+    }
+
     if (nextTab !== tab) {
       setPreviousTab(tab);
       setTab(nextTab);
@@ -219,6 +251,52 @@ function App() {
   function goHome() {
     setPreviousTab("home");
     setTab("home");
+  }
+
+  function openApp(nextTab: Tab = "home") {
+    setPreviousTab("home");
+    setTab(nextTab);
+    navigateRoute("/app");
+  }
+
+  function publicBack() {
+    navigateRoute("/");
+  }
+
+  if (route === "/privacy") {
+    return (
+      <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        <PrivacyPage onBack={publicBack} />
+      </LanguageContext.Provider>
+    );
+  }
+
+  if (route === "/terms") {
+    return (
+      <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        <TermsPage onBack={publicBack} />
+      </LanguageContext.Provider>
+    );
+  }
+
+  if (route === "/support") {
+    return (
+      <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        <SupportPage onBack={publicBack} />
+      </LanguageContext.Provider>
+    );
+  }
+
+  if (route !== "/app") {
+    return (
+      <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        <LandingPage
+          onOpenApp={() => openApp("home")}
+          onExploreEventMode={() => openApp("matches")}
+          onNavigateLegal={(page) => navigateRoute(`/${page}`)}
+        />
+      </LanguageContext.Provider>
+    );
   }
 
   if (!session) {
@@ -302,6 +380,7 @@ function App() {
     if (tab === "meetups") return <MeetupPage />;
     if (tab === "phrasebook") return <PhrasebookPage onBack={goBack} />;
     if (tab === "traveltools") return <TravelToolsPage onBack={goBack} setTab={navigateTo} />;
+    if (tab === "travelLocation") return <TravelLocationPage onBack={goBack} onSaved={goHome} />;
     if (tab === "privacy") return <PrivacyPage onBack={goHome} />;
     if (tab === "terms") return <TermsPage onBack={goHome} />;
     if (tab === "support") return <SupportPage onBack={goHome} />;
@@ -481,6 +560,8 @@ function AccessDenied({ onHome }: { onHome: () => void }) {
 
 createRoot(document.getElementById("root")!).render(
   <LocationProvider>
-    <App />
+    <TravelLocationProvider>
+      <App />
+    </TravelLocationProvider>
   </LocationProvider>
 );

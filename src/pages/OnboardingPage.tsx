@@ -1,57 +1,58 @@
 import { useState } from "react";
-import { getCountryOptions } from "../data/onboardingOptions";
+import { citiesForCountry, countryNames } from "../data/destinations";
 import { Language, languages } from "../i18n";
 import { useLanguage } from "../LanguageContext";
 import { supabase } from "../lib/supabase";
+import { DESTINATION_CITY_KEY, DESTINATION_COUNTRY_KEY, LOCATION_SOURCE_KEY, ORIGIN_COUNTRY_KEY } from "../TravelLocationContext";
 
 type Props = {
   onComplete: () => void;
 };
-
-const destinationCountries = ["USA", "Canada", "Mexico"];
 
 export function OnboardingPage({ onComplete }: Props) {
   const { language, setLanguage } = useLanguage();
   const [step, setStep] = useState(1);
   const [originCountry, setOriginCountry] = useState("");
   const [destinationCountry, setDestinationCountry] = useState("");
+  const [destinationCity, setDestinationCity] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const countryOptions = getCountryOptions();
 
   async function finish() {
-    if (!originCountry || !destinationCountry) {
-      setError("Choose where you are coming from and where you are traveling to.");
-      return;
-    }
-
-    if (!supabase) {
-      setError("Setup is temporarily unavailable. Please try again later.");
+    if (!originCountry || !destinationCountry || !destinationCity) {
+      setError("Choose where you are from, where you are traveling, and what city you are visiting.");
       return;
     }
 
     setSaving(true);
     setError("");
 
-    const { data, error: userError } = await supabase.auth.getUser();
+    const { data, error: userError } = supabase
+      ? await supabase.auth.getUser()
+      : { data: { user: null }, error: null };
     const user = data.user;
 
-    if (userError || !user) {
+    if (supabase && (userError || !user)) {
       setSaving(false);
       setError(userError?.message || "You need to be signed in to finish setup.");
       return;
     }
 
     localStorage.setItem("fanatlas_language", language);
+    localStorage.setItem(ORIGIN_COUNTRY_KEY, originCountry);
+    localStorage.setItem(DESTINATION_COUNTRY_KEY, destinationCountry);
+    localStorage.setItem(DESTINATION_CITY_KEY, destinationCity);
+    localStorage.setItem(LOCATION_SOURCE_KEY, "manual");
 
-    const { error: profileError } = await supabase.from("profiles").upsert({
+    const { error: profileError } = supabase && user ? await supabase.from("profiles").upsert({
       id: user.id,
       email: user.email,
       username: user.email?.split("@")[0] || user.phone || "FanAtlas user",
       language,
       origin_country: originCountry,
-      destination_country: destinationCountry
-    });
+      destination_country: destinationCountry,
+      destination_city: destinationCity
+    }) : { error: null };
 
     setSaving(false);
 
@@ -96,20 +97,20 @@ export function OnboardingPage({ onComplete }: Props) {
         {step === 2 && (
           <>
             <h2>Where are you coming from?</h2>
-            <select
+            <input
+              list="onboarding-origin-countries"
               value={originCountry}
+              placeholder="Morocco, France, Canada..."
               onChange={(event) => {
                 setError("");
                 setOriginCountry(event.target.value);
               }}
-            >
-              <option value="">Select country</option>
-              {countryOptions.map((country) => (
-                <option key={country.name} value={country.name}>
-                  {country.name}
-                </option>
+            />
+            <datalist id="onboarding-origin-countries">
+              {countryNames.map((country) => (
+                <option key={country} value={country} />
               ))}
-            </select>
+            </datalist>
             <button className="primary-btn full-width" disabled={!originCountry} onClick={() => setStep(3)}>
               Continue
             </button>
@@ -119,22 +120,50 @@ export function OnboardingPage({ onComplete }: Props) {
         {step === 3 && (
           <>
             <h2>Where are you traveling to?</h2>
-            <select
+            <input
+              list="onboarding-destination-countries"
               value={destinationCountry}
+              placeholder="Spain, Japan, Brazil..."
               onChange={(event) => {
                 setError("");
-                setDestinationCountry(event.target.value);
+                const nextCountry = event.target.value;
+                setDestinationCountry(nextCountry);
+                if (citiesForCountry(nextCountry).length) {
+                  setDestinationCity(citiesForCountry(nextCountry)[0] || "");
+                }
               }}
-            >
-              <option value="">Select destination</option>
-              {destinationCountries.map((country) => (
-                <option key={country} value={country}>
-                  {country}
-                </option>
+            />
+            <datalist id="onboarding-destination-countries">
+              {countryNames.map((country) => (
+                <option key={country} value={country} />
               ))}
-            </select>
+            </datalist>
             {error && <p className="onboarding-error">{error}</p>}
-            <button className="primary-btn full-width" disabled={saving || !destinationCountry} onClick={finish}>
+            <button className="primary-btn full-width" disabled={!destinationCountry} onClick={() => setStep(4)}>
+              Continue
+            </button>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <h2>What city are you visiting?</h2>
+            <input
+              list="onboarding-destination-cities"
+              value={destinationCity}
+              placeholder="Paris, Tokyo, Cairo..."
+              onChange={(event) => {
+                setError("");
+                setDestinationCity(event.target.value);
+              }}
+            />
+            <datalist id="onboarding-destination-cities">
+              {citiesForCountry(destinationCountry).map((city) => (
+                <option key={city} value={city} />
+              ))}
+            </datalist>
+            {error && <p className="onboarding-error">{error}</p>}
+            <button className="primary-btn full-width" disabled={saving || !destinationCity} onClick={finish}>
               {saving ? "Saving..." : "Finish Setup"}
             </button>
           </>

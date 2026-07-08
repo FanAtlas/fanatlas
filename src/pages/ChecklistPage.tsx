@@ -98,8 +98,9 @@ export function ChecklistPage({ onBack }: { onBack: () => void }) {
                 const checked = checkedItems.includes(key);
 
                 return (
-                  <label className={`checklist-item ${checked ? "checked" : ""}`} key={key}>
+                  <label className={`fan-checkbox-row checklist-item ${checked ? "checked" : ""}`} key={key}>
                     <input
+                      className="fan-checkbox"
                       checked={checked}
                       onChange={() => toggleItem(key)}
                       type="checkbox"

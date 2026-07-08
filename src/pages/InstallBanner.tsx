@@ -61,18 +61,18 @@ export function InstallBanner() {
       </div>
 
       {isIOS ? (
-        <button onClick={() => alert("On iPhone: tap Share, then Add to Home Screen.")}>
+        <button className="install-banner-action" onClick={() => alert("On iPhone: tap Share, then Add to Home Screen.")}>
           How?
         </button>
       ) : (
-        <button onClick={installApp}>
+        <button className="install-banner-action" onClick={installApp}>
           Install
         </button>
       )}
 
-      <span onClick={() => setShow(false)}>
+      <button className="install-banner-close" onClick={() => setShow(false)} type="button" aria-label="Close install banner">
         ×
-      </span>
+      </button>
     </div>
   );
 }

@@ -6,32 +6,25 @@ import { Search } from "lucide-react";
 import { BackButton } from "../components/BackButton";
 import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
-import { defaultMapDestinations, MapDestination, MapDestinationType } from "../mapDestinations";
+import { MapDestination, MapDestinationType } from "../mapDestinations";
 import { reminderDate, scheduleNotification } from "../services/notifications";
 import { useLocation } from "../LocationContext";
 import { distanceKm } from "../lib/location";
+import { useTravelLocation } from "../TravelLocationContext";
+import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
+import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
 
 type TravelMode = "walking" | "driving";
-type CategoryFilter = "All" | "Stadiums" | "Hotels" | "Restaurants" | "Fan Zones" | "Hospitals" | "Embassies";
+type CategoryFilter = "All" | "Hotels" | "Restaurants" | "Attractions" | "Transport" | "SOS";
 
 const categoryFilters: CategoryFilter[] = [
   "All",
-  "Stadiums",
   "Hotels",
   "Restaurants",
-  "Fan Zones",
-  "Hospitals",
-  "Embassies"
+  "Attractions",
+  "Transport",
+  "SOS"
 ];
-
-const categoryTypeMap: Record<Exclude<CategoryFilter, "All">, MapDestinationType[]> = {
-  Stadiums: ["stadium"],
-  Hotels: ["hotel"],
-  Restaurants: ["restaurant", "cafe"],
-  "Fan Zones": ["fan-zone"],
-  Hospitals: ["hospital"],
-  Embassies: ["embassy", "police"]
-};
 
 const createIcon = (emoji: string) =>
   L.divIcon({
@@ -44,12 +37,14 @@ function FitPreview({
   destination,
   focusRequest,
   route,
-  userLocation
+  userLocation,
+  destinationCenter
 }: {
   destination: MapDestination | null;
   focusRequest: number;
   route: [number, number][];
   userLocation: [number, number] | null;
+  destinationCenter: [number, number];
 }) {
   const map = useMap();
 
@@ -60,22 +55,12 @@ function FitPreview({
       map.fitBounds(L.latLngBounds([userLocation, [destination.lat, destination.lng]]), { padding: [34, 34] });
     } else if (destination) {
       map.setView([destination.lat, destination.lng], 13, { animate: true });
-    } else if (userLocation) {
-      map.setView(userLocation, 12, { animate: true });
+    } else {
+      map.setView(destinationCenter, 12, { animate: true });
     }
-  }, [destination, focusRequest, map, route, userLocation]);
+  }, [destination, destinationCenter, focusRequest, map, route, userLocation]);
 
   return null;
-}
-
-function hasDestinationMarker(destination: MapDestination | null) {
-  if (!destination) return true;
-
-  return defaultMapDestinations.some((place) => (
-    place.name === destination.name &&
-    Math.abs(place.lat - destination.lat) < 0.0001 &&
-    Math.abs(place.lng - destination.lng) < 0.0001
-  ));
 }
 
 function categoryLabel(type: MapDestinationType) {
@@ -128,6 +113,27 @@ function mapLinks(destination: MapDestination) {
   };
 }
 
+function globalPlaceDestination(place: GlobalPlace): MapDestination {
+  return {
+    name: place.name,
+    city: place.city,
+    lat: place.lat,
+    lng: place.lng,
+    emoji: placeEmoji(place.category),
+    type: place.category === "hotel" ? "hotel" :
+      place.category === "restaurant" ? "restaurant" :
+      place.category === "hospital" ? "hospital" :
+      place.category === "police" ? "police" :
+      place.category === "embassy" ? "embassy" :
+      "place",
+    address: place.address,
+    openingHours: place.detail,
+    safetyNotes: place.source === "openstreetmap"
+      ? "OpenStreetMap community place data. Verify critical details before travel."
+      : "Starter travel card. Live map places refresh in the background."
+  };
+}
+
 export function MapPage({
   initialDestination,
   setSelectedStadium,
@@ -139,6 +145,8 @@ export function MapPage({
 }) {
   const { language } = useLanguage();
   const { location, status: locationStatus } = useLocation();
+  const { travelLocation } = useTravelLocation();
+  const { groups, loading: placesLoading, message: placesMessage, refreshPlaces } = useGlobalPlaces();
   const userLocation: [number, number] | null = location
     ? [location.latitude, location.longitude]
     : null;
@@ -155,28 +163,39 @@ export function MapPage({
   const [category, setCategory] = useState<CategoryFilter>("All");
   const routeRequestId = useRef(0);
 
-  const showSelectedMarker = selectedPlace && !hasDestinationMarker(selectedPlace);
   const externalLinks = selectedPlace ? mapLinks(selectedPlace) : null;
   const selectedDistance = selectedPlace && location ? `${distanceKm(location, selectedPlace).toFixed(1)} km` : null;
   const selectedDetails = selectedPlace ? destinationDetails(selectedPlace, selectedDistance) : [];
+  const destinationCenter: [number, number] = [travelLocation.latitude, travelLocation.longitude];
   const mapCenter: [number, number] = selectedPlace
     ? [selectedPlace.lat, selectedPlace.lng]
-    : userLocation || [39.8283, -98.5795];
+    : destinationCenter;
 
   const filteredDestinations = useMemo(() => {
     const normalizedQuery = search.trim().toLowerCase();
+    const byCategory = category === "Hotels" ? groups.hotels :
+      category === "Restaurants" ? groups.restaurants :
+      category === "Attractions" ? groups.attractions :
+      category === "Transport" ? groups.transport :
+      category === "SOS" ? groups.sos :
+      [...groups.hotels, ...groups.restaurants, ...groups.attractions, ...groups.transport, ...groups.sos];
 
-    return defaultMapDestinations.filter((place) => {
-      const matchesCategory = category === "All" || categoryTypeMap[category].includes(place.type);
+    return byCategory.map(globalPlaceDestination).filter((place) => {
       const matchesSearch = !normalizedQuery ||
         `${place.name} ${place.city} ${categoryLabel(place.type)}`.toLowerCase().includes(normalizedQuery);
 
-      return matchesCategory && matchesSearch;
+      return matchesSearch;
     }).sort((a, b) => {
-      if (!location) return 0;
-      return distanceKm(location, a) - distanceKm(location, b);
+      const origin = { latitude: travelLocation.latitude, longitude: travelLocation.longitude };
+      return distanceKm(origin, a) - distanceKm(origin, b);
     });
-  }, [category, location, search]);
+  }, [category, groups.attractions, groups.hotels, groups.restaurants, groups.sos, groups.transport, search, travelLocation.latitude, travelLocation.longitude]);
+  const showSelectedMarker = selectedPlace && !filteredDestinations.some((place) => (
+    place.name === selectedPlace.name &&
+    Math.abs(place.lat - selectedPlace.lat) < 0.0001 &&
+    Math.abs(place.lng - selectedPlace.lng) < 0.0001
+  ));
+  const visibleMapDestinations = filteredDestinations.slice(0, 25);
 
   useEffect(() => {
     if (initialDestination) {
@@ -308,15 +327,21 @@ export function MapPage({
 
       <div className="map-location-status">
         <span>
-          {locationStatus === "available"
-            ? "Using your current location"
-            : "Enable location for nearby recommendations."}
+          Showing {travelLocation.destinationCity}, {travelLocation.destinationCountry}
+          {locationStatus === "available" ? " with your current location marker." : "."}
         </span>
-        <button type="button" onClick={useMyLocation}>Use My Location</button>
+        <button type="button" onClick={() => setTab("travelLocation")}>Change</button>
       </div>
+      {placesLoading && <div className="location-fallback">{placesMessage || `Finding live places near ${travelLocation.destinationCity}...`}</div>}
+      {!placesLoading && placesMessage && (
+        <div className="location-fallback">
+          {placesMessage}
+          {placesMessage.includes("Finding live places") && <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>}
+        </div>
+      )}
 
       <div className="map-preview-card">
-        <MapContainer center={mapCenter} zoom={selectedPlace ? 13 : 3} className="map-hub-leaflet">
+        <MapContainer center={mapCenter} zoom={selectedPlace ? 13 : 12} className="map-hub-leaflet">
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="© OpenStreetMap"
@@ -327,6 +352,7 @@ export function MapPage({
             focusRequest={focusRequest}
             route={route}
             userLocation={userLocation}
+            destinationCenter={destinationCenter}
           />
 
           {userLocation && (
@@ -335,7 +361,11 @@ export function MapPage({
             </Marker>
           )}
 
-          {defaultMapDestinations.map((place) => (
+          <Marker position={destinationCenter} icon={createIcon("📌")}>
+            <Popup>{travelLocation.destinationCity}, {travelLocation.destinationCountry}</Popup>
+          </Marker>
+
+          {visibleMapDestinations.map((place) => (
             <Marker
               key={`${place.type}-${place.name}`}
               position={[place.lat, place.lng]}
@@ -441,7 +471,7 @@ export function MapPage({
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search stadiums, hotels, restaurants, fan zones..."
+            placeholder="Search hotels, restaurants, attractions, transport, SOS..."
           />
         </div>
 
@@ -459,8 +489,16 @@ export function MapPage({
         </div>
 
         <div className="destination-list">
+          {filteredDestinations.length === 0 && (
+            <div className="card-dark">
+              <strong>{travelLocation.destinationCity} map tools are ready.</strong>
+              <p className="subtle">Use search, SOS, and destination tools while live map places refresh.</p>
+              <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>
+            </div>
+          )}
+
           {filteredDestinations.map((place) => {
-            const km = location ? distanceKm(location, place) : null;
+            const km = distanceKm({ latitude: travelLocation.latitude, longitude: travelLocation.longitude }, place);
 
             return (
               <button
@@ -474,7 +512,7 @@ export function MapPage({
                   <strong>{place.name}</strong>
                   <small>{categoryLabel(place.type)} · {place.city}</small>
                 </span>
-                {km !== null && <span className="destination-distance">{km.toFixed(1)} km</span>}
+                <span className="destination-distance">{km.toFixed(1)} km</span>
               </button>
             );
           })}

@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BackButton } from "../components/BackButton";
 import { useLanguage } from "../LanguageContext";
 import { AssistantMessage, askTravelAssistant } from "../services/openai";
+import { useTravelLocation } from "../TravelLocationContext";
 
 type ChatMessage = AssistantMessage & {
   id: string;
@@ -19,7 +20,7 @@ const welcomeMessage: ChatMessage = {
   id: "welcome",
   role: "assistant",
   content:
-    "Hi, I'm FanAtlas. Ask me about World Cup 2026 stadiums, fan zones, hotels, restaurants, transportation, SOS, or app navigation."
+    "Hi, I'm FanAtlas. Ask me about your destination, hotels, restaurants, transportation, SOS, translation, expenses, checklists, or event travel."
 };
 
 function createMessage(role: ChatMessage["role"], content: string): ChatMessage {
@@ -55,6 +56,7 @@ function loadStoredMessages() {
 
 export function AIChatPage({ onBack }: { onBack: () => void }) {
   const { language } = useLanguage();
+  const { travelLocation } = useTravelLocation();
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadStoredMessages());
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -101,7 +103,11 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
 
     try {
       const result = await askTravelAssistant(nextApiMessages, {
-        language
+        language,
+        originCountry: travelLocation.originCountry,
+        destinationCountry: travelLocation.destinationCountry,
+        destinationCity: travelLocation.destinationCity,
+        city: travelLocation.destinationCity
       });
       setMessages((current) => [...current, createMessage("assistant", result.answer)]);
       setStatus("OpenAI Assistant");
@@ -149,7 +155,7 @@ export function AIChatPage({ onBack }: { onBack: () => void }) {
         <div>
           <div className="brand">AI Assistant <span>OpenAI</span></div>
           <div className="subtle">
-            World Cup 2026 travel, safety, stadiums, hotels, restaurants, transport and SOS · {status}
+            Travel, safety, hotels, restaurants, transport, SOS, and event planning · {status}
           </div>
         </div>
         <button className="mini-btn" onClick={clearChat} disabled={loading}>

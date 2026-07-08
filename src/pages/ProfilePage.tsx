@@ -16,6 +16,7 @@ import { useLanguage } from "../LanguageContext";
 import { LegalFooter } from "../components/LegalFooter";
 import { supabase } from "../lib/supabase";
 import { Tab } from "../main";
+import { useTravelLocation } from "../TravelLocationContext";
 
 type Profile = {
   email: string;
@@ -43,6 +44,7 @@ export function ProfilePage({
   setTab: (tab: Tab) => void;
 }) {
   const { language, setLanguage, t } = useLanguage();
+  const { travelLocation } = useTravelLocation();
   const [profile, setProfile] = useState<Profile>(defaultProfile);
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
@@ -147,6 +149,31 @@ export function ProfilePage({
       )}
 
       <section className="profile-section">
+        <button className="profile-row" onClick={() => setTab("travelLocation")}>
+          <span className="profile-row-icon"><Globe2 size={19} /></span>
+          <span>
+            <strong>Change travel location</strong>
+            <small>Traveling to {travelLocation.destinationCity}, {travelLocation.destinationCountry}</small>
+          </span>
+          <em>›</em>
+        </button>
+
+        <div className="profile-row profile-info-row">
+          <span className="profile-row-icon"><MapPinIcon /></span>
+          <span>
+            <strong>Home country</strong>
+            <small>{travelLocation.originCountry || "Not set"}</small>
+          </span>
+        </div>
+
+        <div className="profile-row profile-info-row">
+          <span className="profile-row-icon"><Globe2 size={19} /></span>
+          <span>
+            <strong>Traveling to</strong>
+            <small>{travelLocation.destinationCity}, {travelLocation.destinationCountry}</small>
+          </span>
+        </div>
+
         <button className="profile-row" onClick={() => setTab("matches")}>
           <span className="profile-row-icon"><Heart size={19} /></span>
           <span>
@@ -239,4 +266,8 @@ export function ProfilePage({
       <LegalFooter setTab={setTab} />
     </div>
   );
+}
+
+function MapPinIcon() {
+  return <Globe2 size={19} />;
 }

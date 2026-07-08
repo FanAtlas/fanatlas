@@ -1,14 +1,16 @@
-import { useMemo, useState } from "react";
-import { Hotel, MapPin, Search, Star } from "lucide-react";
+import { useState } from "react";
+import { Hotel, MapPin } from "lucide-react";
 import { BackButton } from "../components/BackButton";
 import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
-import { getPlaceDestination, MapDestination } from "../mapDestinations";
+import { MapDestination } from "../mapDestinations";
 import { reminderDate, scheduleNotification } from "../services/notifications";
 import { FavoriteButton } from "../components/FavoriteButton";
 import { trackRevenueClick } from "../services/revenueTracking";
-import { useLocation } from "../LocationContext";
 import { directionsUrl, distanceKm, formatDistance } from "../lib/location";
+import { useTravelLocation } from "../TravelLocationContext";
+import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
+import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
 
 export type HotelOffer = {
   id: string;
@@ -24,14 +26,6 @@ export type HotelOffer = {
   provider: string;
   affiliatePath: string;
 };
-
-const stadiums = [
-  "MetLife Stadium",
-  "Estadio Azteca",
-  "SoFi Stadium",
-  "BMO Field",
-  "AT&T Stadium"
-];
 
 export const hotelOffers: HotelOffer[] = [
   {
@@ -159,6 +153,17 @@ function bookingUrl(offer: HotelOffer) {
   return `${baseUrl}?${params.toString()}`;
 }
 
+function bookingSearchUrl(place: GlobalPlace) {
+  const baseUrl = import.meta.env.VITE_HOTEL_AFFILIATE_BASE_URL || "https://www.booking.com/searchresults.html";
+  const params = new URLSearchParams({
+    ss: `${place.name} ${place.city} ${place.country}`,
+    aid: import.meta.env.VITE_HOTEL_AFFILIATE_ID || "fanatlas",
+    label: `fanatlas-${place.id}`
+  });
+
+  return `${baseUrl}?${params.toString()}`;
+}
+
 export function HotelsPage({
   onBack,
   setMapDestination,
@@ -169,28 +174,16 @@ export function HotelsPage({
   setTab: (tab: Tab) => void;
 }) {
   const { language, t } = useLanguage();
-  const { location, status: locationStatus } = useLocation();
-  const [selectedStadium, setSelectedStadium] = useState(stadiums[0]);
-  const [searchedStadium, setSearchedStadium] = useState(stadiums[0]);
+  const { travelLocation } = useTravelLocation();
+  const { groups, loading, message, refreshPlaces } = useGlobalPlaces();
   const [notificationMessage, setNotificationMessage] = useState("");
-  const offers = useMemo(() => {
-    if (location) {
-      return hotelOffers
-        .map((offer) => ({ ...offer, userDistanceKm: distanceKm(location, offer) }))
-        .sort((a, b) => a.userDistanceKm - b.userDistanceKm);
-    }
+  const offers = groups.hotels;
 
-    return hotelOffers
-      .filter((offer) => offer.stadium === searchedStadium)
-      .map((offer) => ({ ...offer, userDistanceKm: offer.distanceKm }))
-      .sort((a, b) => a.distanceKm - b.distanceKm);
-  }, [location, searchedStadium]);
-
-  async function addHotelReminder(offer: HotelOffer) {
+  async function addHotelReminder(offer: GlobalPlace) {
     const { permission } = await scheduleNotification({
       type: "hotel",
       title: `Hotel reminder: ${offer.name}`,
-      message: `${offer.price} near ${offer.stadium}. Review booking, check-in, cancellation policy, and route.`,
+      message: `Review booking, check-in, cancellation policy, and route for ${offer.name} in ${offer.city}.`,
       dueAt: reminderDate(1440),
       source: "Hotels",
       actionTab: "hotels"
@@ -209,57 +202,53 @@ export function HotelsPage({
         <BackButton onBack={onBack} />
         <div>
           <div className="brand">{t.hotels}</div>
-          <div className="subtle">{t.stayNear}</div>
+          <div className="subtle">Hotels in {travelLocation.destinationCity}, {travelLocation.destinationCountry}</div>
         </div>
       </div>
+
+      <button className="travel-location-pill" onClick={() => setTab("travelLocation")}>
+        <span>Traveling to: {travelLocation.destinationCity}, {travelLocation.destinationCountry}</span>
+        <strong>Change</strong>
+      </button>
 
       <div className="hotel-search-hero">
         <Hotel size={30} />
         <div>
-          <h1>{t.searchHotelsNearStadium}</h1>
-          <p>{t.compareHotels}</p>
+          <h1>Nearby Hotels</h1>
+          <p>Compare hotel partners for your selected destination.</p>
         </div>
       </div>
 
-      <div className="hotel-search-panel">
-        <label>
-          Stadium
-          <select
-            className="input"
-            value={selectedStadium}
-            onChange={(event) => setSelectedStadium(event.target.value)}
-          >
-            {stadiums.map((stadium) => (
-              <option key={stadium}>{stadium}</option>
-            ))}
-          </select>
-        </label>
-
-        <button className="primary-btn full-width" onClick={() => setSearchedStadium(selectedStadium)}>
-          <Search size={17} /> {t.searchHotelsNearStadium}
-        </button>
-      </div>
-
-      {locationStatus !== "available" && locationStatus !== "requesting" && (
-        <div className="location-fallback">Enable location for nearby recommendations.</div>
+      {loading && <div className="location-fallback">{message || `Finding live places near ${travelLocation.destinationCity}...`}</div>}
+      {!loading && message && (
+        <div className="location-fallback">
+          {message}
+          {message.includes("Finding live places") && <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>}
+        </div>
       )}
 
       <div className="section-row">
-        <h3>{location ? "Hotels near me" : searchedStadium}</h3>
+        <h3>{travelLocation.destinationCity}</h3>
         <span className="section-badge">{offers.length} hotels</span>
       </div>
 
       {notificationMessage && <div className="route-status">{notificationMessage}</div>}
 
+      {offers.length === 0 && (
+        <div className="card-dark">
+          <strong>{travelLocation.destinationCity} hotel tools are ready.</strong>
+          <p className="subtle">Use Map or hotel search while live hotel partners refresh.</p>
+          <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>
+        </div>
+      )}
+
       <div className="hotel-offer-list">
         {offers.map((offer) => (
           <article className="hotel-offer-card" key={offer.id}>
-            <img src={offer.image} alt={offer.name} />
-
             <div className="hotel-offer-body">
               <div>
-                <strong>{offer.name}</strong>
-                <p>{offer.city} · {offer.provider}</p>
+                <strong>{placeEmoji(offer.category)} {offer.name}</strong>
+                <p>{offer.city} · {offer.detail}</p>
               </div>
 
               <FavoriteButton
@@ -268,7 +257,6 @@ export function HotelsPage({
                   item_id: offer.id,
                   name: offer.name,
                   city: offer.city,
-                  image: offer.image,
                   metadata: {
                     ...offer,
                     destination: {
@@ -276,7 +264,7 @@ export function HotelsPage({
                       city: offer.city,
                       lat: offer.lat,
                       lng: offer.lng,
-                      emoji: "🏨",
+                      emoji: placeEmoji(offer.category),
                       type: "hotel"
                     }
                   }
@@ -284,22 +272,23 @@ export function HotelsPage({
               />
 
               <div className="hotel-offer-meta">
-                <span><Star size={14} /> {offer.rating}</span>
-                <span><MapPin size={14} /> {formatDistance(offer.userDistanceKm)} from you</span>
-                <strong>{offer.price}</strong>
+                <span><MapPin size={14} /> {formatDistance(distanceKm(travelLocation, offer))} from destination center</span>
+                <strong>OpenStreetMap</strong>
               </div>
 
               <div className="hotel-offer-actions">
                 <button
                   className="secondary-btn"
                   onClick={() => {
-                    setMapDestination(getPlaceDestination(offer.name, offer.city) || {
+                    setMapDestination({
                       name: offer.name,
                       city: offer.city,
                       lat: offer.lat,
                       lng: offer.lng,
-                      emoji: "🏨",
-                      type: "hotel"
+                      emoji: placeEmoji(offer.category),
+                      type: "hotel",
+                      address: offer.address,
+                      openingHours: offer.detail
                     });
                     setTab("map");
                   }}
@@ -319,17 +308,16 @@ export function HotelsPage({
                 </button>
                 <a
                   className="buy-btn"
-                  href={bookingUrl(offer)}
+                  href={bookingSearchUrl(offer)}
                   target="_blank"
                   rel="noreferrer"
                   onClick={() => trackRevenueClick({
                     type: "hotel",
                     product: offer.name,
-                    stadium: offer.stadium,
                     city: offer.city,
-                    provider: offer.provider,
-                    amount: offer.price,
-                    url: bookingUrl(offer),
+                    provider: "Booking Partner",
+                    amount: "Search",
+                    url: bookingSearchUrl(offer),
                     source: "Hotels Page"
                   })}
                 >

@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { languages } from "../i18n";
 import { useLanguage } from "../LanguageContext";
-import { supabase } from "../lib/supabase";
 import { Tab } from "../main";
 import { MapDestination } from "../mapDestinations";
 import { useLocation } from "../LocationContext";
+import { useTravelLocation } from "../TravelLocationContext";
+import { getEmergencyNumbers } from "../data/emergencyNumbers";
+import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
+import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
 
 type EmergencyCategory = "hospital" | "police" | "embassy";
 
@@ -297,7 +300,7 @@ const phrases = [
   ["Portuguese", "Preciso de ajuda. Chame uma ambulância. Onde fica o hospital?"]
 ];
 
-function distanceKm(origin: [number, number], destination: EmergencyLocation) {
+function distanceKm(origin: [number, number], destination: { lat: number; lng: number }) {
   const earthRadiusKm = 6371;
   const toRad = (value: number) => (value * Math.PI) / 180;
   const dLat = toRad(destination.lat - origin[0]);
@@ -337,8 +340,9 @@ export function SOSPage({
 }) {
   const { language, t } = useLanguage();
   const { location, status: locationStatus } = useLocation();
+  const { travelLocation } = useTravelLocation();
+  const { groups, loading, message, refreshPlaces } = useGlobalPlaces();
   const [activeCategory, setActiveCategory] = useState<EmergencyCategory>("hospital");
-  const [country, setCountry] = useState("");
   const userLocation: [number, number] | null = location
     ? [location.latitude, location.longitude]
     : null;
@@ -346,56 +350,48 @@ export function SOSPage({
     ? "Enable location for nearby results."
     : "";
 
-  useEffect(() => {
-    async function loadCountry() {
-      if (!supabase) return;
-
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData.user;
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("country")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      setCountry(data?.country || "");
-    }
-
-    loadCountry();
-  }, []);
-
-  const embassy = embassyDirectory[country] || fallbackEmbassy(country);
-  const locations = useMemo(() => ({
-    hospital: hospitals,
-    police: policeStations,
-    embassy: [embassy]
-  }), [embassy]);
+  const emergency = getEmergencyNumbers(travelLocation.destinationCountry);
+  const activePlaces = useMemo(() => {
+    if (activeCategory === "hospital") return groups.hospitals;
+    if (activeCategory === "police") return groups.police;
+    return groups.embassies;
+  }, [activeCategory, groups.embassies, groups.hospitals, groups.police]);
 
   const nearbyLocations = useMemo(() => {
     if (!userLocation) {
-      return locations[activeCategory].slice(0, 3).map((location) => ({
+      return activePlaces.slice(0, 8).map((location) => ({
         ...location,
         distance: null as number | null
       }));
     }
 
-    return locations[activeCategory]
+    return activePlaces
       .map((location) => ({
         ...location,
         distance: distanceKm(userLocation, location) as number | null
       }))
       .filter((location) => (location.distance ?? Infinity) <= NEARBY_RADIUS_KM)
       .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
-  }, [activeCategory, locations, userLocation]);
+  }, [activePlaces, userLocation]);
 
   function locateAndShow(category: EmergencyCategory) {
     setActiveCategory(category);
   }
 
-  function openDirections(location: EmergencyLocation) {
-    setMapDestination(location);
+  function openDirections(location: GlobalPlace) {
+    setMapDestination({
+      name: location.name,
+      city: location.city,
+      lat: location.lat,
+      lng: location.lng,
+      emoji: placeEmoji(location.category),
+      type: location.category === "hospital" ? "hospital" :
+        location.category === "police" ? "police" :
+        location.category === "embassy" ? "embassy" :
+        "place",
+      address: location.address,
+      openingHours: location.detail
+    });
     setTab("map");
   }
 
@@ -406,10 +402,15 @@ export function SOSPage({
         <div className="language-pill">{languages[language]}</div>
       </div>
 
-      <a href="tel:911" className="sos-hero">
+      <button className="travel-location-pill" onClick={() => setTab("travelLocation")}>
+        <span>SOS for: {travelLocation.destinationCountry}</span>
+        <strong>Change</strong>
+      </button>
+
+      <a href={`tel:${emergency.emergency.split(" / ")[0]}`} className="sos-hero">
         <span>⚠️</span>
         <h2>{t.sosEmergency}</h2>
-        <p>{t.tapEmergency}</p>
+        <p>{t.tapEmergency}: {emergency.emergency}</p>
       </a>
 
       <div className="sos-category-grid">
@@ -436,39 +437,46 @@ export function SOSPage({
       {locationError && (
         <div className="route-status error">{locationError}</div>
       )}
+      {loading && <div className="location-fallback">{message || `Finding live places near ${travelLocation.destinationCity}...`}</div>}
+      {!loading && message && (
+        <div className="location-fallback">
+          {message}
+          {message.includes("Finding live places") && <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>}
+        </div>
+      )}
 
       <div className="card-dark">
         <strong>{userLocation ? "Nearby" : "Host-city"} {activeCategory === "embassy" ? "consular help" : activeCategory}</strong>
         <p className="subtle">
-          {userLocation ? "Sorted from your current location." : "Enable location for nearby results."}
-          {activeCategory === "embassy" && country ? ` Based on onboarding country: ${country}.` : ""}
+          {userLocation ? "Sorted from your current location." : `Showing known emergency places for ${travelLocation.destinationCity}.`}
         </p>
       </div>
 
       <div className="sos-location-list">
-        {userLocation && nearbyLocations.length === 0 && (
+        {nearbyLocations.length === 0 && (
           <div className="card-dark">
-            <strong>No nearby results found.</strong>
-            <p className="subtle">Use the emergency number above or try a different category.</p>
+            <strong>No local {activeCategory} partners yet in this city.</strong>
+            <p className="subtle">Use the emergency number above or try Map search.</p>
+            <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>
           </div>
         )}
 
         {nearbyLocations.map((location) => (
-          <div className="sos-location-card" key={`${location.category}-${location.name}`}>
+          <div className="sos-location-card" key={`${location.category}-${location.id}`}>
             <div className="sos-location-main">
-              <span>{location.emoji}</span>
+              <span>{placeEmoji(location.category)}</span>
               <div>
                 <strong>{location.name}</strong>
-                <p>{location.city} · {location.address}</p>
-                <p>{location.note}</p>
+                <p>{location.city}{location.address ? ` · ${location.address}` : ""}</p>
+                <p>{location.detail}</p>
                 <small>{location.distance === null ? "Enable location for nearby results." : `${location.distance.toFixed(1)} km away`}</small>
               </div>
             </div>
 
             <div className="sos-actions">
-              <a href={`tel:${location.phone}`}>Call</a>
+              <a href={`tel:${location.phone || emergency.emergency.split(" / ")[0]}`}>Call</a>
               <button onClick={() => openDirections(location)}>Directions</button>
-              <a href={location.website} target="_blank" rel="noreferrer">Website</a>
+              {location.website && <a href={location.website} target="_blank" rel="noreferrer">Website</a>}
             </div>
           </div>
         ))}
@@ -477,12 +485,13 @@ export function SOSPage({
       <h3>{t.emergencyNumbers}</h3>
       <div className="sos-grid">
         {[
-          { country: "USA", flag: "🇺🇸", phone: "911", note: t.policeFireAmbulance },
-          { country: "Canada", flag: "🇨🇦", phone: "911", note: t.policeFireAmbulance },
-          { country: "Mexico", flag: "🇲🇽", phone: "911", note: t.nationalEmergencyLine }
+          { country: travelLocation.destinationCountry, label: "Emergency", phone: emergency.emergency, note: t.policeFireAmbulance },
+          { country: travelLocation.destinationCountry, label: "Police", phone: emergency.police, note: "Police" },
+          { country: travelLocation.destinationCountry, label: "Ambulance", phone: emergency.ambulance, note: "Medical emergency" },
+          { country: travelLocation.destinationCountry, label: "Fire", phone: emergency.fire, note: "Fire services" }
         ].map((item) => (
-          <a className="sos-tile" href={`tel:${item.phone}`} key={item.country}>
-            <strong>{item.flag} {item.country}</strong>
+          <a className="sos-tile" href={`tel:${item.phone.split(" / ")[0]}`} key={item.label}>
+            <strong>{item.label} · {item.country}</strong>
             <span>{item.phone}</span>
             <p>{item.note}</p>
           </a>
