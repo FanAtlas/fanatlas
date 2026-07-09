@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CalendarDays, Clock, MapPin, Search, Users } from "lucide-react";
 import {
   getWorldCup2026Games,
   getWorldCup2026Groups,
@@ -112,6 +113,34 @@ function countdown(match: FanAtlasMatch) {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+}
+
+function flagForTeam(team: string) {
+  const flags: Record<string, string> = {
+    Argentina: "🇦🇷",
+    Brazil: "🇧🇷",
+    Canada: "🇨🇦",
+    Egypt: "🇪🇬",
+    England: "🏴",
+    France: "🇫🇷",
+    Germany: "🇩🇪",
+    Italy: "🇮🇹",
+    Japan: "🇯🇵",
+    Mexico: "🇲🇽",
+    Morocco: "🇲🇦",
+    Portugal: "🇵🇹",
+    Spain: "🇪🇸",
+    "United States": "🇺🇸",
+    USA: "🇺🇸"
+  };
+
+  return flags[team] || "🌍";
+}
+
+function matchTimeLabel(status: string, matchCountdown: string) {
+  if (status === "Live") return "LIVE NOW";
+  if (status === "Finished") return "Finished";
+  return matchCountdown ? `Starts in ${matchCountdown}` : "Upcoming";
 }
 
 export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, setSelectedMatch }: Props) {
@@ -246,83 +275,101 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
         </div>
       )}
 
-      <div className="feature-card green">
-        <span className="feature-emoji">⚽</span>
+      <div className="match-center-hero">
+        <span className="match-hero-icon">⚽</span>
         <div>
           <h3>{t.matchDayAssistant}</h3>
-          <p>{t.chooseMatchDesc}</p>
-          <small>Choose a match to plan routes, timing, food, hotels, fan zones, and safety.</small>
+          <p>Choose a match to plan your route, hotels, restaurants, fan zones, and transportation.</p>
         </div>
       </div>
 
       <div className="match-filter-panel">
-        <input
-          className="input"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search teams, stadiums, cities..."
-        />
+        <label className="match-search-field">
+          <Search size={18} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search teams, stadiums or cities"
+          />
+        </label>
 
-        <div className="grid-2">
-          <select className="input" value={stageFilter} onChange={(event) => setStageFilter(event.target.value)}>
-            {stages.map((stage) => (
-              <option key={stage}>{stage}</option>
-            ))}
-          </select>
+        <div className="match-filter-grid">
+          <label className="match-select-field">
+            <span>Competition</span>
+            <select value={stageFilter} onChange={(event) => setStageFilter(event.target.value)}>
+              {stages.map((stage) => (
+                <option key={stage}>{stage}</option>
+              ))}
+            </select>
+          </label>
 
-          <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            {["All", "Live", "Upcoming", "Finished"].map((status) => (
-              <option key={status}>{status}</option>
-            ))}
-          </select>
+          <label className="match-select-field">
+            <span>Status</span>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              {["All", "Live", "Upcoming", "Finished"].map((status) => (
+                <option key={status}>{status}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="match-status-tabs">
-          <button className={statusFilter === "All" ? "active" : ""} onClick={() => setStatusFilter("All")}>All {counts.all}</button>
-          <button className={statusFilter === "Live" ? "active" : ""} onClick={() => setStatusFilter("Live")}>Live {counts.live}</button>
-          <button className={statusFilter === "Upcoming" ? "active" : ""} onClick={() => setStatusFilter("Upcoming")}>Upcoming {counts.upcoming}</button>
-          <button className={statusFilter === "Finished" ? "active" : ""} onClick={() => setStatusFilter("Finished")}>Finished {counts.finished}</button>
+          <button className={statusFilter === "All" ? "active" : ""} onClick={() => setStatusFilter("All")}>All <span>{counts.all}</span></button>
+          <button className={statusFilter === "Live" ? "active" : ""} onClick={() => setStatusFilter("Live")}>Live <span>{counts.live}</span></button>
+          <button className={statusFilter === "Upcoming" ? "active" : ""} onClick={() => setStatusFilter("Upcoming")}>Upcoming <span>{counts.upcoming}</span></button>
+          <button className={statusFilter === "Finished" ? "active" : ""} onClick={() => setStatusFilter("Finished")}>Finished <span>{counts.finished}</span></button>
         </div>
       </div>
 
       <div className="matches-list">
         {filteredMatches.length === 0 && !error && (
           <div className="card-dark">
-            <strong>{t.noFixturesAvailable}</strong>
-            <p className="subtle">{matches.length === 0 ? t.noFixtureRows : "No matches match your filters."}</p>
+            <strong>No upcoming matches found.</strong>
+            <p className="subtle">{matches.length === 0 ? t.noFixtureRows : "Adjust filters or search another team, stadium, or city."}</p>
           </div>
         )}
 
         {filteredMatches.map((m) => {
           const status = getComputedStatus(m);
           const matchCountdown = status === "Upcoming" ? countdown(m) : "";
+          const stadium = stadiums.find((item) => item.name === m.stadium);
 
           return (
           <div className={`match-card-premium ${getMatchTone(m.city)}`} key={m.id || `${m.team1}-${m.team2}-${m.stadium}`}>
             <div className="match-card-header">
-              <div>
-                <div className="match-stage-line">
-                  <span>#{m.matchNumber}</span>
-                  <span>{m.stage || "Group Stage"}</span>
-                  {m.group && <span>{m.group}</span>}
-                </div>
-                <h2>{m.homeTeam} vs {m.awayTeam}</h2>
-                <p>{m.date}</p>
-                <p>Stadium local time: {m.stadiumTime || m.kickoffTime}</p>
-                <p>{m.userLocalTime || `Your local time: ${m.kickoffTime}`}</p>
+              <div className="match-stage-line">
+                <span>{m.stage || "Group Stage"}</span>
+                {m.group && <span>{m.group}</span>}
               </div>
               <div className={`match-status-pill ${status.toLowerCase()}`}>
                 {shouldShowScore(m) && <strong>{m.score}</strong>}
-                <span>{status}</span>
-                {matchCountdown && <small>{matchCountdown}</small>}
+                <span>{matchTimeLabel(status, matchCountdown)}</span>
               </div>
             </div>
-            <div className="match-detail-line">🏟 {m.stadium} · {m.city}{m.country ? `, ${m.country}` : ""}</div>
-            <div className="match-detail-line">🎉 {t.afterMatch}: {m.fanZone}</div>
+
+            <div className="match-teams">
+              <div className="match-team">
+                <span>{flagForTeam(m.homeTeam)}</span>
+                <strong>{m.homeTeam}</strong>
+              </div>
+              <div className="match-vs">VS</div>
+              <div className="match-team">
+                <span>{flagForTeam(m.awayTeam)}</span>
+                <strong>{m.awayTeam}</strong>
+              </div>
+            </div>
+
+            <div className="match-info-grid">
+              <div><CalendarDays size={16} /><span>{m.date}</span></div>
+              <div><MapPin size={16} /><span>{m.stadium}<small>{m.city}{m.country ? `, ${m.country}` : ""}</small></span></div>
+              <div><Clock size={16} /><span>{m.stadiumTime || m.kickoffTime}<small>{m.userLocalTime || `Your local time: ${m.kickoffTime}`}</small></span></div>
+              <div><Users size={16} /><span>Capacity<small>{stadium?.capacity || "Venue guide"}</small></span></div>
+            </div>
+
             <div className="match-actions-premium">
-              <button className="primary-btn" onClick={() => planMatch(m)}>{t.planThisMatchDay}</button>
-              <button className="stadium-map-btn" onClick={() => openStadiumPage(m)}>🏟 Stadium Page</button>
-              <button className="stadium-map-btn" onClick={() => openStadiumMap(m)}>📍 {t.stadiumMap}</button>
+              <button className="primary-btn" onClick={() => planMatch(m)}>Plan Match</button>
+              <button className="stadium-map-btn" onClick={() => openStadiumPage(m)}>Stadium Info</button>
+              <button className="stadium-map-btn" onClick={() => openStadiumMap(m)}>Open Map</button>
             </div>
           </div>
         );})}

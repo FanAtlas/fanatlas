@@ -7,13 +7,13 @@ import {
   Hotel,
   Languages,
   LifeBuoy,
-  ListChecks,
   Map,
   MapPin,
+  Navigation,
   Plane,
-  Route,
   Shield,
   Smartphone,
+  Sparkles,
   Utensils,
   WalletCards,
   Wifi
@@ -25,53 +25,44 @@ type LandingPageProps = {
   onNavigateLegal: (page: "privacy" | "terms" | "support") => void;
 };
 
-const heroCards = [
-  { title: "Location-Based Travel", description: "Personalized nearby guidance wherever your trip takes you.", icon: MapPin },
-  { title: "SOS Anywhere", description: "Find emergency help and important local safety information fast.", icon: Shield },
-  { title: "Smart Maps", description: "Navigate hotels, restaurants, event areas, and saved places.", icon: Map },
-  { title: "Hotels & Restaurants", description: "Discover useful places around your current location.", icon: Hotel },
-  { title: "AI Travel Assistant", description: "Ask for help planning, translating, budgeting, and deciding.", icon: Bot },
-  { title: "Travel Tools", description: "Currency, eSIM, checklists, expenses, offline guides, and more.", icon: Plane }
+const previewCards = [
+  { title: "Find places near you", description: "Useful places around your destination, ready when you arrive.", icon: MapPin },
+  { title: "Hotels & restaurants", description: "Search stays, food, cafes, and travel stops for the city you choose.", icon: Hotel },
+  { title: "SOS by country", description: "Emergency numbers and nearby safety help based on destination.", icon: Shield },
+  { title: "Smart maps", description: "See hotels, restaurants, transport, SOS, and saved trip places.", icon: Map },
+  { title: "AI travel assistant", description: "Ask for planning help, local tips, translations, and trip ideas.", icon: Bot },
+  { title: "Travel tools", description: "eSIM, currency, phrasebook, checklists, expenses, and offline guides.", icon: Plane }
 ];
 
-const features = [
+const featureGrid = [
+  { label: "SOS", icon: LifeBuoy },
   { label: "Hotels", icon: Hotel },
   { label: "Restaurants", icon: Utensils },
   { label: "Maps", icon: Map },
-  { label: "SOS", icon: LifeBuoy },
-  { label: "Currency", icon: CircleDollarSign },
   { label: "eSIM", icon: Smartphone },
+  { label: "Currency", icon: CircleDollarSign },
   { label: "Translator", icon: Languages },
   { label: "Checklist", icon: CheckSquare },
   { label: "Expenses", icon: WalletCards },
   { label: "Offline Guides", icon: Wifi },
-  { label: "AI Travel Assistant", icon: Bot },
+  { label: "AI Assistant", icon: Bot },
   { label: "Event Mode", icon: CalendarDays }
 ];
 
-const audience = ["Travelers", "Tourists", "Families", "Sports fans", "Event travelers", "Business travelers"];
+const mockups = [
+  { title: "Home", detail: "Cairo travel picks", items: ["Hotels", "Restaurants", "SOS"] },
+  { title: "Explore", detail: "Places near destination", items: ["Attractions", "Food", "Transport"] },
+  { title: "Map", detail: "Live destination view", items: ["Route", "Markers", "Saved"] },
+  { title: "SOS", detail: "Local emergency help", items: ["Police", "Hospital", "Embassy"] },
+  { title: "Travel Tools", detail: "Everything for the trip", items: ["eSIM", "Currency", "Checklist"] }
+];
 
-const faqs = [
-  {
-    question: "Can I use FanAtlas outside the World Cup?",
-    answer: "Yes. FanAtlas is built as a global travel companion for everyday trips, vacations, work travel, and major events."
-  },
-  {
-    question: "Does FanAtlas replace Google Maps?",
-    answer: "No. FanAtlas complements map apps by organizing travel tools, nearby discovery, safety, planning, and event context in one place."
-  },
-  {
-    question: "Does SOS work by location?",
-    answer: "Yes. SOS features are designed around your location so you can find nearby emergency help and relevant safety resources."
-  },
-  {
-    question: "Is FanAtlas free?",
-    answer: "FanAtlas offers free access to core travel tools, with more advanced features planned over time."
-  },
-  {
-    question: "Is Premium coming?",
-    answer: "Yes. Premium is planned for expanded travel assistance, event tools, and advanced planning features."
-  }
+const heroScreens = [
+  { name: "Home", value: "Cairo ready" },
+  { name: "Explore", value: "12 essentials" },
+  { name: "SOS", value: "Egypt help" },
+  { name: "Map", value: "25 places" },
+  { name: "Hotels", value: "Near you" }
 ];
 
 export function LandingPage({ onOpenApp, onExploreEventMode, onNavigateLegal }: LandingPageProps) {
@@ -82,63 +73,79 @@ export function LandingPage({ onOpenApp, onExploreEventMode, onNavigateLegal }: 
           <Globe2 size={22} />
           <span>FanAtlas</span>
         </button>
+        <nav className="landing-nav-links" aria-label="Landing navigation">
+          <button type="button" onClick={onOpenApp}>App</button>
+          <button type="button" onClick={onExploreEventMode}>Event Mode</button>
+        </nav>
         <button type="button" className="landing-nav-app" onClick={onOpenApp}>
-          Open App
+          Open Web App
         </button>
       </header>
 
       <main>
         <section className="landing-hero">
           <div className="landing-hero-copy">
-            <div className="landing-audience-row">
-              {audience.map((item) => (
-                <span key={item}>{item}</span>
-              ))}
-            </div>
-            <h1>FanAtlas</h1>
-            <h2>Your travel companion anywhere you go.</h2>
+            <span className="landing-kicker"><Sparkles size={15} /> Global AI travel companion</span>
+            <h1>Travel smarter anywhere in the world.</h1>
             <p>
-              Find hotels, restaurants, maps, SOS help, eSIM, currency, translation, checklists, expenses,
-              and AI travel tools based on your location.
+              FanAtlas helps you find hotels, restaurants, maps, SOS help, translation, currency, eSIM,
+              checklists, expenses, and travel tools based on where you are going.
             </p>
             <div className="landing-actions">
-              <button type="button" className="primary-btn landing-cta" onClick={onOpenApp}>
+              <button type="button" className="landing-primary-cta" onClick={onOpenApp}>
                 Start Free
               </button>
-              <button type="button" className="secondary-btn landing-cta" onClick={onOpenApp}>
+              <button type="button" className="landing-secondary-cta" onClick={onOpenApp}>
                 Open Web App
               </button>
             </div>
+            <div className="landing-trust-line">
+              Built for global travelers, sports fans, and major events.
+            </div>
           </div>
 
-          <div className="landing-phone-preview" aria-label="Travel tools preview">
-            <div className="landing-phone-top">
-              <span>Nearby</span>
-              <strong>Toronto</strong>
+          <div className="landing-visual" aria-label="FanAtlas app preview">
+            <div className="landing-orbit landing-orbit-one" />
+            <div className="landing-orbit landing-orbit-two" />
+            <div className="landing-phone-shell">
+              <div className="landing-phone-status">
+                <span>Traveling to</span>
+                <strong>🇪🇬 Cairo, Egypt</strong>
+              </div>
+              <div className="landing-map-preview">
+                <Navigation size={34} />
+                <span className="landing-map-pin pin-one" />
+                <span className="landing-map-pin pin-two" />
+                <span className="landing-map-pin pin-three" />
+              </div>
+              <div className="landing-phone-grid">
+                {heroScreens.map((screen) => (
+                  <div key={screen.name}>
+                    <span>{screen.name}</span>
+                    <strong>{screen.value}</strong>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="landing-map-panel">
-              <MapPin size={26} />
-              <Route size={42} />
-              <Hotel size={26} />
-            </div>
-            <div className="landing-tool-strip">
-              <span>SOS</span>
-              <span>eSIM</span>
-              <span>AI</span>
-            </div>
+            {heroScreens.slice(1, 4).map((screen, index) => (
+              <div className={`landing-floating-card float-${index + 1}`} key={screen.name}>
+                <span>{screen.name}</span>
+                <strong>{screen.value}</strong>
+              </div>
+            ))}
           </div>
         </section>
 
         <section className="landing-section">
           <div className="landing-section-heading">
-            <span>Travel-first</span>
-            <h2>Built for trips, not just one event.</h2>
+            <span>App preview</span>
+            <h2>Everything you need when you land.</h2>
           </div>
-          <div className="landing-card-grid">
-            {heroCards.map((card) => {
+          <div className="landing-preview-grid">
+            {previewCards.map((card) => {
               const Icon = card.icon;
               return (
-                <article className="landing-feature-card" key={card.title}>
+                <article className="landing-glass-card" key={card.title}>
                   <Icon size={24} />
                   <h3>{card.title}</h3>
                   <p>{card.description}</p>
@@ -148,25 +155,50 @@ export function LandingPage({ onOpenApp, onExploreEventMode, onNavigateLegal }: 
           </div>
         </section>
 
+        <section className="landing-location-section">
+          <div>
+            <span className="landing-section-pill">Location-aware</span>
+            <h2>Your app changes when your trip changes.</h2>
+            <p>
+              Choose where you are traveling, and FanAtlas adapts hotels, restaurants, SOS, maps,
+              currency, language tools, and travel recommendations for that destination.
+            </p>
+          </div>
+          <div className="landing-trip-card">
+            <div><span>From</span><strong>🇬🇧 United Kingdom</strong></div>
+            <div><span>Traveling to</span><strong>🇪🇬 Egypt</strong></div>
+            <div><span>City</span><strong>Cairo</strong></div>
+          </div>
+        </section>
+
+        <section className="landing-event-section">
+          <span>Featured Event</span>
+          <h2>World Cup 2026</h2>
+          <p>Plan stadium visits, fan zones, hotels, restaurants, and match-day travel during major global events.</p>
+          <button type="button" className="landing-secondary-cta" onClick={onExploreEventMode}>
+            Explore Event Mode
+          </button>
+        </section>
+
         <section className="landing-section">
           <div className="landing-section-heading">
-            <span>How FanAtlas Works</span>
-            <h2>Go from arrival to action in three steps.</h2>
+            <span>How it works</span>
+            <h2>Plan from arrival to action in minutes.</h2>
           </div>
           <div className="landing-steps">
-            <article><strong>1</strong><span>Allow location</span></article>
-            <article><strong>2</strong><span>Discover what is nearby</span></article>
-            <article><strong>3</strong><span>Plan, save, and navigate your trip</span></article>
+            <article><strong>1</strong><span>Choose your destination</span></article>
+            <article><strong>2</strong><span>Discover nearby travel essentials</span></article>
+            <article><strong>3</strong><span>Save, plan, and navigate your trip</span></article>
           </div>
         </section>
 
         <section className="landing-section">
           <div className="landing-section-heading">
             <span>Features</span>
-            <h2>Everything travelers need in one app.</h2>
+            <h2>A complete toolkit for every kind of traveler.</h2>
           </div>
           <div className="landing-features-grid">
-            {features.map((feature) => {
+            {featureGrid.map((feature) => {
               const Icon = feature.icon;
               return (
                 <article key={feature.label}>
@@ -178,30 +210,36 @@ export function LandingPage({ onOpenApp, onExploreEventMode, onNavigateLegal }: 
           </div>
         </section>
 
-        <section className="landing-event-section">
-          <span>Featured Event</span>
-          <h2>World Cup 2026</h2>
-          <p>
-            FanAtlas helps fans find stadiums, fan zones, hotels, restaurants, SOS help, and travel tools
-            during major global events.
-          </p>
-          <button type="button" className="secondary-btn landing-cta" onClick={onExploreEventMode}>
-            Explore Event Mode
-          </button>
-        </section>
-
         <section className="landing-section">
           <div className="landing-section-heading">
-            <span>FAQ</span>
-            <h2>Quick answers for travelers.</h2>
+            <span>Screens</span>
+            <h2>Designed for the moments travelers actually need help.</h2>
           </div>
-          <div className="landing-faq-list">
-            {faqs.map((faq) => (
-              <details key={faq.question}>
-                <summary>{faq.question}</summary>
-                <p>{faq.answer}</p>
-              </details>
+          <div className="landing-screenshot-grid">
+            {mockups.map((screen) => (
+              <article className="landing-screen-card" key={screen.title}>
+                <div className="landing-screen-top">
+                  <span>{screen.title}</span>
+                  <strong>{screen.detail}</strong>
+                </div>
+                <div className="landing-screen-list">
+                  {screen.items.map((item) => <span key={item}>{item}</span>)}
+                </div>
+              </article>
             ))}
+          </div>
+        </section>
+
+        <section className="landing-final-cta">
+          <span>Ready for your next destination?</span>
+          <h2>Start planning your next trip with FanAtlas.</h2>
+          <div className="landing-actions">
+            <button type="button" className="landing-primary-cta" onClick={onOpenApp}>
+              Start Free
+            </button>
+            <button type="button" className="landing-secondary-cta" onClick={onOpenApp}>
+              Open Web App
+            </button>
           </div>
         </section>
       </main>

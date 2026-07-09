@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bot, Hotel, MapPin, Search, Shield, Smartphone, Utensils, Trophy, Wrench } from "lucide-react";
+import { Bot, Hotel, MapPin, Search, Shield, Utensils, Trophy, Wrench } from "lucide-react";
 import { useLanguage } from "../LanguageContext";
 import { LegalFooter } from "../components/LegalFooter";
 import { fanZones, places, stadiums as knownStadiums } from "../data/mockData";
@@ -14,10 +14,39 @@ import { useTravelLocation } from "../TravelLocationContext";
 import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
 import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
 import { countryFlag } from "../data/countries";
+import { ExploreImageCategory, imageForCategory } from "../data/categoryImages";
 
 function getNextMatch(matches: FanAtlasMatch[]) {
   return matches.find((match) => match.status !== "Finished") || matches[0] || null;
 }
+
+type HomePlaceCard = {
+  id: string;
+  title: string;
+  category: "attraction" | "restaurant" | "hotel";
+  badge: string;
+  distance: string;
+  image: string;
+  place?: GlobalPlace;
+};
+
+const fallbackHomeCards: Record<HomePlaceCard["category"], Array<{ title: string; badge: string; action: string }>> = {
+  attraction: [
+    { title: "Explore landmarks nearby", badge: "Attraction", action: "Open Map" },
+    { title: "Open destination map", badge: "Map", action: "Open Map" },
+    { title: "Ask AI for top attractions", badge: "AI picks", action: "Open details" }
+  ],
+  restaurant: [
+    { title: "Find restaurants nearby", badge: "Restaurant", action: "Open Map" },
+    { title: "Search local food spots", badge: "Food", action: "Open Map" },
+    { title: "Ask AI for food recommendations", badge: "AI food guide", action: "Open details" }
+  ],
+  hotel: [
+    { title: "Search hotels near this destination", badge: "Hotel", action: "Open Hotels" },
+    { title: "Compare stay areas", badge: "Stay planning", action: "Open Hotels" },
+    { title: "Ask AI where to stay", badge: "AI stay guide", action: "Open details" }
+  ]
+};
 
 export function HomePage({
   setExploreCategory,
@@ -88,10 +117,15 @@ export function HomePage({
     { label: "Map", icon: MapPin, tab: "map" as Tab },
     { label: "Hotels", icon: Hotel, tab: "hotels" as Tab },
     { label: "Restaurants", icon: Utensils, tab: "explore" as Tab, category: "Restaurants" },
+    { label: "SOS", icon: Shield, tab: "sos" as Tab },
     { label: "Travel Tools", icon: Wrench, tab: "traveltools" as Tab },
-    { label: "eSIM", icon: Smartphone, tab: "esim" as Tab },
-    { label: "SOS", icon: Shield, tab: "sos" as Tab }
+    { label: "AI Assistant", icon: Bot, tab: "ai" as Tab }
   ];
+  const homeCards = useMemo(() => ({
+    attractions: buildHomeCards(groups.attractions, "attraction", travelLocation),
+    restaurants: buildHomeCards(groups.restaurants, "restaurant", travelLocation),
+    hotels: buildHomeCards(groups.hotels, "hotel", travelLocation)
+  }), [groups.attractions, groups.hotels, groups.restaurants, travelLocation]);
 
   return (
     <div className="home-compact-page" dir={language === "ar" ? "rtl" : "ltr"}>
@@ -188,15 +222,23 @@ export function HomePage({
         </div>
       )}
 
-      <section className="home-compact-hero">
+      <section className="home-destination-hero">
         <div>
-          <span>Travel planning</span>
-          <h1>{t.planTripSeconds}</h1>
-          <p>{t.homeHeroSubtitle}</p>
+          <span>Traveling to</span>
+          <h1>Explore {travelLocation.destinationCity}</h1>
+          <p>Attractions, restaurants, hotels, SOS, and travel tools for your destination.</p>
         </div>
-        <button className="primary-btn" onClick={() => setTab("ai")}>
-          <Bot size={18} /> {t.askAITravelAssistant}
-        </button>
+        <div className="home-hero-actions">
+          <button className="primary-btn" onClick={() => {
+            setMapDestination(null);
+            setTab("map");
+          }}>
+            Open Map
+          </button>
+          <button className="secondary-btn" onClick={() => setTab("travelLocation")}>
+            Change Destination
+          </button>
+        </div>
       </section>
 
       <div className="quick-grid home-compact-actions">
@@ -220,72 +262,37 @@ export function HomePage({
         })}
       </div>
 
-      <section className="nearby-section">
-        <div className="section-row">
+      <section className="home-travel-picks">
+        <div className="home-section-heading">
           <div>
-            <h3>{travelLocation.destinationCity} Travel Picks</h3>
-            <span className="subtle">Based on {travelLocation.destinationCity}, {travelLocation.destinationCountry}</span>
+            <span>Destination guide</span>
+            <h3>{travelLocation.destinationCity}, {travelLocation.destinationCountry}</h3>
           </div>
+          {placesLoading && <em>Refreshing local places...</em>}
         </div>
 
-        {placesLoading && <div className="location-fallback">{placesMessage || `Finding live places near ${travelLocation.destinationCity}...`}</div>}
         {!placesLoading && placesMessage && (
-          <div className="location-fallback">
-            {placesMessage}
-            {placesMessage.includes("Finding live places") && <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>}
+          <div className="home-refresh-pill">
+            {placesMessage.includes("saved") ? "Showing saved places while refreshing." : "Refreshing local places..."}
+            {placesMessage.includes("Finding live places") && <button onClick={refreshPlaces}>Try Again</button>}
           </div>
         )}
 
-        {groups.hotels.length || groups.restaurants.length || groups.attractions.length ? (
-          <div className="nearby-groups">
-            {groups.attractions.length > 0 && (
-              <div className="nearby-group">
-                <strong>Attractions</strong>
-                {groups.attractions.slice(0, 3).map((item) => (
-                  <button className="fan-list-item" key={item.name} onClick={() => {
-                    setMapDestination(globalPlaceDestination(item));
-                    setTab("map");
-                  }}>
-                    <span>{placeEmoji(item.category)} {item.name}</span>
-                    <small>{formatDistance(distanceKm(travelLocation, item))}</small>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="nearby-group">
-              <strong>Nearby Restaurants</strong>
-              {groups.restaurants.length > 0 ? groups.restaurants.slice(0, 3).map((item) => (
-                <button className="fan-list-item" key={item.name} onClick={() => {
-                  setSelectedRestaurant({ ...item, cuisine: item.detail, rating: 4.5, price: "" });
-                  setTab("restaurant");
-                }}>
-                  <span>{placeEmoji(item.category)} {item.name}</span>
-                  <small>{formatDistance(distanceKm(travelLocation, item))}</small>
-                </button>
-              )) : <p className="subtle">Open Map or ask the AI Travel Assistant for restaurant ideas.</p>}
-            </div>
-
-            <div className="nearby-group">
-              <strong>Nearby Hotels</strong>
-              {groups.hotels.length > 0 ? groups.hotels.slice(0, 3).map((item) => (
-                <button className="fan-list-item" key={item.id} onClick={() => {
-                  setMapDestination(globalPlaceDestination(item));
-                  setTab("map");
-                }}>
-                  <span>{placeEmoji(item.category)} {item.name}</span>
-                  <small>{formatDistance(distanceKm(travelLocation, item))}</small>
-                </button>
-              )) : <p className="subtle">Use hotel search or Map while live places refresh.</p>}
-            </div>
-          </div>
-        ) : (
-          <div className="card-dark">
-            <strong>{travelLocation.destinationCity} travel tools are ready.</strong>
-            <p className="subtle">Open Map, SOS, hotels, restaurants, or the AI Travel Assistant while live places refresh.</p>
-            <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>
-          </div>
-        )}
+        <HomeCardSection
+          title="Top Attractions"
+          cards={homeCards.attractions}
+          onOpen={(card) => openHomeCard(card, setMapDestination, setSelectedRestaurant, setTab)}
+        />
+        <HomeCardSection
+          title="Restaurants Near You"
+          cards={homeCards.restaurants}
+          onOpen={(card) => openHomeCard(card, setMapDestination, setSelectedRestaurant, setTab)}
+        />
+        <HomeCardSection
+          title="Hotels Near You"
+          cards={homeCards.hotels}
+          onOpen={(card) => openHomeCard(card, setMapDestination, setSelectedRestaurant, setTab)}
+        />
       </section>
 
       {isEventDestination && <section className="home-worldcup-card">
@@ -321,9 +328,9 @@ export function HomePage({
       <section className="home-sos-mini">
         <div>
           <strong>SOS Emergency</strong>
-          <p>Emergency numbers, hospitals, police, and embassy help.</p>
+          <p>Emergency numbers, hospitals, police, and embassy help for {travelLocation.destinationCountry}.</p>
         </div>
-        <button className="primary-btn" onClick={() => setTab("sos")}>{t.open}</button>
+        <button className="primary-btn" onClick={() => setTab("sos")}>Open SOS</button>
       </section>
 
       <LegalFooter setTab={setTab} />
@@ -348,4 +355,98 @@ function globalPlaceDestination(place: GlobalPlace): MapDestination {
     openingHours: place.detail,
     safetyNotes: place.source === "openstreetmap" ? "OpenStreetMap community place data. Verify critical details before travel." : undefined
   };
+}
+
+function buildHomeCards(
+  places: GlobalPlace[],
+  category: HomePlaceCard["category"],
+  travelLocation: { destinationCity: string; destinationCountry: string; latitude: number; longitude: number }
+): HomePlaceCard[] {
+  const liveCards = places.slice(0, 6).map((place, index) => ({
+    id: place.id,
+    title: place.name,
+    category,
+    badge: categoryLabel(category),
+    distance: `${formatDistance(distanceKm(travelLocation, place))}`,
+    image: (place as GlobalPlace & { image?: string }).image || imageForCategory(category as ExploreImageCategory, index),
+    place
+  }));
+
+  if (liveCards.length > 0) return liveCards;
+
+  return fallbackHomeCards[category].map((item, index) => ({
+    id: `home-fallback-${category}-${index}-${travelLocation.destinationCity}`,
+    title: item.title,
+    category,
+    badge: item.badge,
+    distance: item.action,
+    image: imageForCategory(category as ExploreImageCategory, index)
+  }));
+}
+
+function categoryLabel(category: HomePlaceCard["category"]) {
+  if (category === "restaurant") return "Restaurant";
+  if (category === "hotel") return "Hotel";
+  return "Attraction";
+}
+
+function categoryEmoji(category: HomePlaceCard["category"]) {
+  if (category === "restaurant") return "🍽";
+  if (category === "hotel") return "🏨";
+  return "📍";
+}
+
+function openHomeCard(
+  card: HomePlaceCard,
+  setMapDestination: (destination: MapDestination | null) => void,
+  setSelectedRestaurant: (restaurant: any) => void,
+  setTab: (tab: Tab) => void
+) {
+  if (card.place && card.category === "restaurant") {
+    setSelectedRestaurant({ ...card.place, cuisine: card.place.detail, rating: 4.5, price: "" });
+    setTab("restaurant");
+    return;
+  }
+
+  if (card.category === "hotel" && !card.place) {
+    setTab("hotels");
+    return;
+  }
+
+  if (card.place) {
+    setMapDestination(globalPlaceDestination(card.place));
+  } else {
+    setMapDestination(null);
+  }
+
+  setTab(card.category === "hotel" ? "hotels" : "map");
+}
+
+function HomeCardSection({
+  title,
+  cards,
+  onOpen
+}: {
+  title: string;
+  cards: HomePlaceCard[];
+  onOpen: (card: HomePlaceCard) => void;
+}) {
+  return (
+    <section className="home-card-section">
+      <div className="home-card-section-title">
+        <h4>{title}</h4>
+      </div>
+      <div className="home-card-rail">
+        {cards.map((card) => (
+          <button className="home-place-card" key={card.id} onClick={() => onOpen(card)}>
+            <img src={card.image} alt={card.title} loading="lazy" />
+            <span>{categoryEmoji(card.category)} {card.badge}</span>
+            <strong>{card.title}</strong>
+            <small>{card.badge} · {card.distance}</small>
+            <em>{card.category === "hotel" && !card.place ? "Open Hotels" : "Open details"} →</em>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }
