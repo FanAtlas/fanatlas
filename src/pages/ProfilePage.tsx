@@ -117,7 +117,7 @@ export function ProfilePage({
     <div className="profile-page" dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="topbar">
         <div className="brand">
-          FanAtlas <span>2026</span>
+          FanAtlas
         </div>
         <div className="language-pill">{languages[language]}</div>
       </div>
@@ -224,8 +224,8 @@ export function ProfilePage({
           <button className="profile-row" onClick={() => setTab("revenue")}>
             <span className="profile-row-icon"><BarChart3 size={19} /></span>
             <span>
-              <strong>Revenue Tracking</strong>
-              <small>Affiliate clicks, top products, and top stadiums</small>
+              <strong>Link Activity</strong>
+              <small>External service clicks, top products, and top stadiums</small>
             </span>
             <em>›</em>
           </button>

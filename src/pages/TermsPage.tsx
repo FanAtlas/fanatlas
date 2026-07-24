@@ -25,8 +25,8 @@ export function TermsPage({ onBack }: { onBack: () => void }) {
       </section>
 
       <section className="card-dark legal-section">
-        <h3>Affiliate Links</h3>
-        <p>Some booking, merchandise, eSIM, transportation, or package buttons may be affiliate-ready and may generate revenue for FanAtlas in the future.</p>
+        <h3>External Services</h3>
+        <p>Some buttons open third-party travel, shopping, connectivity, or transportation services. Review details directly with the provider before purchasing or booking.</p>
       </section>
 
       <section className="card-dark legal-section">

@@ -34,7 +34,7 @@ const seedContent: AdminContentItem[] = [
     title: "Search Hotels Near This Stadium",
     city: "All host cities",
     status: "Draft",
-    summary: "Affiliate-ready stadium hotel search block with budget, mid, and luxury filters.",
+    summary: "Stadium hotel search block with budget, mid, and luxury filters.",
     updatedAt: "2026-06-18"
   },
   {

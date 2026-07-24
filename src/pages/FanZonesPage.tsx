@@ -53,7 +53,7 @@ export function FanZonesPage({ onBack, setTab }: { onBack: () => void; setTab: (
       <div className="topbar">
         <BackButton onBack={onBack} />
         <div>
-          <div className="brand">{t.fanZones} <span>2026</span></div>
+          <div className="brand">{t.fanZones} <span>Archive</span></div>
           <div className="subtle">{t.watchPartiesDesc}</div>
         </div>
       </div>

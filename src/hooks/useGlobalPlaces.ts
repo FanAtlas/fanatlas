@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { createContext, createElement, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { useTravelLocation } from "../TravelLocationContext";
 import { getFallbackPlaces } from "../data/globalFallbackContent";
 import { getCachedGlobalPlaces, getGlobalPlaces, GlobalPlace, GlobalPlaceCategory } from "../services/globalPlaces";
@@ -6,33 +6,60 @@ import { getCachedGlobalPlaces, getGlobalPlaces, GlobalPlace, GlobalPlaceCategor
 type GlobalPlacesState = {
   places: GlobalPlace[];
   loading: boolean;
+  error: string | null;
   message: string;
 };
 
-export function useGlobalPlaces() {
+type GlobalPlacesContextValue = GlobalPlacesState & {
+  refresh: () => void;
+};
+
+const GlobalPlacesContext = createContext<GlobalPlacesContextValue | null>(null);
+
+export function GlobalPlacesProvider({ children }: { children: ReactNode }) {
   const { travelLocation } = useTravelLocation();
   const [refreshKey, setRefreshKey] = useState(0);
   const [state, setState] = useState<GlobalPlacesState>({
     places: getFallbackPlaces(travelLocation),
     loading: true,
+    error: null,
     message: `Finding live places near ${travelLocation.destinationCity}...`
   });
 
   useEffect(() => {
     let cancelled = false;
     const fallbackPlaces = getFallbackPlaces(travelLocation);
+    const hasDestination = Boolean(travelLocation.destinationCity && travelLocation.destinationCountry);
+    const hasValidDestinationCoordinates = hasValidCoordinates(travelLocation.latitude, travelLocation.longitude);
+
+    if (!hasValidDestinationCoordinates) {
+      setState((current) => ({
+        places: placesBelongToDestination(current.places, travelLocation)
+          ? current.places
+          : fallbackPlaces,
+        loading: hasDestination,
+        error: null,
+        message: hasDestination ? `Finding live places near ${travelLocation.destinationCity}...` : ""
+      }));
+      return;
+    }
+
     const cached = getCachedGlobalPlaces(travelLocation);
 
     if (cached) {
       setState({
         places: cached.places,
-        loading: true,
-        message: "Showing saved travel content while live places refresh."
+        loading: false,
+        error: null,
+        message: cached.message
       });
+
+      if (refreshKey === 0) return;
     } else {
       setState({
         places: fallbackPlaces,
         loading: true,
+        error: null,
         message: `Finding live places near ${travelLocation.destinationCity}...`
       });
     }
@@ -46,13 +73,14 @@ export function useGlobalPlaces() {
       }));
     }, 5000);
 
-    getGlobalPlaces(travelLocation, { ignoreCache: Boolean(cached) || refreshKey > 0 })
+    getGlobalPlaces(travelLocation, { ignoreCache: refreshKey > 0 })
       .then((result) => {
         if (cancelled) return;
         if (result.places.length === 0) {
           setState({
             places: cached?.places.length ? cached.places : fallbackPlaces,
             loading: false,
+            error: null,
             message: ""
           });
           return;
@@ -61,6 +89,7 @@ export function useGlobalPlaces() {
         setState({
           places: result.places,
           loading: false,
+          error: null,
           message: result.source === "live" ? "" : result.message
         });
       })
@@ -69,6 +98,7 @@ export function useGlobalPlaces() {
         setState({
           places: cached?.places.length ? cached.places : fallbackPlaces,
           loading: false,
+          error: cached ? null : "Unable to load live places.",
           message: cached ? "Showing saved places while live places refresh." : ""
         });
       })
@@ -88,9 +118,22 @@ export function useGlobalPlaces() {
     refreshKey
   ]);
 
+  const value = useMemo<GlobalPlacesContextValue>(() => ({
+    ...state,
+    refresh: () => setRefreshKey((value) => value + 1)
+  }), [state]);
+
+  return createElement(GlobalPlacesContext.Provider, { value }, children);
+}
+
+export function useGlobalPlaces() {
+  const context = useContext(GlobalPlacesContext);
+  if (!context) throw new Error("useGlobalPlaces must be used within GlobalPlacesProvider");
+  const { travelLocation } = useTravelLocation();
+
   const groups = useMemo(() => {
     const byCategory = (categories: GlobalPlaceCategory[]) =>
-      placesByDistance(state.places.filter((place) => categories.includes(place.category)), travelLocation.latitude, travelLocation.longitude);
+      placesByDistance(context.places.filter((place) => categories.includes(place.category)), travelLocation.latitude, travelLocation.longitude);
 
     return {
       hotels: byCategory(["hotel"]),
@@ -102,17 +145,41 @@ export function useGlobalPlaces() {
       police: byCategory(["police"]),
       embassies: byCategory(["embassy"])
     };
-  }, [state.places, travelLocation.latitude, travelLocation.longitude]);
+  }, [context.places, travelLocation.latitude, travelLocation.longitude]);
 
   return {
-    ...state,
+    ...context,
     groups,
-    refreshPlaces: () => setRefreshKey((value) => value + 1)
+    refreshPlaces: context.refresh
   };
 }
 
 function placesByDistance(places: GlobalPlace[], latitude: number, longitude: number) {
   return [...places].sort((a, b) => distance(latitude, longitude, a.lat, a.lng) - distance(latitude, longitude, b.lat, b.lng));
+}
+
+function hasValidCoordinates(latitude: number, longitude: number) {
+  return Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180 &&
+    (latitude !== 0 || longitude !== 0);
+}
+
+function placesBelongToDestination(places: GlobalPlace[], travelLocation: { destinationCity: string; destinationCountry: string }) {
+  if (places.length === 0) return false;
+  const city = normalizeDestinationPart(travelLocation.destinationCity);
+  const country = normalizeDestinationPart(travelLocation.destinationCountry);
+  return places.every((place) => (
+    normalizeDestinationPart(place.city) === city &&
+    normalizeDestinationPart(place.country) === country
+  ));
+}
+
+function normalizeDestinationPart(value: string) {
+  return value.trim().toLowerCase();
 }
 
 function distance(lat1: number, lng1: number, lat2: number, lng2: number) {

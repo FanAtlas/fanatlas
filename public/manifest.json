@@ -1,7 +1,7 @@
 {
   "name": "FanAtlas",
   "short_name": "FanAtlas",
-  "description": "AI World Cup travel companion",
+  "description": "Your global travel companion for places, navigation, safety, stays, local experiences, and events.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07111f",

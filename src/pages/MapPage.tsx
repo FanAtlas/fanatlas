@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Search } from "lucide-react";
+import { ChevronDown, ChevronUp, LocateFixed, Navigation, RefreshCw, Search, X } from "lucide-react";
 import { BackButton } from "../components/BackButton";
 import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
@@ -50,11 +50,13 @@ function FitPreview({
 
   useEffect(() => {
     if (route.length > 1) {
-      map.fitBounds(L.latLngBounds(route), { padding: [34, 34] });
+      map.fitBounds(L.latLngBounds(route), { paddingTopLeft: [34, 34], paddingBottomRight: [34, 150] });
     } else if (destination && userLocation) {
-      map.fitBounds(L.latLngBounds([userLocation, [destination.lat, destination.lng]]), { padding: [34, 34] });
+      map.fitBounds(L.latLngBounds([userLocation, [destination.lat, destination.lng]]), { paddingTopLeft: [34, 34], paddingBottomRight: [34, 150] });
     } else if (destination) {
       map.setView([destination.lat, destination.lng], 13, { animate: true });
+    } else if (userLocation) {
+      map.fitBounds(L.latLngBounds([userLocation, destinationCenter]), { padding: [34, 34] });
     } else {
       map.setView(destinationCenter, 12, { animate: true });
     }
@@ -161,6 +163,7 @@ export function MapPage({
   const [routeLoading, setRouteLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("All");
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const routeRequestId = useRef(0);
 
   const externalLinks = selectedPlace ? mapLinks(selectedPlace) : null;
@@ -196,6 +199,11 @@ export function MapPage({
     Math.abs(place.lng - selectedPlace.lng) < 0.0001
   ));
   const visibleMapDestinations = filteredDestinations.slice(0, 25);
+  const placeCountLabel = `${filteredDestinations.length} ${filteredDestinations.length === 1 ? "place" : "places"}`;
+  const sheetPreviewPlaces = sheetExpanded ? filteredDestinations : filteredDestinations.slice(0, 2);
+  const mapStatus = placesLoading
+    ? (placesMessage || `Finding places near ${travelLocation.destinationCity}...`)
+    : `${travelLocation.destinationCity}, ${travelLocation.destinationCountry} · ${placeCountLabel}`;
 
   useEffect(() => {
     if (initialDestination) {
@@ -288,6 +296,16 @@ export function MapPage({
     setFocusRequest((request) => request + 1);
   }
 
+  function clearRoute() {
+    setSelectedPlace(null);
+    setRoute([]);
+    setDistance("");
+    setDuration("");
+    setRouteError("");
+    setNotificationMessage("");
+    routeRequestId.current += 1;
+  }
+
   async function addStadiumArrivalReminder() {
     if (!selectedPlace || selectedPlace.type !== "stadium") return;
 
@@ -317,28 +335,57 @@ export function MapPage({
     <div className="map-hub-page" dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="map-hub-topbar">
         <BackButton />
-      </div>
-
-      <header className="map-hub-header">
-        <span>FanAtlas Map</span>
-        <h1>Route Preview</h1>
-        <p>Plan the trip in FanAtlas, then open turn-by-turn navigation in Apple Maps, Google Maps, or Waze.</p>
-      </header>
-
-      <div className="map-location-status">
-        <span>
-          Showing {travelLocation.destinationCity}, {travelLocation.destinationCountry}
-          {locationStatus === "available" ? " with your current location marker." : "."}
-        </span>
-        <button type="button" onClick={() => setTab("travelLocation")}>Change</button>
-      </div>
-      {placesLoading && <div className="location-fallback">{placesMessage || `Finding live places near ${travelLocation.destinationCity}...`}</div>}
-      {!placesLoading && placesMessage && (
-        <div className="location-fallback">
-          {placesMessage}
-          {placesMessage.includes("Finding live places") && <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>}
+        <div className="map-title-lockup" aria-live="polite">
+          <strong>{travelLocation.destinationCity}</strong>
+          <span>{travelLocation.destinationCountry}</span>
         </div>
-      )}
+        <button
+          className="map-topbar-action"
+          type="button"
+          onClick={() => setTab("travelLocation")}
+          aria-label="Change destination"
+          title="Change destination"
+        >
+          Change
+        </button>
+      </div>
+
+      <section className="map-search-panel" aria-label="Map search and filters">
+        <div className="map-search">
+          <Search size={17} aria-hidden="true" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search hotels, restaurants, attractions..."
+            aria-label="Search nearby places"
+          />
+          {search && (
+            <button
+              className="map-search-clear"
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              title="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        <div className="map-category-row" aria-label="Place category filters">
+          {categoryFilters.map((item) => (
+            <button
+              key={item}
+              className={category === item ? "active" : ""}
+              onClick={() => setCategory(item)}
+              type="button"
+              aria-pressed={category === item}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="map-preview-card">
         <MapContainer center={mapCenter} zoom={selectedPlace ? 13 : 12} className="map-hub-leaflet">
@@ -388,105 +435,99 @@ export function MapPage({
             </>
           )}
         </MapContainer>
+
+        <div className="map-floating-controls" aria-label="Map controls">
+          <button type="button" onClick={useMyLocation} aria-label="Show my location on the map" title="My location">
+            <LocateFixed size={18} />
+          </button>
+          <button type="button" onClick={refreshPlaces} aria-label="Refresh nearby places" title="Refresh places">
+            <RefreshCw size={18} />
+          </button>
+          {selectedPlace && (
+            <button
+              type="button"
+              onClick={() => buildRoute(selectedPlace, mode)}
+              disabled={routeLoading}
+              aria-label="Rebuild route to selected place"
+              title="Route"
+            >
+              <Navigation size={18} />
+            </button>
+          )}
+        </div>
+
+        <div className="map-status-pill" role="status">
+          <span>{mapStatus}</span>
+          {locationStatus === "available" && <small>Current location on map</small>}
+        </div>
+
+        {selectedPlace && (
+          <section className="map-route-overlay" aria-label="Route summary">
+            <div className="selected-destination-row compact">
+              <span>{selectedPlace.emoji}</span>
+              <div>
+                <strong>{selectedPlace.name}</strong>
+                <p>{categoryLabel(selectedPlace.type)} · {mode}</p>
+              </div>
+            </div>
+
+            {routeLoading && <div className="route-status">Building route preview...</div>}
+            {routeError && <div className="route-status error">{routeError}</div>}
+
+            {distance && duration && (
+              <div className="route-summary compact">
+                <p><span>Distance</span><strong>{distance}</strong></p>
+                <p><span>ETA</span><strong>{duration}</strong></p>
+              </div>
+            )}
+
+            <div className="travel-mode-row compact">
+              <button
+                className={`travel-mode ${mode === "walking" ? "active" : ""}`}
+                disabled={routeLoading}
+                onClick={() => buildRoute(selectedPlace, "walking")}
+              >
+                Walking
+              </button>
+              <button
+                className={`travel-mode ${mode === "driving" ? "active" : ""}`}
+                disabled={routeLoading}
+                onClick={() => buildRoute(selectedPlace, "driving")}
+              >
+                Driving
+              </button>
+            </div>
+
+            <div className="map-route-actions">
+              <button type="button" onClick={clearRoute}>Clear</button>
+              <button type="button" onClick={() => setTab("matches")}>Match plan</button>
+            </div>
+          </section>
+        )}
       </div>
 
-      {selectedPlace && (
-        <section className="route-preview-panel">
-          <div className="selected-destination-row">
-            <span>{selectedPlace.emoji}</span>
-            <div>
-              <strong>{selectedPlace.name}</strong>
-              <p>{categoryLabel(selectedPlace.type)} · {selectedPlace.city}</p>
-            </div>
-          </div>
-
-          {routeLoading && <div className="route-status">Building route preview...</div>}
-          {routeError && <div className="route-status error">{routeError}</div>}
-          {notificationMessage && <div className="route-status">{notificationMessage}</div>}
-
-          <div className="travel-mode-row">
-            <button
-              className={`travel-mode ${mode === "walking" ? "active" : ""}`}
-              disabled={routeLoading}
-              onClick={() => buildRoute(selectedPlace, "walking")}
-            >
-              Walking
-            </button>
-            <button
-              className={`travel-mode ${mode === "driving" ? "active" : ""}`}
-              disabled={routeLoading}
-              onClick={() => buildRoute(selectedPlace, "driving")}
-            >
-              Driving
-            </button>
-          </div>
-
-          {distance && duration && (
-            <div className="route-summary">
-              <p>Distance <strong>{distance}</strong></p>
-              <p>ETA <strong>{duration}</strong></p>
-            </div>
-          )}
-
-          {selectedPlace.type === "stadium" && (
-            <div className="map-stadium-actions">
-              <button className="secondary-btn" onClick={openStadiumPage}>View Stadium Page</button>
-              <button className="secondary-btn" onClick={addStadiumArrivalReminder}>Add stadium arrival reminder</button>
-            </div>
-          )}
-
-          {externalLinks && (
-            <div className="external-map-actions">
-              <a href={externalLinks.apple} target="_blank" rel="noopener noreferrer">Apple Maps</a>
-              <a href={externalLinks.google} target="_blank" rel="noopener noreferrer">Google Maps</a>
-              <a href={externalLinks.waze} target="_blank" rel="noopener noreferrer">Waze</a>
-            </div>
-          )}
-
-          <div className="map-info-grid">
-            {selectedDetails.map((item) => (
-              <div className="map-info-card" key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </div>
-            ))}
-          </div>
-
-          {route.length > 0 && (
-            <div className="route-note-card">
-              <strong>Preview route in FanAtlas</strong>
-              <p>This is a planning preview. Use Apple Maps, Google Maps, or Waze for live navigation, traffic, closures, and rerouting.</p>
-            </div>
-          )}
-
-          <button className="primary-btn full-width" onClick={() => setTab("matches")}>
-            Use for match day plan
-          </button>
-        </section>
+      {notificationMessage && <div className="route-status">{notificationMessage}</div>}
+      {!placesLoading && placesMessage && (
+        <div className="location-fallback">
+          {placesMessage}
+          {placesMessage.includes("Finding live places") && <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>}
+        </div>
       )}
 
-      <section className="destination-hub">
-        <div className="map-search">
-          <Search size={17} />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search hotels, restaurants, attractions, transport, SOS..."
-          />
-        </div>
-
-        <div className="map-category-row">
-          {categoryFilters.map((item) => (
-            <button
-              key={item}
-              className={category === item ? "active" : ""}
-              onClick={() => setCategory(item)}
-              type="button"
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+      <section className={`nearby-bottom-sheet ${sheetExpanded ? "expanded" : "collapsed"}`}>
+        <button
+          className="nearby-sheet-header"
+          type="button"
+          onClick={() => setSheetExpanded((expanded) => !expanded)}
+          aria-expanded={sheetExpanded}
+        >
+          <span className="nearby-sheet-handle" aria-hidden="true" />
+          <span>
+            <strong>Nearby places</strong>
+            <small>{placeCountLabel} · {category}</small>
+          </span>
+          {sheetExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+        </button>
 
         <div className="destination-list">
           {filteredDestinations.length === 0 && (
@@ -497,7 +538,7 @@ export function MapPage({
             </div>
           )}
 
-          {filteredDestinations.map((place) => {
+          {sheetPreviewPlaces.map((place) => {
             const km = distanceKm({ latitude: travelLocation.latitude, longitude: travelLocation.longitude }, place);
 
             return (
@@ -510,13 +551,51 @@ export function MapPage({
                 <span className="destination-icon">{place.emoji}</span>
                 <span className="destination-copy">
                   <strong>{place.name}</strong>
-                  <small>{categoryLabel(place.type)} · {place.city}</small>
+                  <small>
+                    {categoryLabel(place.type)} · {place.city}
+                    {place.safetyNotes?.includes("Starter travel card") ? " · Search suggestion" : ""}
+                  </small>
                 </span>
                 <span className="destination-distance">{km.toFixed(1)} km</span>
               </button>
             );
           })}
         </div>
+
+        {selectedPlace && sheetExpanded && (
+          <div className="nearby-selected-details">
+            {selectedPlace.type === "stadium" && (
+              <div className="map-stadium-actions">
+                <button className="secondary-btn" onClick={openStadiumPage}>View Stadium Page</button>
+                <button className="secondary-btn" onClick={addStadiumArrivalReminder}>Add stadium arrival reminder</button>
+              </div>
+            )}
+
+            {externalLinks && (
+              <div className="external-map-actions">
+                <a href={externalLinks.apple} target="_blank" rel="noopener noreferrer">Apple Maps</a>
+                <a href={externalLinks.google} target="_blank" rel="noopener noreferrer">Google Maps</a>
+                <a href={externalLinks.waze} target="_blank" rel="noopener noreferrer">Waze</a>
+              </div>
+            )}
+
+            <div className="map-info-grid">
+              {selectedDetails.map((item) => (
+                <div className="map-info-card" key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+
+            {route.length > 0 && (
+              <div className="route-note-card">
+                <strong>Preview route in FanAtlas</strong>
+                <p>This is a planning preview. Use Apple Maps, Google Maps, or Waze for live navigation, traffic, closures, and rerouting.</p>
+              </div>
+            )}
+          </div>
+        )}
       </section>
     </div>
   );

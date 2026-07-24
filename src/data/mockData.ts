@@ -211,15 +211,15 @@ export const guides = [
 ];
 
 export const esimDeals = [
-  { provider: "Airalo", bestFor: "Budget tourists", coverage: "USA + Canada + Mexico", data: "10 GB", price: "$9.99", url: "https://example.com/airalo-affiliate" },
-  { provider: "Holafly", bestFor: "Unlimited data", coverage: "North America", data: "Unlimited", price: "$19.90", url: "https://example.com/holafly-affiliate" },
-  { provider: "Nomad", bestFor: "Flexible plans", coverage: "USA + Mexico", data: "20 GB", price: "$14.99", url: "https://example.com/nomad-affiliate" }
+  { provider: "Airalo", bestFor: "Budget tourists", coverage: "USA + Canada + Mexico", data: "10 GB", price: "$9.99", url: "https://www.airalo.com/" },
+  { provider: "Holafly", bestFor: "Unlimited data", coverage: "North America", data: "Unlimited", price: "$19.90", url: "https://esim.holafly.com/" },
+  { provider: "Nomad", bestFor: "Flexible plans", coverage: "USA + Mexico", data: "20 GB", price: "$14.99", url: "https://www.getnomad.app/" }
 ];
 
 export const hotelPartners = [
-  { provider: "Booking.com", bestFor: "Hotels near stadiums", filter: "Walking distance", price: "From $120/night", url: "https://example.com/booking-affiliate" },
-  { provider: "Expedia", bestFor: "Flight + hotel bundles", filter: "Family friendly", price: "Bundle deals", url: "https://example.com/expedia-affiliate" },
-  { provider: "Hotels.com", bestFor: "Rewards travelers", filter: "Budget stays", price: "Member prices", url: "https://example.com/hotels-affiliate" }
+  { provider: "Booking.com", bestFor: "Hotels near stadiums", filter: "Walking distance", price: "From $120/night", url: "https://www.booking.com/" },
+  { provider: "Expedia", bestFor: "Flight + hotel bundles", filter: "Family friendly", price: "Bundle deals", url: "https://www.expedia.com/" },
+  { provider: "Hotels.com", bestFor: "Rewards travelers", filter: "Budget stays", price: "Member prices", url: "https://www.hotels.com/" }
 ];
 
 export const mapPins = [

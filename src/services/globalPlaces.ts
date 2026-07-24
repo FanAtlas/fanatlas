@@ -1,4 +1,5 @@
 import { geocodeCity } from "./geocoding";
+import { fetchGooglePlaces, hasGooglePlacesKey } from "./googlePlaces";
 
 export type GlobalPlaceCategory =
   | "hotel"
@@ -22,7 +23,8 @@ export type GlobalPlace = {
   address?: string;
   phone?: string;
   website?: string;
-  source: "openstreetmap" | "fallback";
+  image?: string;
+  source: "google_places" | "openstreetmap" | "fallback";
 };
 
 export function placeEmoji(category: GlobalPlaceCategory) {
@@ -274,12 +276,8 @@ async function fetchOverpass(lat: number, lng: number, radius: number) {
 }
 
 async function fetchPlacesWithAutoRetry(latitude: number, longitude: number) {
-  try {
-    const firstPass = await fetchOverpass(latitude, longitude, 8000);
-    if (firstPass.length > 0) return firstPass;
-  } catch {
-    // Retry below with a wider radius. The caller handles the final fallback.
-  }
+  const firstPass = await fetchOverpass(latitude, longitude, 8000);
+  if (firstPass.length > 0) return firstPass;
 
   return fetchOverpass(latitude, longitude, 20000);
 }
@@ -346,7 +344,14 @@ export async function getGlobalPlaces(input: GlobalPlacesInput, options: GlobalP
       };
     }
 
-    const places = await fetchPlacesWithAutoRetry(latitude, longitude);
+    const googlePlaces = hasGooglePlacesKey()
+      ? await fetchGooglePlaces({
+        ...input,
+        latitude,
+        longitude
+      }).catch(() => null)
+      : null;
+    const places = googlePlaces?.places.length ? googlePlaces.places : await fetchPlacesWithAutoRetry(latitude, longitude);
 
     const normalizedPlaces = validatePlaces(
       places.map((place) => ({
@@ -361,7 +366,7 @@ export async function getGlobalPlaces(input: GlobalPlacesInput, options: GlobalP
     const result: GlobalPlacesResult = {
       places: normalizedPlaces,
       source: "live",
-      message: "Finding nearby places...",
+      message: googlePlaces?.places.length ? "Finding places and photos..." : "Finding nearby places...",
       latitude,
       longitude
     };

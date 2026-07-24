@@ -398,7 +398,7 @@ export function SOSPage({
   return (
     <div className="sos-page" dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="topbar">
-        <div className="brand">FanAtlas <span>2026</span></div>
+        <div className="brand">FanAtlas</div>
         <div className="language-pill">{languages[language]}</div>
       </div>
 

@@ -55,8 +55,8 @@ export function RevenueDashboardPage() {
     <div className="revenue-dashboard-page">
       <div className="topbar">
         <div>
-          <div className="brand">Revenue <span>Tracking</span></div>
-          <div className="subtle">Internal affiliate click analytics</div>
+          <div className="brand">Link <span>Activity</span></div>
+          <div className="subtle">External service click activity</div>
         </div>
       </div>
 
@@ -64,7 +64,7 @@ export function RevenueDashboardPage() {
         <MousePointerClick size={28} />
         <div>
           <h1>{clicks.length} clicks</h1>
-          <p>Tracking hotel, eSIM, merchandise, VIP package, and transportation affiliate clicks.</p>
+          <p>Review hotel, eSIM, merchandise, VIP package, and transportation link clicks.</p>
         </div>
       </div>
 
@@ -77,7 +77,7 @@ export function RevenueDashboardPage() {
               <strong>{item.clicks}</strong>
             </div>
           ))}
-          {clicksByType.length === 0 && <p className="subtle">No affiliate clicks tracked yet.</p>}
+          {clicksByType.length === 0 && <p className="subtle">No external link clicks yet.</p>}
         </div>
       </section>
 
@@ -89,7 +89,7 @@ export function RevenueDashboardPage() {
             <strong>{item.clicks}</strong>
           </div>
         ))}
-        {topProducts.length === 0 && <p className="subtle">Products appear after users click revenue buttons.</p>}
+        {topProducts.length === 0 && <p className="subtle">Products appear after users click external service buttons.</p>}
       </section>
 
       <section className="revenue-section">

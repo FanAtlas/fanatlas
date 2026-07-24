@@ -100,21 +100,6 @@ function mergeLiveStatus(currentMatches: FanAtlasMatch[], liveMatches: FanAtlasM
   });
 }
 
-function countdown(match: FanAtlasMatch) {
-  if (!match.kickoffUtc) return "";
-
-  const diff = new Date(match.kickoffUtc).getTime() - Date.now();
-  if (diff <= 0) return "";
-
-  const days = Math.floor(diff / 86400000);
-  const hours = Math.floor((diff % 86400000) / 3600000);
-  const minutes = Math.floor((diff % 3600000) / 60000);
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
 function flagForTeam(team: string) {
   const flags: Record<string, string> = {
     Argentina: "🇦🇷",
@@ -137,10 +122,9 @@ function flagForTeam(team: string) {
   return flags[team] || "🌍";
 }
 
-function matchTimeLabel(status: string, matchCountdown: string) {
-  if (status === "Live") return "LIVE NOW";
-  if (status === "Finished") return "Finished";
-  return matchCountdown ? `Starts in ${matchCountdown}` : "Upcoming";
+function matchTimeLabel(status: string) {
+  if (status === "Finished") return "Final result";
+  return "Archived fixture";
 }
 
 export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, setSelectedMatch }: Props) {
@@ -155,7 +139,7 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
   const [stageFilter, setStageFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const source = usingSavedSchedule
-    ? "Saved World Cup schedule. Live status updates refresh in the background."
+    ? "Saved World Cup 2026 archive. Historical data may refresh when available."
     : t.worldCupFixtures;
 
   useEffect(() => {
@@ -246,7 +230,6 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
 
   const counts = useMemo(() => ({
     all: matches.length,
-    live: matches.filter((match) => getComputedStatus(match) === "Live").length,
     upcoming: matches.filter((match) => getComputedStatus(match) === "Upcoming").length,
     finished: matches.filter((match) => getComputedStatus(match) === "Finished").length
   }), [matches]);
@@ -255,14 +238,14 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
     <div dir={language === "ar" ? "rtl" : "ltr"}>
       <div className="topbar">
         <div>
-          <div className="brand">{t.matchCenter} <span>2026</span></div>
+          <div className="brand">World Cup <span>2026 Archive</span></div>
           <div className="subtle">{source}</div>
         </div>
-        <div className="language-pill">🏆 {t.live}</div>
+        <div className="language-pill">Archive</div>
       </div>
 
       {updatingLiveSchedule && (
-        <div className="match-update-banner">Updating live schedule...</div>
+        <div className="match-update-banner">Loading tournament archive...</div>
       )}
 
       {error && <div className="alert-card danger"><div><strong>Schedule unavailable</strong><p>{error}</p></div></div>}
@@ -270,7 +253,7 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
       {usingSavedSchedule && !error && (
         <div className="alert-card warning">
           <div>
-            <strong>Showing saved World Cup schedule. Live updates will refresh when available.</strong>
+            <strong>Showing saved World Cup 2026 archive. Results appear only when historical data includes them.</strong>
           </div>
         </div>
       )}
@@ -278,8 +261,8 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
       <div className="match-center-hero">
         <span className="match-hero-icon">⚽</span>
         <div>
-          <h3>{t.matchDayAssistant}</h3>
-          <p>Choose a match to plan your route, hotels, restaurants, fan zones, and transportation.</p>
+          <h3>World Cup 2026 Archive</h3>
+          <p>Browse completed fixtures, results when available, stadiums, and host-city travel history.</p>
         </div>
       </div>
 
@@ -306,32 +289,30 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
           <label className="match-select-field">
             <span>Status</span>
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              {["All", "Live", "Upcoming", "Finished"].map((status) => (
-                <option key={status}>{status}</option>
-              ))}
+              <option value="All">All archive</option>
+              <option value="Finished">Final results</option>
+              <option value="Upcoming">Archived fixtures</option>
             </select>
           </label>
         </div>
 
         <div className="match-status-tabs">
-          <button className={statusFilter === "All" ? "active" : ""} onClick={() => setStatusFilter("All")}>All <span>{counts.all}</span></button>
-          <button className={statusFilter === "Live" ? "active" : ""} onClick={() => setStatusFilter("Live")}>Live <span>{counts.live}</span></button>
-          <button className={statusFilter === "Upcoming" ? "active" : ""} onClick={() => setStatusFilter("Upcoming")}>Upcoming <span>{counts.upcoming}</span></button>
-          <button className={statusFilter === "Finished" ? "active" : ""} onClick={() => setStatusFilter("Finished")}>Finished <span>{counts.finished}</span></button>
+          <button className={statusFilter === "All" ? "active" : ""} onClick={() => setStatusFilter("All")}>Archive <span>{counts.all}</span></button>
+          <button className={statusFilter === "Finished" ? "active" : ""} onClick={() => setStatusFilter("Finished")}>Results <span>{counts.finished}</span></button>
+          <button className={statusFilter === "Upcoming" ? "active" : ""} onClick={() => setStatusFilter("Upcoming")}>Fixtures <span>{counts.upcoming}</span></button>
         </div>
       </div>
 
       <div className="matches-list">
         {filteredMatches.length === 0 && !error && (
           <div className="card-dark">
-            <strong>No upcoming matches found.</strong>
+            <strong>No archive entries found.</strong>
             <p className="subtle">{matches.length === 0 ? t.noFixtureRows : "Adjust filters or search another team, stadium, or city."}</p>
           </div>
         )}
 
         {filteredMatches.map((m) => {
           const status = getComputedStatus(m);
-          const matchCountdown = status === "Upcoming" ? countdown(m) : "";
           const stadium = stadiums.find((item) => item.name === m.stadium);
 
           return (
@@ -343,7 +324,7 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
               </div>
               <div className={`match-status-pill ${status.toLowerCase()}`}>
                 {shouldShowScore(m) && <strong>{m.score}</strong>}
-                <span>{matchTimeLabel(status, matchCountdown)}</span>
+                <span>{matchTimeLabel(status)}</span>
               </div>
             </div>
 
@@ -367,7 +348,7 @@ export function MatchesPage({ setMapDestination, setSelectedStadium, setTab, set
             </div>
 
             <div className="match-actions-premium">
-              <button className="primary-btn" onClick={() => planMatch(m)}>Plan Match</button>
+              <button className="primary-btn" onClick={() => planMatch(m)}>View Event Plan</button>
               <button className="stadium-map-btn" onClick={() => openStadiumPage(m)}>Stadium Info</button>
               <button className="stadium-map-btn" onClick={() => openStadiumMap(m)}>Open Map</button>
             </div>

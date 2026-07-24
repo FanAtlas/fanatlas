@@ -162,7 +162,7 @@ export function TicketsPage({ onBack, setSelectedMatch, setTab }: TicketsPagePro
         <BackButton onBack={onBack} />
         <div>
           <div className="brand">
-            {t.ticketsTitle} <span>2026</span>
+            {t.ticketsTitle}
           </div>
           <div className="subtle">
             Upload PDF, screenshot, QR, seat and match details

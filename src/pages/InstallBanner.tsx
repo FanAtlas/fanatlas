@@ -55,7 +55,7 @@ export function InstallBanner() {
           </p>
         ) : (
           <p>
-            Add FanAtlas to your phone for quick World Cup access.
+            Keep maps, travel tools, saved places, and destination guidance close at hand.
           </p>
         )}
       </div>

@@ -16,17 +16,17 @@ const features = [
   {
     icon: ShieldOff,
     title: "Ad-free",
-    detail: "Remove promotional placements and keep match-day tools focused."
+    detail: "Remove promotional placements and keep destination planning focused."
   },
   {
     icon: Bot,
     title: "Premium AI",
-    detail: "More detailed planning for stadiums, fan zones, hotels, SOS, and transport."
+    detail: "More detailed planning for places, hotels, SOS, transport, and local experiences."
   },
   {
     icon: Download,
     title: "Offline Guides",
-    detail: "Save before, during, and after-trip guides for low-signal match days."
+    detail: "Save before, during, and after-trip guides for low-signal travel days."
   },
   {
     icon: Languages,
@@ -35,8 +35,8 @@ const features = [
   },
   {
     icon: Trophy,
-    title: "Match Day Pro",
-    detail: "Pro checklist, reminders, route planning, and post-match fan zone flow."
+    title: "Event Planning Tools",
+    detail: "Sports travel, event-day guidance, reminders, route planning, and archive support."
   }
 ];
 
@@ -50,13 +50,13 @@ const plans: Array<{
     id: "monthly",
     name: "Monthly",
     price: "$6.99",
-    summary: "Best for a single trip or short tournament stay."
+    summary: "Best for a single trip or short city stay."
   },
   {
     id: "annual",
     name: "Annual",
     price: "$39.99",
-    summary: "Best for multi-city travelers and future tournaments."
+    summary: "Best for multi-city travelers, future trips, and recurring events."
   }
 ];
 
@@ -102,7 +102,7 @@ export function PremiumPage({ onBack, setTab }: { onBack: () => void; setTab: (t
         <BackButton onBack={onBack} />
         <div>
           <div className="brand">FanAtlas <span>Premium</span></div>
-          <div className="subtle">Ad-free travel tools for World Cup 2026</div>
+          <div className="subtle">Ad-free travel tools for destinations, safety, and trip planning</div>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export function PremiumPage({ onBack, setTab }: { onBack: () => void; setTab: (t
           <span>{active ? "Premium Active" : "Upgrade"}</span>
         </div>
         <h1>FanAtlas Premium</h1>
-        <p>Unlock Premium AI, offline guides, Premium Translation, Match Day Pro, and an ad-free app experience.</p>
+        <p>Unlock Premium AI, offline guides, Premium Translation, advanced destination tools, and an ad-free app experience.</p>
       </section>
 
       <section className="premium-status-card">

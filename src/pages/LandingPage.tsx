@@ -75,7 +75,7 @@ export function LandingPage({ onOpenApp, onExploreEventMode, onNavigateLegal }: 
         </button>
         <nav className="landing-nav-links" aria-label="Landing navigation">
           <button type="button" onClick={onOpenApp}>App</button>
-          <button type="button" onClick={onExploreEventMode}>Event Mode</button>
+          <button type="button" onClick={onExploreEventMode}>Event Archive</button>
         </nav>
         <button type="button" className="landing-nav-app" onClick={onOpenApp}>
           Open Web App
@@ -172,11 +172,11 @@ export function LandingPage({ onOpenApp, onExploreEventMode, onNavigateLegal }: 
         </section>
 
         <section className="landing-event-section">
-          <span>Featured Event</span>
-          <h2>World Cup 2026</h2>
-          <p>Plan stadium visits, fan zones, hotels, restaurants, and match-day travel during major global events.</p>
+          <span>Past Event Archive</span>
+          <h2>World Cup 2026 Archive</h2>
+          <p>Browse completed tournament guides, stadium visits, fan zones, hotels, restaurants, and sports-travel history.</p>
           <button type="button" className="landing-secondary-cta" onClick={onExploreEventMode}>
-            Explore Event Mode
+            Explore Past Event Guides
           </button>
         </section>
 

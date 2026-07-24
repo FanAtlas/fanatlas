@@ -16,7 +16,7 @@ export function ESimPage({ onBack }: { onBack: () => void }) {
       activation: "QR code install",
       hotspot: "Hotspot allowed",
       badges: ["Budget", "Regional"],
-      url: "https://example.com/airalo-affiliate"
+      url: "https://www.airalo.com/"
     },
     {
       provider: "Holafly",
@@ -29,11 +29,11 @@ export function ESimPage({ onBack }: { onBack: () => void }) {
       activation: "App or QR setup",
       hotspot: "Hotspot varies by plan",
       badges: ["Unlimited", "Support"],
-      url: "https://example.com/holafly-affiliate"
+      url: "https://esim.holafly.com/"
     },
     {
       provider: "Nomad",
-      title: "Nomad World Cup Plan",
+      title: "Nomad Travel Plan",
       data: "20GB Data",
       days: "30 Days",
       coverage: "USA • Canada • Mexico",
@@ -42,14 +42,14 @@ export function ESimPage({ onBack }: { onBack: () => void }) {
       activation: "Install before flight",
       hotspot: "Hotspot allowed",
       badges: ["Multi-country", "Value"],
-      url: "https://example.com/nomad-affiliate"
+      url: "https://www.getnomad.app/"
     }
   ];
 
   const checklist = [
     "Phone is carrier-unlocked",
     "Device supports eSIM",
-    "Install before match day crowds",
+    "Install before crowded travel days",
     "Keep your home SIM active for SMS codes"
   ];
 

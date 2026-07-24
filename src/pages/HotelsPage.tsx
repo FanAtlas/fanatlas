@@ -1,168 +1,22 @@
-import { useState } from "react";
-import { Hotel, MapPin } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bell, ExternalLink, Hotel, MapPin, Search, X } from "lucide-react";
 import { BackButton } from "../components/BackButton";
 import { useLanguage } from "../LanguageContext";
 import { Tab } from "../main";
 import { MapDestination } from "../mapDestinations";
 import { reminderDate, scheduleNotification } from "../services/notifications";
 import { FavoriteButton } from "../components/FavoriteButton";
-import { trackRevenueClick } from "../services/revenueTracking";
 import { directionsUrl, distanceKm, formatDistance } from "../lib/location";
 import { useTravelLocation } from "../TravelLocationContext";
 import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
 import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
+import { imageForCategory } from "../data/categoryImages";
+import { hotelSearchLinks } from "../services/hotelLinks";
+import { ensureMinimumPlaces } from "../data/globalFallbackContent";
 
-export type HotelOffer = {
-  id: string;
-  name: string;
-  city: string;
-  stadium: string;
-  image: string;
-  rating: number;
-  price: string;
-  distanceKm: number;
-  lat: number;
-  lng: number;
-  provider: string;
-  affiliatePath: string;
-};
+type HotelFilter = "Nearby" | "Search Options";
 
-export const hotelOffers: HotelOffer[] = [
-  {
-    id: "nyc-marriott-times-square",
-    name: "Marriott Times Square",
-    city: "New York",
-    stadium: "MetLife Stadium",
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80",
-    rating: 4.5,
-    price: "$220/night",
-    distanceKm: 10.8,
-    lat: 40.7586,
-    lng: -73.9851,
-    provider: "Booking Partner",
-    affiliatePath: "marriott-times-square"
-  },
-  {
-    id: "nyc-moxy-chelsea",
-    name: "Moxy Chelsea",
-    city: "New York",
-    stadium: "MetLife Stadium",
-    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=900&q=80",
-    rating: 4.3,
-    price: "$185/night",
-    distanceKm: 11.5,
-    lat: 40.7464,
-    lng: -73.9933,
-    provider: "Hotel Partner",
-    affiliatePath: "moxy-chelsea"
-  },
-  {
-    id: "mx-ibis-reforma",
-    name: "Ibis Mexico City",
-    city: "Mexico City",
-    stadium: "Estadio Azteca",
-    image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=900&q=80",
-    rating: 4.1,
-    price: "$80/night",
-    distanceKm: 8.7,
-    lat: 19.4285,
-    lng: -99.1677,
-    provider: "Booking Partner",
-    affiliatePath: "ibis-mexico-city"
-  },
-  {
-    id: "mx-galeria-plaza",
-    name: "Galeria Plaza Reforma",
-    city: "Mexico City",
-    stadium: "Estadio Azteca",
-    image: "https://images.unsplash.com/photo-1455587734955-081b22074882?auto=format&fit=crop&w=900&q=80",
-    rating: 4.4,
-    price: "$135/night",
-    distanceKm: 9.4,
-    lat: 19.426,
-    lng: -99.1688,
-    provider: "Hotel Partner",
-    affiliatePath: "galeria-plaza-reforma"
-  },
-  {
-    id: "la-holiday-inn-lax",
-    name: "Holiday Inn Los Angeles",
-    city: "Los Angeles",
-    stadium: "SoFi Stadium",
-    image: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=900&q=80",
-    rating: 4.2,
-    price: "$145/night",
-    distanceKm: 2.1,
-    lat: 33.9466,
-    lng: -118.3852,
-    provider: "Booking Partner",
-    affiliatePath: "holiday-inn-los-angeles"
-  },
-  {
-    id: "la-cambria-lax",
-    name: "Cambria LAX",
-    city: "Los Angeles",
-    stadium: "SoFi Stadium",
-    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=900&q=80",
-    rating: 4.4,
-    price: "$168/night",
-    distanceKm: 3.6,
-    lat: 33.9235,
-    lng: -118.391,
-    provider: "Hotel Partner",
-    affiliatePath: "cambria-lax"
-  },
-  {
-    id: "toronto-delta",
-    name: "Delta Hotels Toronto",
-    city: "Toronto",
-    stadium: "BMO Field",
-    image: "https://images.unsplash.com/photo-1568084680786-a84f91d1153c?auto=format&fit=crop&w=900&q=80",
-    rating: 4.6,
-    price: "$210/night",
-    distanceKm: 2.4,
-    lat: 43.6428,
-    lng: -79.3837,
-    provider: "Booking Partner",
-    affiliatePath: "delta-hotels-toronto"
-  },
-  {
-    id: "dallas-live-loews",
-    name: "Live by Loews Arlington",
-    city: "Dallas",
-    stadium: "AT&T Stadium",
-    image: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=900&q=80",
-    rating: 4.7,
-    price: "$260/night",
-    distanceKm: 0.6,
-    lat: 32.7506,
-    lng: -97.0871,
-    provider: "Hotel Partner",
-    affiliatePath: "live-by-loews-arlington"
-  }
-];
-
-function bookingUrl(offer: HotelOffer) {
-  const baseUrl = import.meta.env.VITE_HOTEL_AFFILIATE_BASE_URL || "https://www.booking.com/searchresults.html";
-  const params = new URLSearchParams({
-    ss: `${offer.name} ${offer.city}`,
-    aid: import.meta.env.VITE_HOTEL_AFFILIATE_ID || "fanatlas",
-    label: `fanatlas-${offer.affiliatePath}`
-  });
-
-  return `${baseUrl}?${params.toString()}`;
-}
-
-function bookingSearchUrl(place: GlobalPlace) {
-  const baseUrl = import.meta.env.VITE_HOTEL_AFFILIATE_BASE_URL || "https://www.booking.com/searchresults.html";
-  const params = new URLSearchParams({
-    ss: `${place.name} ${place.city} ${place.country}`,
-    aid: import.meta.env.VITE_HOTEL_AFFILIATE_ID || "fanatlas",
-    label: `fanatlas-${place.id}`
-  });
-
-  return `${baseUrl}?${params.toString()}`;
-}
+const hotelFilters: HotelFilter[] = ["Nearby", "Search Options"];
 
 export function HotelsPage({
   onBack,
@@ -175,9 +29,27 @@ export function HotelsPage({
 }) {
   const { language, t } = useLanguage();
   const { travelLocation } = useTravelLocation();
-  const { groups, loading, message, refreshPlaces } = useGlobalPlaces();
+  const { groups, loading, message, refreshPlaces, error } = useGlobalPlaces();
   const [notificationMessage, setNotificationMessage] = useState("");
-  const offers = groups.hotels;
+  const [query, setQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<HotelFilter>("Nearby");
+
+  const realHotels = useMemo(
+    () => groups.hotels.filter((offer) => isRealHotel(offer) && hasValidCoordinates(offer)),
+    [groups.hotels]
+  );
+  const staySuggestions = useMemo(
+    () => ensureMinimumPlaces(travelLocation, groups.hotels, "hotel").filter((offer) => offer.source === "fallback"),
+    [groups.hotels, travelLocation]
+  );
+  const filteredRealHotels = useMemo(
+    () => filterHotels(realHotels, query),
+    [query, realHotels]
+  );
+  const filteredSuggestions = useMemo(
+    () => filterHotels(staySuggestions, query),
+    [query, staySuggestions]
+  );
 
   async function addHotelReminder(offer: GlobalPlace) {
     const { permission } = await scheduleNotification({
@@ -198,141 +70,280 @@ export function HotelsPage({
 
   return (
     <div className="hotels-revenue-page" dir={language === "ar" ? "rtl" : "ltr"}>
-      <div className="topbar">
+      <div className="hotels-premium-topbar">
         <BackButton onBack={onBack} />
-        <div>
-          <div className="brand">{t.hotels}</div>
-          <div className="subtle">Hotels in {travelLocation.destinationCity}, {travelLocation.destinationCountry}</div>
+        <div className="hotels-title-lockup">
+          <span>{t.hotels}</span>
+          <strong>{travelLocation.destinationCity}, {travelLocation.destinationCountry}</strong>
         </div>
+        <button className="hotels-change-btn" type="button" onClick={() => setTab("travelLocation")}>
+          Change
+        </button>
       </div>
 
-      <button className="travel-location-pill" onClick={() => setTab("travelLocation")}>
-        <span>Traveling to: {travelLocation.destinationCity}, {travelLocation.destinationCountry}</span>
-        <strong>Change</strong>
-      </button>
+      <section className="hotels-search-panel" aria-label="Hotel search and filters">
+        <label className="hotels-search">
+          <Search size={18} aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={`Search hotels in ${travelLocation.destinationCity}`}
+            aria-label={`Search hotels in ${travelLocation.destinationCity}`}
+          />
+          {query && (
+            <button className="hotels-search-clear" type="button" onClick={() => setQuery("")} aria-label="Clear hotel search" title="Clear search">
+              <X size={16} />
+            </button>
+          )}
+        </label>
 
-      <div className="hotel-search-hero">
-        <Hotel size={30} />
-        <div>
-          <h1>Nearby Hotels</h1>
-          <p>Compare hotel partners for your selected destination.</p>
+        <div className="hotels-filter-row" aria-label="Hotel filters">
+          {hotelFilters.map((filter) => (
+            <button
+              aria-pressed={activeFilter === filter}
+              className={activeFilter === filter ? "active" : ""}
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              type="button"
+            >
+              {filter}
+            </button>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {loading && <div className="location-fallback">{message || `Finding live places near ${travelLocation.destinationCity}...`}</div>}
+      <section className="hotels-summary-card">
+        <div>
+          <span>{realHotels.length} verified nearby</span>
+          <strong>Nearby stays</strong>
+          <p>Search real hotel results separately from stay-search suggestions.</p>
+        </div>
+        <Hotel size={24} aria-hidden="true" />
+      </section>
+
+      {loading && <div className="hotels-inline-state">{message || `Finding live places near ${travelLocation.destinationCity}...`}</div>}
+      {!loading && error && (
+        <div className="hotels-inline-state">
+          {error}
+          <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>
+        </div>
+      )}
       {!loading && message && (
-        <div className="location-fallback">
+        <div className="hotels-inline-state">
           {message}
           {message.includes("Finding live places") && <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>}
         </div>
       )}
 
-      <div className="section-row">
-        <h3>{travelLocation.destinationCity}</h3>
-        <span className="section-badge">{offers.length} hotels</span>
-      </div>
-
       {notificationMessage && <div className="route-status">{notificationMessage}</div>}
 
-      {offers.length === 0 && (
-        <div className="card-dark">
-          <strong>{travelLocation.destinationCity} hotel tools are ready.</strong>
-          <p className="subtle">Use Map or hotel search while live hotel partners refresh.</p>
-          <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>
-        </div>
+      {activeFilter === "Nearby" && (
+        <section className="hotels-section">
+          <div className="hotels-section-heading">
+            <div>
+              <span>Verified nearby stays</span>
+              <h2>{travelLocation.destinationCity}</h2>
+            </div>
+            <small>{filteredRealHotels.length} nearby</small>
+          </div>
+
+          {filteredRealHotels.length === 0 && (
+            <div className="hotels-empty-card">
+              <strong>No verified nearby hotels are available yet.</strong>
+              <p>Try refreshing live places or use the stay-search options below.</p>
+              <button className="places-retry-btn" onClick={refreshPlaces}>Try Again</button>
+            </div>
+          )}
+
+          <div className="hotel-offer-list">
+            {filteredRealHotels.map((offer, index) => (
+              <HotelOfferCard
+                index={index}
+                key={offer.id}
+                offer={offer}
+                onMap={() => {
+                  setMapDestination({
+                    name: offer.name,
+                    city: offer.city,
+                    lat: offer.lat,
+                    lng: offer.lng,
+                    emoji: placeEmoji(offer.category),
+                    type: "hotel",
+                    address: offer.address,
+                    openingHours: offer.detail
+                  });
+                  setTab("map");
+                }}
+                onReminder={() => addHotelReminder(offer)}
+                travelLocation={travelLocation}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
-      <div className="hotel-offer-list">
-        {offers.map((offer) => (
-          <article className="hotel-offer-card" key={offer.id}>
-            <div className="hotel-offer-body">
-              <div>
-                <strong>{placeEmoji(offer.category)} {offer.name}</strong>
-                <p>{offer.city} · {offer.detail}</p>
-              </div>
+      <section className="hotels-section">
+        <div className="hotels-section-heading">
+          <div>
+            <span>Stay search options</span>
+            <h2>Compare stays</h2>
+          </div>
+          <small>{filteredSuggestions.length} options</small>
+        </div>
 
-              <FavoriteButton
-                item={{
-                  item_type: "hotel",
-                  item_id: offer.id,
-                  name: offer.name,
-                  city: offer.city,
-                  metadata: {
-                    ...offer,
-                    destination: {
-                      name: offer.name,
-                      city: offer.city,
-                      lat: offer.lat,
-                      lng: offer.lng,
-                      emoji: placeEmoji(offer.category),
-                      type: "hotel"
-                    }
-                  }
-                }}
-              />
+        {filteredSuggestions.length === 0 && (
+          <div className="hotels-empty-card">
+            <strong>No matching stay-search suggestions.</strong>
+            <p>Clear search or try another hotel area.</p>
+          </div>
+        )}
 
-              <div className="hotel-offer-meta">
-                <span><MapPin size={14} /> {formatDistance(distanceKm(travelLocation, offer))} from destination center</span>
-                <strong>OpenStreetMap</strong>
-              </div>
+        <div className="hotel-suggestion-list">
+          {filteredSuggestions.map((offer, index) => (
+            <HotelSuggestionCard index={index} key={offer.id} offer={offer} />
+          ))}
+        </div>
+      </section>
 
-              <div className="hotel-offer-actions">
-                <button
-                  className="secondary-btn"
-                  onClick={() => {
-                    setMapDestination({
-                      name: offer.name,
-                      city: offer.city,
-                      lat: offer.lat,
-                      lng: offer.lng,
-                      emoji: placeEmoji(offer.category),
-                      type: "hotel",
-                      address: offer.address,
-                      openingHours: offer.detail
-                    });
-                    setTab("map");
-                  }}
-                >
-                  Quick directions
-                </button>
-                <a
-                  className="secondary-btn"
-                  href={directionsUrl(offer)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open maps
-                </a>
-                <button className="secondary-btn" onClick={() => addHotelReminder(offer)}>
-                  Remind me
-                </button>
-                <a
-                  className="buy-btn"
-                  href={bookingSearchUrl(offer)}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => trackRevenueClick({
-                    type: "hotel",
-                    product: offer.name,
-                    city: offer.city,
-                    provider: "Booking Partner",
-                    amount: "Search",
-                    url: bookingSearchUrl(offer),
-                    source: "Hotels Page"
-                  })}
-                >
-                  Book Hotel
-                </a>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      <div className="action-note">
+      <div className="hotels-trust-note">
         <Hotel size={18} />
-        <span>Compare hotel options, confirm details with the booking provider, and save your stay before match day.</span>
+        <span>FanAtlas may earn a commission when you use partner search links. Prices and availability are shown by the provider.</span>
       </div>
     </div>
   );
+}
+
+function HotelOfferCard({
+  index,
+  offer,
+  onMap,
+  onReminder,
+  travelLocation
+}: {
+  index: number;
+  key?: string;
+  offer: GlobalPlace;
+  onMap: () => void;
+  onReminder: () => void | Promise<void>;
+  travelLocation: { latitude: number; longitude: number };
+}) {
+  const fallbackImage = imageForCategory("hotel", index);
+  const [imageSrc, setImageSrc] = useState(offer.image || fallbackImage);
+  const distance = formatDistance(distanceKm(travelLocation, offer));
+
+  function handleImageError() {
+    if (imageSrc !== fallbackImage) setImageSrc(fallbackImage);
+  }
+
+  return (
+    <article className="hotel-offer-card">
+      <img
+        className="hotel-offer-image"
+        src={imageSrc}
+        alt={offer.name}
+        loading="lazy"
+        onError={handleImageError}
+      />
+      <div className="hotel-offer-body">
+        <div className="hotel-offer-heading">
+          <span className="hotel-card-badge">{offer.source === "google_places" ? "Verified place" : "OpenStreetMap"}</span>
+          <strong>{placeEmoji(offer.category)} {offer.name}</strong>
+          <p>{offer.city} · {offer.detail}</p>
+        </div>
+
+        <div className="hotel-offer-topline">
+          <span><MapPin size={14} /> {distance}</span>
+          <FavoriteButton
+            compact
+            item={{
+              item_type: "hotel",
+              item_id: offer.id,
+              name: offer.name,
+              city: offer.city,
+              metadata: {
+                ...offer,
+                destination: {
+                  name: offer.name,
+                  city: offer.city,
+                  lat: offer.lat,
+                  lng: offer.lng,
+                  emoji: placeEmoji(offer.category),
+                  type: "hotel"
+                }
+              }
+            }}
+          />
+        </div>
+
+        <div className="hotel-primary-actions">
+          <button className="hotel-primary-action" onClick={onMap} type="button" aria-label={`View ${offer.name} on FanAtlas map`}>
+            <MapPin size={15} /> View on Map
+          </button>
+          <details className="hotel-more-actions">
+            <summary>More options</summary>
+            <div>
+              <a href={directionsUrl(offer)} target="_blank" rel="noopener noreferrer">
+                Open Google Maps <ExternalLink size={14} />
+              </a>
+              <button onClick={onReminder} type="button">
+                <Bell size={14} /> Remind Me
+              </button>
+              {hotelSearchLinks(offer).map((link) => (
+                <a href={link.url} key={link.label} target="_blank" rel="noopener noreferrer">
+                  {link.label} <ExternalLink size={14} />
+                </a>
+              ))}
+            </div>
+          </details>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function HotelSuggestionCard({ index, offer }: { index: number; key?: string; offer: GlobalPlace }) {
+  const fallbackImage = imageForCategory("hotel", index);
+  const [imageSrc, setImageSrc] = useState(fallbackImage);
+  const link = hotelSearchLinks(offer)[index % 3];
+
+  function handleImageError() {
+    if (imageSrc !== fallbackImage) setImageSrc(fallbackImage);
+  }
+
+  return (
+    <article className="hotel-suggestion-card">
+      <img src={imageSrc} alt="" loading="lazy" onError={handleImageError} />
+      <div>
+        <span>Search suggestion</span>
+        <strong>{offer.name}</strong>
+        <p>{offer.city} · {offer.detail}</p>
+      </div>
+      <a className="hotel-suggestion-action" href={link.url} target="_blank" rel="noopener noreferrer">
+        {link.label} <ExternalLink size={14} />
+      </a>
+    </article>
+  );
+}
+
+function filterHotels(offers: GlobalPlace[], query: string) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return offers;
+
+  return offers.filter((offer) => (
+    `${offer.name} ${offer.city} ${offer.country} ${offer.detail}`.toLowerCase().includes(normalized)
+  ));
+}
+
+function isRealHotel(offer: GlobalPlace) {
+  return offer.source === "google_places" || offer.source === "openstreetmap";
+}
+
+function hasValidCoordinates(offer: GlobalPlace) {
+  return Number.isFinite(offer.lat) &&
+    Number.isFinite(offer.lng) &&
+    offer.lat >= -90 &&
+    offer.lat <= 90 &&
+    offer.lng >= -180 &&
+    offer.lng <= 180 &&
+    (offer.lat !== 0 || offer.lng !== 0);
 }

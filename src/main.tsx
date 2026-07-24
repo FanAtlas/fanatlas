@@ -1,64 +1,75 @@
-import React, { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Home, MapPin, Compass, Trophy, User, Shield } from "lucide-react";
+import { Home, MapPin, Compass, CalendarDays, User, Shield } from "lucide-react";
 import "./styles.css";
 
 import { HomePage } from "./pages/HomePage";
-import { MapPage } from "./pages/MapPage";
-import { ExplorePage } from "./pages/ExplorePage";
-import { MatchesPage } from "./pages/MatchesPage";
 import { ProfilePage } from "./pages/ProfilePage";
-import { SOSPage } from "./pages/SOSPage";
-import { AIChatPage } from "./pages/AIChatPage";
-import { TravelGuidesPage } from "./pages/TravelGuidesPage";
-import { CurrencyConverterPage } from "./pages/CurrencyConverterPage";
-import { VoiceTranslatorPage } from "./pages/VoiceTranslatorPage";
-import { TVConnectPage } from "./pages/TVConnectPage";
-import { MatchDayPage } from "./pages/MatchDayPage";
-import { HotelsPage } from "./pages/HotelsPage";
-import { ESimPage } from "./pages/ESimPage";
-import { RestaurantDetailPage } from "./pages/RestaurantDetailPage";
 import { AuthPage } from "./pages/AuthPage";
-import { TicketsPage } from "./pages/TicketsPage";
-import { FanZonesPage } from "./pages/FanZonesPage";
-import { VIPPackagesPage } from "./pages/VIPPackagesPage";
-import { TransportationPage } from "./pages/TransportationPage";
-import { MerchandisePage } from "./pages/MerchandisePage";
-import { FanZoneVIPPage } from "./pages/FanZoneVIPPage";
-import { FanZoneTransportPage } from "./pages/FanZoneTransportPage";
-import { FanZoneMerchPage } from "./pages/FanZoneMerchPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
-import { PremiumPage } from "./pages/PremiumPage";
-import { StadiumDetailPage } from "./pages/StadiumDetailPage";
-import { FavoritesPage } from "./pages/FavoritesPage";
-import { OfflineGuidePage } from "./pages/OfflineGuidePage";
-import { NotificationSettingsPage } from "./pages/NotificationSettingsPage";
-import { RevenueDashboardPage } from "./pages/RevenueDashboardPage";
-import { CityGuidePage } from "./pages/CityGuidePage";
-import { ExpenseTrackerPage } from "./pages/ExpenseTrackerPage";
-import { ChecklistPage } from "./pages/ChecklistPage";
-import { MeetupPage } from "./pages/MeetupPage";
-import { PhrasebookPage } from "./pages/PhrasebookPage";
-import { AdminPage } from "./pages/AdminPage";
-import { TravelToolsPage } from "./pages/TravelToolsPage";
-import { PrivacyPage } from "./pages/PrivacyPage";
-import { TermsPage } from "./pages/TermsPage";
-import { SupportPage } from "./pages/SupportPage";
 import { LandingPage } from "./pages/LandingPage";
-import { TravelLocationPage } from "./pages/TravelLocationPage";
 
-import { FanAtlasMatch } from "./services/worldcup2026";
+import type { FanAtlasMatch } from "./services/worldcup2026";
 import { supabase } from "./lib/supabase";
 import { Language, text } from "./i18n";
 import { LanguageContext } from "./LanguageContext";
-import { MapDestination } from "./mapDestinations";
+import type { MapDestination } from "./mapDestinations";
 import { getDueNotifications, markNotificationDelivered } from "./services/notifications";
 import { LocationProvider } from "./LocationContext";
 import { TravelLocationProvider } from "./TravelLocationContext";
+import { GlobalPlacesProvider } from "./hooks/useGlobalPlaces";
+
+const MapPage = lazy(() => import("./pages/MapPage").then((module) => ({ default: module.MapPage })));
+const ExplorePage = lazy(() => import("./pages/ExplorePage").then((module) => ({ default: module.ExplorePage })));
+const MatchesPage = lazy(() => import("./pages/MatchesPage").then((module) => ({ default: module.MatchesPage })));
+const SOSPage = lazy(() => import("./pages/SOSPage").then((module) => ({ default: module.SOSPage })));
+const AIChatPage = lazy(() => import("./pages/AIChatPage").then((module) => ({ default: module.AIChatPage })));
+const TravelGuidesPage = lazy(() => import("./pages/TravelGuidesPage").then((module) => ({ default: module.TravelGuidesPage })));
+const CurrencyConverterPage = lazy(() => import("./pages/CurrencyConverterPage").then((module) => ({ default: module.CurrencyConverterPage })));
+const VoiceTranslatorPage = lazy(() => import("./pages/VoiceTranslatorPage").then((module) => ({ default: module.VoiceTranslatorPage })));
+const TVConnectPage = lazy(() => import("./pages/TVConnectPage").then((module) => ({ default: module.TVConnectPage })));
+const MatchDayPage = lazy(() => import("./pages/MatchDayPage").then((module) => ({ default: module.MatchDayPage })));
+const HotelsPage = lazy(() => import("./pages/HotelsPage").then((module) => ({ default: module.HotelsPage })));
+const ESimPage = lazy(() => import("./pages/ESimPage").then((module) => ({ default: module.ESimPage })));
+const RestaurantDetailPage = lazy(() => import("./pages/RestaurantDetailPage").then((module) => ({ default: module.RestaurantDetailPage })));
+const TicketsPage = lazy(() => import("./pages/TicketsPage").then((module) => ({ default: module.TicketsPage })));
+const FanZonesPage = lazy(() => import("./pages/FanZonesPage").then((module) => ({ default: module.FanZonesPage })));
+const VIPPackagesPage = lazy(() => import("./pages/VIPPackagesPage").then((module) => ({ default: module.VIPPackagesPage })));
+const TransportationPage = lazy(() => import("./pages/TransportationPage").then((module) => ({ default: module.TransportationPage })));
+const MerchandisePage = lazy(() => import("./pages/MerchandisePage").then((module) => ({ default: module.MerchandisePage })));
+const FanZoneVIPPage = lazy(() => import("./pages/FanZoneVIPPage").then((module) => ({ default: module.FanZoneVIPPage })));
+const FanZoneTransportPage = lazy(() => import("./pages/FanZoneTransportPage").then((module) => ({ default: module.FanZoneTransportPage })));
+const FanZoneMerchPage = lazy(() => import("./pages/FanZoneMerchPage").then((module) => ({ default: module.FanZoneMerchPage })));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
+const PremiumPage = lazy(() => import("./pages/PremiumPage").then((module) => ({ default: module.PremiumPage })));
+const StadiumDetailPage = lazy(() => import("./pages/StadiumDetailPage").then((module) => ({ default: module.StadiumDetailPage })));
+const FavoritesPage = lazy(() => import("./pages/FavoritesPage").then((module) => ({ default: module.FavoritesPage })));
+const CollectionsPage = lazy(() => import("./pages/CollectionsPage").then((module) => ({ default: module.CollectionsPage })));
+const TripDraftsPage = lazy(() => import("./pages/TripDraftsPage").then((module) => ({ default: module.TripDraftsPage })));
+const OfflineGuidePage = lazy(() => import("./pages/OfflineGuidePage").then((module) => ({ default: module.OfflineGuidePage })));
+const NotificationSettingsPage = lazy(() => import("./pages/NotificationSettingsPage").then((module) => ({ default: module.NotificationSettingsPage })));
+const RevenueDashboardPage = lazy(() => import("./pages/RevenueDashboardPage").then((module) => ({ default: module.RevenueDashboardPage })));
+const CityGuidePage = lazy(() => import("./pages/CityGuidePage").then((module) => ({ default: module.CityGuidePage })));
+const ExpenseTrackerPage = lazy(() => import("./pages/ExpenseTrackerPage").then((module) => ({ default: module.ExpenseTrackerPage })));
+const ChecklistPage = lazy(() => import("./pages/ChecklistPage").then((module) => ({ default: module.ChecklistPage })));
+const MeetupPage = lazy(() => import("./pages/MeetupPage").then((module) => ({ default: module.MeetupPage })));
+const PhrasebookPage = lazy(() => import("./pages/PhrasebookPage").then((module) => ({ default: module.PhrasebookPage })));
+const AdminPage = lazy(() => import("./pages/AdminPage").then((module) => ({ default: module.AdminPage })));
+const TravelToolsPage = lazy(() => import("./pages/TravelToolsPage").then((module) => ({ default: module.TravelToolsPage })));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage").then((module) => ({ default: module.PrivacyPage })));
+const TermsPage = lazy(() => import("./pages/TermsPage").then((module) => ({ default: module.TermsPage })));
+const SupportPage = lazy(() => import("./pages/SupportPage").then((module) => ({ default: module.SupportPage })));
+const TravelLocationPage = lazy(() => import("./pages/TravelLocationPage").then((module) => ({ default: module.TravelLocationPage })));
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
 
 const LANGUAGE_STORAGE_KEY = "fanatlas_language";
 const LEGACY_LANGUAGE_STORAGE_KEY = "fanatlas.language";
 const ADMIN_EMAIL = "kadsimohamedads@gmail.com";
+const pageFallback = <div className="page-loading">Loading...</div>;
+let highTrafficPagesPrefetched = false;
 type PublicRoute = "/" | "/app" | "/privacy" | "/terms" | "/support";
 
 export type Tab =
@@ -89,6 +100,8 @@ export type Tab =
   | "premium"
   | "stadium"
   | "favorites"
+  | "collections"
+  | "tripDrafts"
   | "offline"
   | "cityguide"
   | "expenses"
@@ -231,6 +244,39 @@ function App() {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (route !== "/app" || tab !== "home" || !session || highTrafficPagesPrefetched) return;
+
+    let cancelled = false;
+    const idleWindow = window as IdleWindow;
+    const prefetchHighTrafficPages = () => {
+      if (cancelled || highTrafficPagesPrefetched) return;
+      highTrafficPagesPrefetched = true;
+      Promise.all([
+        import("./pages/ExplorePage"),
+        import("./pages/HotelsPage"),
+        import("./pages/MapPage"),
+        import("./pages/SOSPage")
+      ]).catch((error) => {
+        console.debug("High-traffic page prefetch failed:", error);
+      });
+    };
+
+    if (idleWindow.requestIdleCallback) {
+      const idleId = idleWindow.requestIdleCallback(prefetchHighTrafficPages, { timeout: 3000 });
+      return () => {
+        cancelled = true;
+        idleWindow.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timer = window.setTimeout(prefetchHighTrafficPages, 1000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [route, session, tab]);
+
   function navigateTo(nextTab: Tab) {
     if (route !== "/app") {
       navigateRoute("/app");
@@ -266,7 +312,9 @@ function App() {
   if (route === "/privacy") {
     return (
       <LanguageContext.Provider value={{ language, setLanguage, t }}>
-        <PrivacyPage onBack={publicBack} />
+        <Suspense fallback={pageFallback}>
+          <PrivacyPage onBack={publicBack} />
+        </Suspense>
       </LanguageContext.Provider>
     );
   }
@@ -274,7 +322,9 @@ function App() {
   if (route === "/terms") {
     return (
       <LanguageContext.Provider value={{ language, setLanguage, t }}>
-        <TermsPage onBack={publicBack} />
+        <Suspense fallback={pageFallback}>
+          <TermsPage onBack={publicBack} />
+        </Suspense>
       </LanguageContext.Provider>
     );
   }
@@ -282,7 +332,9 @@ function App() {
   if (route === "/support") {
     return (
       <LanguageContext.Provider value={{ language, setLanguage, t }}>
-        <SupportPage onBack={publicBack} />
+        <Suspense fallback={pageFallback}>
+          <SupportPage onBack={publicBack} />
+        </Suspense>
       </LanguageContext.Provider>
     );
   }
@@ -308,7 +360,9 @@ function App() {
 
     return (
       <LanguageContext.Provider value={{ language, setLanguage, t }}>
-        {publicPage}
+        <Suspense fallback={pageFallback}>
+          {publicPage}
+        </Suspense>
       </LanguageContext.Provider>
     );
   }
@@ -416,6 +470,33 @@ function App() {
     if (tab === "favorites") {
       return (
         <FavoritesPage
+          userId={session.user.id}
+          setExploreCategory={setExploreCategory}
+          setMapDestination={setSelectedMapDestination}
+          setSelectedRestaurant={setSelectedRestaurant}
+          setSelectedStadium={setSelectedStadium}
+          setTab={navigateTo}
+        />
+      );
+    }
+    if (tab === "collections") {
+      return (
+        <CollectionsPage
+          userId={session.user.id}
+          onBack={goBack}
+          setExploreCategory={setExploreCategory}
+          setMapDestination={setSelectedMapDestination}
+          setSelectedRestaurant={setSelectedRestaurant}
+          setSelectedStadium={setSelectedStadium}
+          setTab={navigateTo}
+        />
+      );
+    }
+    if (tab === "tripDrafts") {
+      return (
+        <TripDraftsPage
+          userId={session.user.id}
+          onBack={goBack}
           setExploreCategory={setExploreCategory}
           setMapDestination={setSelectedMapDestination}
           setSelectedRestaurant={setSelectedRestaurant}
@@ -482,6 +563,7 @@ function App() {
       return (
         <RestaurantDetailPage
           restaurant={selectedRestaurant}
+          setExploreCategory={setExploreCategory}
           setMapDestination={setSelectedMapDestination}
           onBack={goBack}
           setTab={navigateTo}
@@ -503,7 +585,7 @@ function App() {
     { id: "home", label: t.home, icon: Home },
     { id: "map", label: t.map, icon: MapPin },
     { id: "explore", label: t.explore, icon: Compass },
-    { id: "matches", label: t.matches, icon: Trophy },
+    { id: "matches", label: t.matches, icon: CalendarDays },
     { id: "sos", label: t.sos, icon: Shield },
     { id: "profile", label: t.profile, icon: User }
   ] as const;
@@ -516,29 +598,35 @@ function App() {
         t
       }}
     >
-      <div className="app-shell" dir={language === "ar" ? "rtl" : "ltr"}>
-        <main className="screen">{render()}</main>
+      <GlobalPlacesProvider>
+        <div className="app-shell" dir={language === "ar" ? "rtl" : "ltr"}>
+          <main className="screen">
+            <Suspense fallback={pageFallback}>
+              {render()}
+            </Suspense>
+          </main>
 
-        <nav className="bottom-nav">
-          {nav.map((item) => {
-            const Icon = item.icon;
+          <nav className="bottom-nav">
+            {nav.map((item) => {
+              const Icon = item.icon;
 
-            return (
-              <button
-                key={item.id}
-                className={`nav-btn ${tab === item.id ? "active" : ""}`}
-                onClick={() => {
-                  if (item.id === "map") setSelectedMapDestination(null);
-                  navigateTo(item.id as Tab);
-                }}
-              >
-                <Icon size={20} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+              return (
+                <button
+                  key={item.id}
+                  className={`nav-btn ${tab === item.id ? "active" : ""}`}
+                  onClick={() => {
+                    if (item.id === "map") setSelectedMapDestination(null);
+                    navigateTo(item.id as Tab);
+                  }}
+                >
+                  <Icon size={20} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </GlobalPlacesProvider>
     </LanguageContext.Provider>
   );
 }
