@@ -1,14 +1,17 @@
 import { useMemo } from "react";
 import { Copy, Edit3, Trash2 } from "lucide-react";
-import type { HydratedTripDraft, TripDraft, TripItineraryDay, TripTimeBlock } from "../../lib/tripDrafts";
-import { UNSCHEDULED_TRIP_DAY_ID } from "../../lib/tripDrafts";
+import type { HydratedTripDraft, TripDraft, TripItineraryDay, TripPlaceVisitStatus, TripTimeBlock } from "../../lib/tripDrafts";
+import { calculateTripProgress, UNSCHEDULED_TRIP_DAY_ID } from "../../lib/tripDrafts";
 import type { SavedPlaceAction } from "../../lib/savedPlaceActions";
-import { getTripAlignmentNotice, getTripContextLines } from "./displayUtils";
+import { buildTripMemoryPhotoGroups, getTripAlignmentNotice, getTripContextLines } from "./displayUtils";
 import { CreateMissingTripDaysControl } from "./CreateMissingTripDaysControl";
 import { TripDetailsEditor } from "./TripDetailsEditor";
 import { DeleteTripDraftConfirm, InlineTripDraftNameEditor } from "./TripInlineControls";
 import { TripItinerary } from "./TripItinerary";
-import type { TripNearbyGroupMoveRequest, TripPlannerTranslate } from "./types";
+import { TripProgressCard } from "./TripProgressCard";
+import { TripPlanningActions } from "./TripPlanningActions";
+import { TripMemoryGallery } from "./TripMemoryGallery";
+import type { PlanningActionCallbacks, TripNearbyGroupMoveRequest, TripPhotoCallbacks, TripPlannerTranslate } from "./types";
 
 export function TripDraftDetailView({
   deleteId,
@@ -47,6 +50,13 @@ export function TripDraftDetailView({
   onMovePlace,
   onMovePlaceWithinSection,
   onSetPlaceTimeBlock,
+  onUpdatePlaceNote,
+  onUpdatePlaceVisitStatus,
+  placePlanningActionCallbacks,
+  tripPlanningActionCallbacks,
+  photoCallbacks,
+  addingPhotosPlaceId,
+  onRemoveMemoryGalleryPhoto,
   onNewDayTitleChange,
   onRemovePlace,
   onRename,
@@ -93,6 +103,13 @@ export function TripDraftDetailView({
   onMovePlace: (draftId: string, logicalPlaceId: string, dayId: string) => void;
   onMovePlaceWithinSection: (draftId: string, logicalPlaceId: string, direction: "up" | "down", placeName: string) => void;
   onSetPlaceTimeBlock: (draftId: string, logicalPlaceId: string, timeBlock: TripTimeBlock | null, placeName: string) => void;
+  onUpdatePlaceNote: (draftId: string, logicalPlaceId: string, note: string | null, expectedCurrentNote: string | null) => boolean;
+  onUpdatePlaceVisitStatus: (draftId: string, logicalPlaceId: string, status: TripPlaceVisitStatus) => boolean;
+  placePlanningActionCallbacks: (draftId: string, logicalPlaceId: string) => PlanningActionCallbacks;
+  tripPlanningActionCallbacks: (draftId: string) => PlanningActionCallbacks;
+  photoCallbacks: (draftId: string, logicalPlaceId: string) => TripPhotoCallbacks;
+  addingPhotosPlaceId: string | null;
+  onRemoveMemoryGalleryPhoto: (draftId: string, logicalPlaceId: string, photoId: string) => Promise<boolean>;
   onNewDayTitleChange: (title: string) => void;
   onRemovePlace: (logicalPlaceId: string) => void;
   onRename: (draftId: string) => void;
@@ -106,6 +123,15 @@ export function TripDraftDetailView({
   const unavailable = isLoadingPlaces ? 0 : draft.counts.unavailable;
   const contextLines = getTripContextLines(draft, language, translate);
   const alignmentNotice = getTripAlignmentNotice(draft, translate);
+  const progress = useMemo(
+    () => calculateTripProgress(draft.draft.placeReferences),
+    [draft.draft.placeReferences]
+  );
+  const memoryGroups = useMemo(
+    () => buildTripMemoryPhotoGroups(draft, translate),
+    [draft, translate]
+  );
+  const photoCount = draft.draft.placeReferences.reduce((count, reference) => count + (reference.photoIds?.length || 0), 0);
   const moveOptions = useMemo(
     () => [
       { id: UNSCHEDULED_TRIP_DAY_ID, label: translate("tripDrafts.itinerary.unscheduled") },
@@ -188,7 +214,7 @@ export function TripDraftDetailView({
       )}
 
       {deleteId === draft.draft.id && (
-        <DeleteTripDraftConfirm draft={draft.draft} onCancel={onCancelDelete} onConfirm={() => onConfirmDelete(draft.draft.id)} translate={translate} />
+        <DeleteTripDraftConfirm draft={draft.draft} photoCount={photoCount} onCancel={onCancelDelete} onConfirm={() => onConfirmDelete(draft.draft.id)} translate={translate} />
       )}
 
       {unavailable > 0 && (
@@ -196,6 +222,15 @@ export function TripDraftDetailView({
           {translate("tripDrafts.unavailableNotice").replace("{count}", String(unavailable))}
         </div>
       )}
+
+      <TripProgressCard language={language} progress={progress} translate={translate} />
+
+      <TripPlanningActions
+        actions={draft.draft.planningActions || []}
+        callbacks={tripPlanningActionCallbacks(draft.draft.id)}
+        language={language}
+        translate={translate}
+      />
 
       <TripItinerary
         deleteDayId={deleteDayId}
@@ -220,7 +255,18 @@ export function TripDraftDetailView({
         onRemovePlace={onRemovePlace}
         onRenameDay={onRenameDay}
         onSetPlaceTimeBlock={onSetPlaceTimeBlock}
+        onUpdatePlaceNote={onUpdatePlaceNote}
+        onUpdatePlaceVisitStatus={onUpdatePlaceVisitStatus}
+        placePlanningActionCallbacks={placePlanningActionCallbacks}
+        photoCallbacks={photoCallbacks}
+        addingPhotosPlaceId={addingPhotosPlaceId}
         onStartRenameDay={onStartRenameDay}
+        translate={translate}
+      />
+
+      <TripMemoryGallery
+        groups={memoryGroups}
+        onRemovePhoto={(logicalPlaceId, photoId) => onRemoveMemoryGalleryPhoto(draft.draft.id, logicalPlaceId, photoId)}
         translate={translate}
       />
     </>

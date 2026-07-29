@@ -5,7 +5,7 @@ import {
   type NearbyPlaceInput
 } from "../../lib/tripGeography";
 import { getSavedPlaceActions } from "../../lib/savedPlaceActions";
-import type { TripNearbyPlaceGroupItem, TripPlaceActionRow, TripPlaceOrderPosition, TripPlannerTranslate } from "./types";
+import type { TripMemoryPhotoGroup, TripNearbyPlaceGroupItem, TripPlaceActionRow, TripPlaceOrderPosition, TripPlannerTranslate } from "./types";
 
 const FEET_PER_METER = 3.28084;
 const METERS_PER_MILE = 1609.344;
@@ -62,6 +62,25 @@ export function getTripPlaceActionRows(places: HydratedTripDraftPlace[]): TripPl
     actions: getSavedPlaceActions(item.place),
     position: getTripPlaceOrderPosition(places, item.reference.logicalPlaceId)
   }] : []);
+}
+
+export function buildTripMemoryPhotoGroups(draft: HydratedTripDraft, translate: TripPlannerTranslate): TripMemoryPhotoGroup[] {
+  const scheduledSections = draft.sections.filter((section) => section.kind === "day");
+  const unscheduledSections = draft.sections.filter((section) => section.kind === "unscheduled");
+  return [...scheduledSections, ...unscheduledSections].flatMap((section) => {
+    const sectionPlaces = section.kind === "day" && section.timeBlocks
+      ? section.timeBlocks.flatMap((block) => block.places)
+      : section.places;
+    return sectionPlaces.flatMap((item) => {
+      const photoIds = item.reference.photoIds || [];
+      if (photoIds.length === 0) return [];
+      return [{
+        placeReferenceId: item.reference.logicalPlaceId,
+        placeName: item.place?.name || translate("tripDrafts.notes.unavailablePlace"),
+        photoIds
+      }];
+    });
+  });
 }
 
 export function getTripNearbyPlaceGroupItems(
@@ -153,6 +172,15 @@ export function translateTripDraftError(error: TripDraftMutationError | null, tr
   if (error === "invalid_destination_day") return translate("tripDrafts.itinerary.errors.invalidDestination");
   if (error === "invalid_place_group") return translate("tripDrafts.nearbyGroups.errors.invalidGroup");
   if (error === "stale_place_group") return translate("tripDrafts.nearbyGroups.errors.staleGroup");
+  if (error === "place_note_too_long") return translate("tripDrafts.notes.errors.tooLong");
+  if (error === "stale_place_note") return translate("tripDrafts.notes.errors.stale");
+  if (error === "invalid_visit_status") return translate("tripDrafts.visitStatus.errors.invalid");
+  if (error === "invalid_planning_action") return translate("tripDrafts.planningActions.errors.empty");
+  if (error === "planning_action_too_long") return translate("tripDrafts.planningActions.errors.tooLong");
+  if (error === "planning_action_not_found") return translate("tripDrafts.planningActions.errors.notFound");
+  if (error === "stale_planning_action") return translate("tripDrafts.planningActions.errors.stale");
+  if (error === "invalid_photo_id") return translate("tripDrafts.photos.errors.addFailed");
+  if (error === "photo_not_found") return translate("tripDrafts.photos.unavailable");
   if (error === "place_not_found") return translate("tripDrafts.itinerary.errors.placeNotFound");
   if (error === "reserved_day_operation") return translate("tripDrafts.itinerary.errors.dayNotFound");
   if (error === "storage_unavailable") return translate("tripDrafts.errors.storageUnavailable");

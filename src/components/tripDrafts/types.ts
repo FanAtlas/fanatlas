@@ -1,4 +1,4 @@
-import type { HydratedTripDraftPlace, TripTimeBlock } from "../../lib/tripDrafts";
+import type { HydratedTripDraftPlace, TripPlaceVisitStatus, TripTimeBlock } from "../../lib/tripDrafts";
 import type { SavedPlace } from "../../lib/savedPlaces";
 import type { SavedPlaceAction } from "../../lib/savedPlaceActions";
 
@@ -31,6 +31,26 @@ export type TripPlacePlanningActions = {
   onSetTimeBlock?: (timeBlock: TripTimeBlock | null) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onUpdateNote?: (note: string | null, expectedCurrentNote: string | null) => boolean;
+  onUpdateVisitStatus?: (status: TripPlaceVisitStatus) => boolean;
+};
+
+export type PlanningActionCallbacks = {
+  onAdd: (text: string) => boolean;
+  onUpdate: (actionId: string, expectedCurrentText: string, text: string) => boolean;
+  onToggle: (actionId: string) => boolean;
+  onRemove: (actionId: string) => boolean;
+};
+
+export type TripPhotoCallbacks = {
+  onAddPhotos: (files: File[]) => Promise<boolean>;
+  onRemovePhoto: (photoId: string) => Promise<boolean>;
+};
+
+export type TripMemoryPhotoGroup = {
+  placeReferenceId: string;
+  placeName: string;
+  photoIds: readonly string[];
 };
 
 export type TripNearbyPlaceGroupItem = {

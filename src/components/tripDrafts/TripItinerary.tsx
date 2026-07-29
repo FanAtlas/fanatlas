@@ -1,8 +1,8 @@
 import { Plus } from "lucide-react";
-import type { HydratedTripDraft, TripItineraryDay, TripTimeBlock } from "../../lib/tripDrafts";
+import type { HydratedTripDraft, TripItineraryDay, TripPlaceVisitStatus, TripTimeBlock } from "../../lib/tripDrafts";
 import type { SavedPlaceAction } from "../../lib/savedPlaceActions";
 import { TripItinerarySection } from "./TripItinerarySection";
-import type { TripDayDestinationOption, TripNearbyGroupMoveRequest, TripPlannerTranslate } from "./types";
+import type { PlanningActionCallbacks, TripDayDestinationOption, TripNearbyGroupMoveRequest, TripPhotoCallbacks, TripPlannerTranslate } from "./types";
 
 export function TripItinerary({
   deleteDayId,
@@ -27,6 +27,11 @@ export function TripItinerary({
   onRemovePlace,
   onRenameDay,
   onSetPlaceTimeBlock,
+  onUpdatePlaceNote,
+  onUpdatePlaceVisitStatus,
+  placePlanningActionCallbacks,
+  photoCallbacks,
+  addingPhotosPlaceId,
   onStartRenameDay,
   translate
 }: {
@@ -52,6 +57,11 @@ export function TripItinerary({
   onRemovePlace: (logicalPlaceId: string) => void;
   onRenameDay: (draftId: string, dayId: string) => void;
   onSetPlaceTimeBlock: (draftId: string, logicalPlaceId: string, timeBlock: TripTimeBlock | null, placeName: string) => void;
+  onUpdatePlaceNote: (draftId: string, logicalPlaceId: string, note: string | null, expectedCurrentNote: string | null) => boolean;
+  onUpdatePlaceVisitStatus: (draftId: string, logicalPlaceId: string, status: TripPlaceVisitStatus) => boolean;
+  placePlanningActionCallbacks: (draftId: string, logicalPlaceId: string) => PlanningActionCallbacks;
+  photoCallbacks: (draftId: string, logicalPlaceId: string) => TripPhotoCallbacks;
+  addingPhotosPlaceId: string | null;
   onStartRenameDay: (day: TripItineraryDay) => void;
   translate: TripPlannerTranslate;
 }) {
@@ -100,6 +110,11 @@ export function TripItinerary({
               onMovePlace={onMovePlace}
               onMovePlaceWithinSection={onMovePlaceWithinSection}
               onSetPlaceTimeBlock={onSetPlaceTimeBlock}
+              onUpdatePlaceNote={onUpdatePlaceNote}
+              onUpdatePlaceVisitStatus={onUpdatePlaceVisitStatus}
+              placePlanningActionCallbacks={placePlanningActionCallbacks}
+              photoCallbacks={photoCallbacks}
+              addingPhotosPlaceId={addingPhotosPlaceId}
               onRemovePlace={onRemovePlace}
               onRenameDay={onRenameDay}
               onStartRenameDay={onStartRenameDay}

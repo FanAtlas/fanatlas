@@ -105,21 +105,28 @@ export function DeleteTripDayConfirm({
 
 export function DeleteTripDraftConfirm({
   draft,
+  photoCount = 0,
   onCancel,
   onConfirm,
   translate
 }: {
   draft: TripDraft;
+  photoCount?: number;
   onCancel: () => void;
   onConfirm: () => void;
   translate: TripPlannerTranslate;
 }) {
+  const hasPhotos = photoCount > 0;
   return (
-    <div className="collection-delete-confirm" role="group" aria-label={translate("tripDrafts.deleteConfirm.title")}>
-      <strong>{translate("tripDrafts.deleteConfirm.title")}</strong>
-      <p>{translate("tripDrafts.deleteConfirm.description").replace("{name}", draft.name)}</p>
+    <div className="collection-delete-confirm" role="group" aria-label={translate(hasPhotos ? "tripDrafts.photos.deleteTripPhotosTitle" : "tripDrafts.deleteConfirm.title")}>
+      <strong>{translate(hasPhotos ? "tripDrafts.photos.deleteTripPhotosTitle" : "tripDrafts.deleteConfirm.title")}</strong>
+      <p>{hasPhotos
+        ? translate("tripDrafts.photos.deleteTripPhotosDescription").replace("{name}", draft.name)
+        : translate("tripDrafts.deleteConfirm.description").replace("{name}", draft.name)}</p>
       <div>
-        <button className="secondary-btn" onClick={onConfirm} type="button">{translate("tripDrafts.deleteConfirm.confirm")}</button>
+        <button className="secondary-btn" onClick={onConfirm} type="button">
+          {translate(hasPhotos ? "tripDrafts.photos.deleteTripAndPhotos" : "tripDrafts.deleteConfirm.confirm")}
+        </button>
         <button className="secondary-btn" onClick={onCancel} type="button">{translate("tripDrafts.deleteConfirm.cancel")}</button>
       </div>
     </div>

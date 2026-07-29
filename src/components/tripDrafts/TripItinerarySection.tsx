@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { Edit3, Trash2 } from "lucide-react";
-import type { HydratedTripItinerarySection, TripItineraryDay, TripTimeBlock } from "../../lib/tripDrafts";
+import type { HydratedTripItinerarySection, TripItineraryDay, TripPlaceVisitStatus, TripTimeBlock } from "../../lib/tripDrafts";
 import type { SavedPlaceAction } from "../../lib/savedPlaceActions";
 import { formatLongIsoDate, getTripPlaceActionRows } from "./displayUtils";
 import { DeleteTripDayConfirm, InlineTripDayTitleEditor } from "./TripInlineControls";
 import { TripItineraryTimeBlock } from "./TripItineraryTimeBlock";
 import { TripPlaceCardList } from "./TripPlaceCardList";
-import type { TripDayDestinationOption, TripNearbyGroupMoveRequest, TripPlannerTranslate } from "./types";
+import type { PlanningActionCallbacks, TripDayDestinationOption, TripNearbyGroupMoveRequest, TripPhotoCallbacks, TripPlannerTranslate } from "./types";
 
 export function TripItinerarySection({
   deleteDayId,
@@ -26,6 +26,11 @@ export function TripItinerarySection({
   onMovePlace,
   onMovePlaceWithinSection,
   onSetPlaceTimeBlock,
+  onUpdatePlaceNote,
+  onUpdatePlaceVisitStatus,
+  placePlanningActionCallbacks,
+  photoCallbacks,
+  addingPhotosPlaceId,
   onRemovePlace,
   onRenameDay,
   onStartRenameDay,
@@ -49,6 +54,11 @@ export function TripItinerarySection({
   onMovePlace: (draftId: string, logicalPlaceId: string, dayId: string) => void;
   onMovePlaceWithinSection: (draftId: string, logicalPlaceId: string, direction: "up" | "down", placeName: string) => void;
   onSetPlaceTimeBlock: (draftId: string, logicalPlaceId: string, timeBlock: TripTimeBlock | null, placeName: string) => void;
+  onUpdatePlaceNote: (draftId: string, logicalPlaceId: string, note: string | null, expectedCurrentNote: string | null) => boolean;
+  onUpdatePlaceVisitStatus: (draftId: string, logicalPlaceId: string, status: TripPlaceVisitStatus) => boolean;
+  placePlanningActionCallbacks: (draftId: string, logicalPlaceId: string) => PlanningActionCallbacks;
+  photoCallbacks: (draftId: string, logicalPlaceId: string) => TripPhotoCallbacks;
+  addingPhotosPlaceId: string | null;
   onRemovePlace: (logicalPlaceId: string) => void;
   onRenameDay: (draftId: string, dayId: string) => void;
   onStartRenameDay: (day: TripItineraryDay) => void;
@@ -134,11 +144,18 @@ export function TripItinerarySection({
         <TripPlaceCardList
           actionRows={actionRows}
           draftId={draftId}
+          language={language}
+          places={section.places}
           moveOptions={moveOptions}
           onExecuteAction={onExecuteAction}
           onMovePlace={onMovePlace}
           onMovePlaceWithinSection={onMovePlaceWithinSection}
           onRemovePlace={onRemovePlace}
+          onUpdatePlaceNote={onUpdatePlaceNote}
+          onUpdatePlaceVisitStatus={onUpdatePlaceVisitStatus}
+          placePlanningActionCallbacks={placePlanningActionCallbacks}
+          photoCallbacks={photoCallbacks}
+          addingPhotosPlaceId={addingPhotosPlaceId}
           translate={translate}
         />
       ) : (
@@ -158,6 +175,11 @@ export function TripItinerarySection({
                 onMovePlaceWithinSection={onMovePlaceWithinSection}
                 onRemovePlace={onRemovePlace}
                 onSetPlaceTimeBlock={onSetPlaceTimeBlock}
+                onUpdatePlaceNote={onUpdatePlaceNote}
+                onUpdatePlaceVisitStatus={onUpdatePlaceVisitStatus}
+                placePlanningActionCallbacks={placePlanningActionCallbacks}
+                photoCallbacks={photoCallbacks}
+                addingPhotosPlaceId={addingPhotosPlaceId}
                 translate={translate}
               />
             </div>
