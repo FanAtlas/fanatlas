@@ -7,6 +7,7 @@ import {
   Heart,
   Languages,
   LogOut,
+  NotebookTabs,
   Shield,
   Ticket,
   Wrench
@@ -236,6 +237,15 @@ export function ProfilePage({
           <span>
             <strong>{t.travelTools}</strong>
             <small>eSIM, currency, translator, checklist, expenses, and guides</small>
+          </span>
+          <em>›</em>
+        </button>
+
+        <button className="profile-row" onClick={() => setTab("passport")}>
+          <span className="profile-row-icon"><NotebookTabs size={19} /></span>
+          <span>
+            <strong>{t["travelPassport.title"]}</strong>
+            <small>{t["travelPassport.profileDescription"]}</small>
           </span>
           <em>›</em>
         </button>

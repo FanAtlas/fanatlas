@@ -25,6 +25,7 @@ export const PLANNING_ACTION_MAX_LENGTH = TRIP_DRAFT_LIMITS.maxPlanningActionLen
 export type TripDraftId = string;
 export type TripDayId = string;
 export type TripDraftStatus = "draft" | "planned" | "archived";
+export type TripCompletionStatus = "draft" | "active" | "completed" | "archived";
 export type TripTimeBlock = "morning" | "afternoon" | "evening";
 export type TripPlaceVisitStatus = "planned" | "visited" | "skipped";
 
@@ -96,6 +97,8 @@ export type TripDraft = {
   id: TripDraftId;
   name: string;
   status: TripDraftStatus;
+  completionStatus?: TripCompletionStatus;
+  completedAt?: string;
   source?: TripDraftSource;
   destination?: TripDestination;
   travelDates?: TripTravelDates;
@@ -601,6 +604,50 @@ export function deleteTripDraft(state: TripDraftsState, draftId: string): TripDr
   return { ok: true, value: { ...current, drafts: current.drafts.filter((draft) => draft.id !== draftId) } };
 }
 
+export function markTripCompleted(
+  state: TripDraftsState,
+  draftId: string,
+  completedAt: string = isoNow()
+): TripDraftMutationResult<TripDraftsState> {
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const normalizedCompletedAt = validIsoString(completedAt) || isoNow();
+  if (draft.completionStatus === "completed" && draft.completedAt) return { ok: true, value: current };
+  return {
+    ok: true,
+    value: replaceDraft(current, {
+      ...draft,
+      completionStatus: "completed",
+      completedAt: draft.completedAt || normalizedCompletedAt,
+      updatedAt: isoNow()
+    })
+  };
+}
+
+export function reopenCompletedTrip(
+  state: TripDraftsState,
+  draftId: string,
+  nextStatus: Exclude<TripCompletionStatus, "completed"> = "draft"
+): TripDraftMutationResult<TripDraftsState> {
+  if (nextStatus !== "draft" && nextStatus !== "active" && nextStatus !== "archived") {
+    return { ok: false, error: "invalid_visit_status" };
+  }
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  if (draft.completionStatus === nextStatus && !draft.completedAt) return { ok: true, value: current };
+  return {
+    ok: true,
+    value: replaceDraft(current, {
+      ...draft,
+      completionStatus: nextStatus,
+      completedAt: undefined,
+      updatedAt: isoNow()
+    })
+  };
+}
+
 export function createTripDraftWithPlace(
   state: TripDraftsState,
   input: { name: string; place: AddPlaceToTripDraftInput }
@@ -704,6 +751,8 @@ export function duplicateTripDraft(
     id: createDraftId(),
     name,
     status: "draft",
+    completionStatus: "draft",
+    completedAt: undefined,
     source: original.source ? { ...original.source } : undefined,
     destination: original.destination ? { ...original.destination } : undefined,
     travelDates: original.travelDates ? { ...original.travelDates } : undefined,
@@ -713,6 +762,7 @@ export function duplicateTripDraft(
       ...reference,
       dayId: reference.dayId === UNSCHEDULED_TRIP_DAY_ID ? UNSCHEDULED_TRIP_DAY_ID : dayIdMap.get(reference.dayId) || UNSCHEDULED_TRIP_DAY_ID,
       persistedReferences: reference.persistedReferences.map((persisted) => ({ ...persisted })),
+      visitStatus: undefined,
       planningActions: reference.planningActions?.map(clonePlanningAction),
       photoIds: []
     })),
@@ -1663,6 +1713,8 @@ export function normalizeTripDraft(value: unknown): TripDraft | null {
     id,
     name,
     status: normalizeStatus(record.status),
+    completionStatus: normalizeTripCompletionStatus(record.completionStatus),
+    completedAt: normalizeTripCompletedAt(record.completedAt, record.completionStatus),
     source: normalizeSource(record.source),
     destination: normalizeTripDestination(record.destination),
     travelDates: normalizeTripTravelDates(record.travelDates),
@@ -1857,6 +1909,16 @@ function clonePlanningAction(action: PlanningAction): PlanningAction {
 
 function normalizeStatus(value: unknown): TripDraftStatus {
   return value === "planned" || value === "archived" ? value : "draft";
+}
+
+export function normalizeTripCompletionStatus(value: unknown): TripCompletionStatus {
+  if (value === "active" || value === "completed" || value === "archived") return value;
+  return "draft";
+}
+
+function normalizeTripCompletedAt(value: unknown, completionStatus: unknown): string | undefined {
+  if (normalizeTripCompletionStatus(completionStatus) !== "completed") return undefined;
+  return validIsoString(value) || undefined;
 }
 
 function normalizeSource(value: unknown): TripDraftSource | undefined {
