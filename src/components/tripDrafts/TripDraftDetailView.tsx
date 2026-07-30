@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Copy, Edit3, Trash2 } from "lucide-react";
 import type { HydratedTripDraft, TripDraft, TripItineraryDay, TripPlaceVisitStatus, TripTimeBlock } from "../../lib/tripDrafts";
 import { calculateTripProgress, UNSCHEDULED_TRIP_DAY_ID } from "../../lib/tripDrafts";
+import { collectTripDraftPhotoReferences } from "../../lib/tripJournal";
 import type { SavedPlaceAction } from "../../lib/savedPlaceActions";
 import { buildTripMemoryPhotoGroups, getTripAlignmentNotice, getTripContextLines } from "./displayUtils";
 import { CreateMissingTripDaysControl } from "./CreateMissingTripDaysControl";
@@ -131,7 +132,7 @@ export function TripDraftDetailView({
     () => buildTripMemoryPhotoGroups(draft, translate),
     [draft, translate]
   );
-  const photoCount = draft.draft.placeReferences.reduce((count, reference) => count + (reference.photoIds?.length || 0), 0);
+  const photoCount = collectTripDraftPhotoReferences(draft.draft).allPhotoIds.size;
   const moveOptions = useMemo(
     () => [
       { id: UNSCHEDULED_TRIP_DAY_ID, label: translate("tripDrafts.itinerary.unscheduled") },

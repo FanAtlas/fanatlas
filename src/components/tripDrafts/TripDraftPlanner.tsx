@@ -16,6 +16,7 @@ import type {
 import type { SavedPlaceAction } from "../../lib/savedPlaceActions";
 import { prepareTripPhotoFile } from "../../lib/prepareTripPhoto";
 import { deleteTripPhotoOwnedBy, deleteTripPhotosByIds, PHOTO_MAX_SELECTION_COUNT, saveTripPhoto, type TripPhotoStorageError } from "../../lib/tripPhotoStorage";
+import { collectTripDraftPhotoReferences } from "../../lib/tripJournal";
 import { createDefaultMissingDayTitles, formatTimeBlockSuccess, translateTripDraftError } from "./displayUtils";
 import { TripDraftDetailView } from "./TripDraftDetailView";
 import { TripDraftListView } from "./TripDraftListView";
@@ -218,7 +219,7 @@ export function TripDraftPlanner({
 
   async function confirmDelete(draftId: string) {
     const draft = hydratedDrafts.find((item) => item.draft.id === draftId)?.draft;
-    const photoIds = draft?.placeReferences.flatMap((reference) => reference.photoIds || []) || [];
+    const photoIds = draft ? [...collectTripDraftPhotoReferences(draft).allPhotoIds] : [];
     if (!deleteDraft(draftId)) {
       setLocalError(translate("tripDrafts.errors.notFound"));
       return;
@@ -508,6 +509,13 @@ export function TripDraftPlanner({
       setLocalMessage("");
       return false;
     }
+    const latestDraft = result.value.drafts.find((item) => item.id === draftId);
+    const stillReferencedByJournal = Boolean(latestDraft?.journalEntries?.some((entry) => (entry.photoIds || []).includes(photoId)));
+    if (stillReferencedByJournal) {
+      setLocalError("");
+      setLocalMessage(translate("tripDrafts.photos.removedSuccess"));
+      return true;
+    }
     const deleteResult = await deleteTripPhotoOwnedBy({ photoId, tripDraftId: draftId, placeReferenceId: logicalPlaceId });
     setLocalError(deleteResult.ok === false ? translatePhotoStorageError(deleteResult.code, translate) : "");
     setLocalMessage(deleteResult.ok ? translate("tripDrafts.photos.removedSuccess") : "");
@@ -526,7 +534,12 @@ export function TripDraftPlanner({
       setLocalError(translateTripDraftError("storage_write_failed", translate));
       return;
     }
-    const cleanup = await deleteTripPhotosByIds(photoIds, { tripDraftId: draftId, placeReferenceId: logicalPlaceId });
+    const remainingReferences = collectTripDraftPhotoReferences({
+      ...draft,
+      placeReferences: draft.placeReferences.filter((reference) => reference.logicalPlaceId !== logicalPlaceId)
+    });
+    const orphanedRemovedPlacePhotoIds = photoIds.filter((photoId) => !remainingReferences.allPhotoIds.has(photoId));
+    const cleanup = await deleteTripPhotosByIds(orphanedRemovedPlacePhotoIds, { tripDraftId: draftId, placeReferenceId: logicalPlaceId });
     setLocalError(cleanup.ok && cleanup.value.failed === 0 ? "" : translate("tripDrafts.photos.errors.cleanupIncomplete"));
     setLocalMessage(translate("tripDrafts.photos.placePhotosRemovedSuccess"));
   }

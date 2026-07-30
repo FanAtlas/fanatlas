@@ -250,6 +250,24 @@ export function ProfilePage({
           <em>›</em>
         </button>
 
+        <button className="profile-row" onClick={() => setTab("journal")}>
+          <span className="profile-row-icon"><NotebookTabs size={19} /></span>
+          <span>
+            <strong>{t["travelJournal.title"]}</strong>
+            <small>{t["travelJournal.profileDescription"]}</small>
+          </span>
+          <em>›</em>
+        </button>
+
+        <button className="profile-row" onClick={() => setTab("insights")}>
+          <span className="profile-row-icon"><NotebookTabs size={19} /></span>
+          <span>
+            <strong>{t["travelInsights.title"]}</strong>
+            <small>{t["travelInsights.profileDescription"]}</small>
+          </span>
+          <em>›</em>
+        </button>
+
         <button className="profile-row" onClick={() => setTab("offline")}>
           <span className="profile-row-icon"><Globe2 size={19} /></span>
           <span>

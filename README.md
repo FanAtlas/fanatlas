@@ -22,6 +22,49 @@ npm install
 npm run dev
 ```
 
+## Developer quality commands
+
+FanAtlas uses npm, TypeScript, ESLint, Vitest, and Playwright for local and CI validation.
+
+```bash
+npm run typecheck      # TypeScript only, no build output
+npm run lint           # ESLint quality checks
+npm run lint:fix       # ESLint auto-fix, review the diff afterwards
+npm run test           # Vitest unit tests
+npm run test:watch     # Vitest watch mode
+npm run test:coverage  # Vitest with V8 coverage
+npm run build          # TypeScript plus production Vite build
+npm run test:e2e       # Playwright browser smoke tests
+npm run validate       # typecheck, lint, unit tests, build
+npm run validate:full  # validate plus Playwright
+```
+
+Install Chromium for local browser tests when needed:
+
+```bash
+npx playwright install chromium
+```
+
+Before release, run the clean validation sequence:
+
+```bash
+npm ci
+npm run validate
+npx playwright install chromium
+npm run test:e2e
+```
+
+Manual checks that are not fully automated live in [docs/qa-checklist.md](docs/qa-checklist.md).
+
+### Testing guidance
+
+- Add unit tests for new pure domain helpers and derivation rules.
+- Use deterministic fixtures with fixed IDs, timestamps, and `YYYY-MM-DD` dates.
+- Do not use real credentials, real journal content, uploaded user photos, or private coordinates in tests.
+- Unit and integration tests should not depend on network services or Supabase.
+- Browser tests should use synthetic storage state or current route behavior, never production accounts.
+- Keep assertions behavior-focused; avoid full-page snapshots.
+
 ## Environment variables
 
 Copy `.env.example` to `.env` and fill:

@@ -102,6 +102,28 @@ function nearbyHotels(city: string, stadium: string) {
 }
 
 export function MatchDayPage({ match, onBack, setMapDestination, setTab }: Props) {
+  const [weather, setWeather] = useState<FanAtlasWeather>(() => emptyWeather());
+  const [weatherError, setWeatherError] = useState("");
+  const [checked, setChecked] = useState<string[]>([]);
+  const [notificationMessage, setNotificationMessage] = useState("");
+
+  useEffect(() => {
+    if (!match) return;
+    const destination = getStadiumDestination(match.stadium, match.city);
+    if (!destination) return;
+
+    getWeather(destination.lat, destination.lng)
+      .then((result) => {
+        setWeather(result);
+        setWeatherError("");
+      })
+      .catch((error) => {
+        console.error("Match day weather error:", error);
+        setWeather(emptyWeather());
+        setWeatherError("Weather unavailable. Review conditions again before departure.");
+      });
+  }, [match]);
+
   if (!match) {
     return (
       <>
@@ -129,8 +151,6 @@ export function MatchDayPage({ match, onBack, setMapDestination, setTab }: Props
 
   const tips = citySafetyTips(m.city);
   const kickoff = kickoffDate(m);
-  const [weather, setWeather] = useState<FanAtlasWeather>(() => emptyWeather());
-  const [weatherError, setWeatherError] = useState("");
   const recommendedArrival = timeBefore(kickoff, 2.5);
   const city = cityKey(m.city);
   const restaurants = places
@@ -151,25 +171,6 @@ export function MatchDayPage({ match, onBack, setMapDestination, setTab }: Props
     "Water before leaving",
     "Hotel address saved"
   ];
-  const [checked, setChecked] = useState<string[]>([]);
-  const [notificationMessage, setNotificationMessage] = useState("");
-
-  useEffect(() => {
-    const destination = getStadiumDestination(m.stadium, m.city);
-    if (!destination) return;
-
-    getWeather(destination.lat, destination.lng)
-      .then((result) => {
-        setWeather(result);
-        setWeatherError("");
-      })
-      .catch((error) => {
-        console.error("Match day weather error:", error);
-        setWeather(emptyWeather());
-        setWeatherError("Weather unavailable. Review conditions again before departure.");
-      });
-  }, [m.city, m.stadium]);
-
   const timeline = [
     { time: "08:00", title: "Leave Hotel", detail: `Confirm ticket, ID, phone battery, and route to ${city}.` },
     { time: "09:00", title: "Fan Zone", detail: `Start at ${zoneList[0]?.name || m.fanZone} while crowds are still manageable.` },

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addPlacePlanningAction as addPlacePlanningActionDomain,
   addPlacePhotoIds as addPlacePhotoIdsDomain,
+  addTripJournalEntry as addTripJournalEntryDomain,
   addPlaceToTripDraft,
   addTripPlanningAction as addTripPlanningActionDomain,
   createTripDraft,
@@ -11,7 +12,9 @@ import {
   createTripDay,
   deleteTripDraft,
   deleteTripDay,
+  deleteTripJournalEntry as deleteTripJournalEntryDomain,
   duplicateTripDraft,
+  attachPhotoToTripJournalEntry as attachPhotoToTripJournalEntryDomain,
   hydrateTripDrafts,
   moveTripPlace,
   moveTripPlaceGroup,
@@ -19,6 +22,8 @@ import {
   readTripDrafts,
   removePlacePlanningAction as removePlacePlanningActionDomain,
   removePlacePhotoId as removePlacePhotoIdDomain,
+  removePhotoFromTripJournalEntry as removePhotoFromTripJournalEntryDomain,
+  removePhotoIdFromTripDraftReferences as removePhotoIdFromTripDraftReferencesDomain,
   removePlaceFromTripDraft,
   removeTripPlanningAction as removeTripPlanningActionDomain,
   renameTripDay,
@@ -27,7 +32,10 @@ import {
   setTripPlaceTimeBlock,
   TRIP_DRAFTS_STORAGE_KEY,
   togglePlacePlanningAction as togglePlacePlanningActionDomain,
+  toggleTripJournalEntryFavorite as toggleTripJournalEntryFavoriteDomain,
   toggleTripPlanningAction as toggleTripPlanningActionDomain,
+  setTripJournalEntryStatus as setTripJournalEntryStatusDomain,
+  updateTripJournalEntry as updateTripJournalEntryDomain,
   updateTripDetails,
   updatePlacePlanningAction as updatePlacePlanningActionDomain,
   updateTripPlanningAction as updateTripPlanningActionDomain,
@@ -55,6 +63,7 @@ import {
   type UpdateTripPlaceVisitStatusInput,
   type UpdateTripDetailsInput
 } from "../lib/tripDrafts";
+import type { CreateTripJournalEntryInput, TripJournalEntry, TripJournalEntryStatus, UpdateTripJournalEntryInput } from "../lib/tripJournalTypes";
 import type { PlaceCollection } from "../lib/placeCollections";
 import type { SavedPlace } from "../lib/savedPlaces";
 
@@ -84,7 +93,13 @@ export type TripDraftUndoActionType =
   | "add-place-action"
   | "update-place-action"
   | "toggle-place-action"
-  | "remove-place-action";
+  | "remove-place-action"
+  | "add-journal-entry"
+  | "update-journal-entry"
+  | "delete-journal-entry"
+  | "toggle-journal-favorite"
+  | "set-journal-status"
+  | "update-journal-photos";
 
 export type TripDraftUndoState = {
   available: boolean;
@@ -144,6 +159,14 @@ type UseTripDraftsResult = {
   removePlacePlanningAction: (draftId: string, input: PlacePlanningActionTargetInput) => TripDraftMutationResult<TripDraftsState>;
   addPlacePhotoIds: (draftId: string, input: PlacePhotoIdsInput) => TripDraftMutationResult<TripDraftsState>;
   removePlacePhotoId: (draftId: string, input: PlacePhotoIdInput) => TripDraftMutationResult<TripDraftsState>;
+  removePhotoIdFromDraftReferences: (draftId: string, photoId: string) => TripDraftMutationResult<TripDraftsState>;
+  addJournalEntry: (draftId: string, input: CreateTripJournalEntryInput) => TripDraftMutationResult<{ state: TripDraftsState; entry: TripJournalEntry }>;
+  updateJournalEntry: (draftId: string, input: UpdateTripJournalEntryInput) => TripDraftMutationResult<TripDraftsState>;
+  deleteJournalEntry: (draftId: string, entryId: string) => TripDraftMutationResult<TripDraftsState>;
+  toggleJournalEntryFavorite: (draftId: string, entryId: string) => TripDraftMutationResult<TripDraftsState>;
+  setJournalEntryStatus: (draftId: string, entryId: string, status: TripJournalEntryStatus) => TripDraftMutationResult<TripDraftsState>;
+  attachPhotoToJournalEntry: (draftId: string, entryId: string, photoId: string) => TripDraftMutationResult<TripDraftsState>;
+  removePhotoFromJournalEntry: (draftId: string, entryId: string, photoId: string) => TripDraftMutationResult<TripDraftsState>;
   addPlaceToDraft: (draftId: string, place: SavedPlace) => TripDraftMutationResult<TripDraftsState>;
   createDraftWithPlace: (input: { name: string; place: SavedPlace }) => TripDraftMutationResult<{ state: TripDraftsState; draft: TripDraft }>;
   undoLastMutation: () => TripDraftUndoResult;
@@ -638,6 +661,100 @@ export function useTripDrafts(savedPlaces: readonly SavedPlace[]): UseTripDrafts
     return commitNonUndoablePhotoMutation(removePlacePhotoIdDomain(stateRef.current, draftId, input));
   }, [commitNonUndoablePhotoMutation]);
 
+  const removePhotoIdFromDraftReferences = useCallback((draftId: string, photoId: string): TripDraftMutationResult<TripDraftsState> => {
+    return commitNonUndoablePhotoMutation(removePhotoIdFromTripDraftReferencesDomain(stateRef.current, draftId, photoId));
+  }, [commitNonUndoablePhotoMutation]);
+
+  const addJournalEntry = useCallback((draftId: string, input: CreateTripJournalEntryInput) => {
+    const beforeState = stateRef.current;
+    const result = addTripJournalEntryDomain(beforeState, draftId, input);
+    if (!result.ok || !result.value) {
+      setError(result.error || "invalid_journal_entry");
+      return result;
+    }
+    return commitUndoableState(beforeState, result.value.state, draftId, "add-journal-entry", 1)
+      ? result
+      : { ok: false, error: "storage_write_failed" as const };
+  }, [commitUndoableState]);
+
+  const updateJournalEntry = useCallback((draftId: string, input: UpdateTripJournalEntryInput): TripDraftMutationResult<TripDraftsState> => {
+    const beforeState = stateRef.current;
+    const result = updateTripJournalEntryDomain(beforeState, draftId, input);
+    if (!result.ok) {
+      setError(result.error || "journal_entry_not_found");
+      return result;
+    }
+    if (!result.value) return result;
+    return commitUndoableState(beforeState, result.value, draftId, "update-journal-entry", 1)
+      ? result
+      : { ok: false, error: "storage_write_failed" };
+  }, [commitUndoableState]);
+
+  const deleteJournalEntry = useCallback((draftId: string, entryId: string): TripDraftMutationResult<TripDraftsState> => {
+    const beforeState = stateRef.current;
+    const result = deleteTripJournalEntryDomain(beforeState, draftId, { entryId });
+    if (!result.ok) {
+      setError(result.error || "journal_entry_not_found");
+      return result;
+    }
+    if (!result.value) return result;
+    return commitUndoableState(beforeState, result.value, draftId, "delete-journal-entry", 1)
+      ? result
+      : { ok: false, error: "storage_write_failed" };
+  }, [commitUndoableState]);
+
+  const toggleJournalEntryFavorite = useCallback((draftId: string, entryId: string): TripDraftMutationResult<TripDraftsState> => {
+    const beforeState = stateRef.current;
+    const result = toggleTripJournalEntryFavoriteDomain(beforeState, draftId, { entryId });
+    if (!result.ok) {
+      setError(result.error || "journal_entry_not_found");
+      return result;
+    }
+    if (!result.value) return result;
+    return commitUndoableState(beforeState, result.value, draftId, "toggle-journal-favorite", 1)
+      ? result
+      : { ok: false, error: "storage_write_failed" };
+  }, [commitUndoableState]);
+
+  const setJournalEntryStatus = useCallback((draftId: string, entryId: string, status: TripJournalEntryStatus): TripDraftMutationResult<TripDraftsState> => {
+    const beforeState = stateRef.current;
+    const result = setTripJournalEntryStatusDomain(beforeState, draftId, { entryId, status });
+    if (!result.ok) {
+      setError(result.error || "journal_entry_not_found");
+      return result;
+    }
+    if (!result.value) return result;
+    return commitUndoableState(beforeState, result.value, draftId, "set-journal-status", 1)
+      ? result
+      : { ok: false, error: "storage_write_failed" };
+  }, [commitUndoableState]);
+
+  const attachPhotoToJournalEntry = useCallback((draftId: string, entryId: string, photoId: string): TripDraftMutationResult<TripDraftsState> => {
+    const beforeState = stateRef.current;
+    const result = attachPhotoToTripJournalEntryDomain(beforeState, draftId, { entryId, photoId });
+    if (!result.ok) {
+      setError(result.error || "journal_entry_not_found");
+      return result;
+    }
+    if (!result.value) return result;
+    return commitUndoableState(beforeState, result.value, draftId, "update-journal-photos", 1)
+      ? result
+      : { ok: false, error: "storage_write_failed" };
+  }, [commitUndoableState]);
+
+  const removePhotoFromJournalEntry = useCallback((draftId: string, entryId: string, photoId: string): TripDraftMutationResult<TripDraftsState> => {
+    const beforeState = stateRef.current;
+    const result = removePhotoFromTripJournalEntryDomain(beforeState, draftId, { entryId, photoId });
+    if (!result.ok) {
+      setError(result.error || "journal_entry_not_found");
+      return result;
+    }
+    if (!result.value) return result;
+    return commitUndoableState(beforeState, result.value, draftId, "update-journal-photos", 1)
+      ? result
+      : { ok: false, error: "storage_write_failed" };
+  }, [commitUndoableState]);
+
   const addPlaceToDraft = useCallback((draftId: string, place: SavedPlace): TripDraftMutationResult<TripDraftsState> => {
     const input = savedPlaceToTripDraftReferenceInput(place);
     if (!input) {
@@ -721,6 +838,14 @@ export function useTripDrafts(savedPlaces: readonly SavedPlace[]): UseTripDrafts
     removePlacePlanningAction,
     addPlacePhotoIds,
     removePlacePhotoId,
+    removePhotoIdFromDraftReferences,
+    addJournalEntry,
+    updateJournalEntry,
+    deleteJournalEntry,
+    toggleJournalEntryFavorite,
+    setJournalEntryStatus,
+    attachPhotoToJournalEntry,
+    removePhotoFromJournalEntry,
     addPlaceToDraft,
     createDraftWithPlace,
     undoLastMutation,
@@ -746,6 +871,10 @@ function cloneTripDraftForUndo(draft: TripDraft): TripDraft {
     destination: draft.destination ? { ...draft.destination } : undefined,
     travelDates: draft.travelDates ? { ...draft.travelDates } : undefined,
     planningActions: draft.planningActions?.map((action) => ({ ...action })),
+    journalEntries: draft.journalEntries?.map((entry) => ({
+      ...entry,
+      photoIds: entry.photoIds ? [...entry.photoIds] : undefined
+    })),
     itineraryDays: draft.itineraryDays.map((day) => ({ ...day })),
     placeReferences: draft.placeReferences.map((reference) => ({
       ...reference,

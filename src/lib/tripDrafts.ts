@@ -1,4 +1,16 @@
 import type { CollectionPersistedReference, PlaceCollection } from "./placeCollections";
+import {
+  attachJournalPhotoId,
+  createTripJournalEntry,
+  normalizeTripJournalEntries,
+  removeJournalPhotoId,
+  removePhotoIdFromAllJournalEntries,
+  removeTripJournalEntryById,
+  unlinkJournalEntriesFromDay,
+  unlinkJournalEntriesFromPlace,
+  updateTripJournalEntryValue
+} from "./tripJournal";
+import type { CreateTripJournalEntryInput, TripJournalEntry, TripJournalEntryStatus, UpdateTripJournalEntryInput } from "./tripJournalTypes";
 import type { SavedPlace, SavedPlaceStorageSource } from "./savedPlaces";
 
 export const TRIP_DRAFTS_STORAGE_KEY = "fanatlas_trip_drafts_v1";
@@ -105,6 +117,7 @@ export type TripDraft = {
   planningActions?: PlanningAction[];
   itineraryDays: TripItineraryDay[];
   placeReferences: TripDraftPlaceReference[];
+  journalEntries?: TripJournalEntry[];
   createdAt: string;
   updatedAt: string;
 };
@@ -220,6 +233,9 @@ export type TripDraftMutationError =
   | "stale_planning_action"
   | "invalid_photo_id"
   | "photo_not_found"
+  | "journal_entry_not_found"
+  | "invalid_journal_entry"
+  | "journal_photo_limit"
   | "place_not_found"
   | "invalid_place_reference"
   | "place_already_in_draft"
@@ -299,6 +315,10 @@ export type PlacePhotoIdsInput = {
 export type PlacePhotoIdInput = {
   logicalPlaceId: string;
   photoId: string;
+};
+
+export type TripJournalEntryTargetInput = {
+  entryId: string;
 };
 
 export function restoreTripDraftSnapshot(
@@ -757,6 +777,7 @@ export function duplicateTripDraft(
     destination: original.destination ? { ...original.destination } : undefined,
     travelDates: original.travelDates ? { ...original.travelDates } : undefined,
     planningActions: original.planningActions?.map(clonePlanningAction),
+    journalEntries: [],
     itineraryDays,
     placeReferences: original.placeReferences.map((reference) => ({
       ...reference,
@@ -787,13 +808,19 @@ export function removePlaceFromTripDraft(
 
   const nextReferences = resequenceReferencesByDayAndTimeBlock(draft.placeReferences.filter((item) => item.logicalPlaceId !== logicalPlaceId));
   if (nextReferences.length === draft.placeReferences.length) return { ok: true, value: current };
+  const now = isoNow();
 
   return {
     ok: true,
     value: {
       ...current,
       drafts: current.drafts.map((item) => (
-        item.id === draftId ? { ...item, placeReferences: nextReferences, updatedAt: isoNow() } : item
+        item.id === draftId ? {
+          ...item,
+          placeReferences: nextReferences,
+          journalEntries: unlinkJournalEntriesFromPlace(item.journalEntries, logicalPlaceId, now),
+          updatedAt: now
+        } : item
       ))
     }
   };
@@ -940,6 +967,7 @@ export function deleteTripDay(
     ...draft,
     itineraryDays: resequenceDays(draft.itineraryDays.filter((day) => day.id !== dayId)),
     placeReferences: nextReferences,
+    journalEntries: unlinkJournalEntriesFromDay(draft.journalEntries, dayId, now),
     updatedAt: now
   };
 
@@ -1395,6 +1423,160 @@ export function removePlacePhotoId(
   };
 }
 
+export function removePhotoIdFromTripDraftReferences(
+  state: TripDraftsState,
+  draftId: string,
+  photoIdValue: string
+): TripDraftMutationResult<TripDraftsState> {
+  const photoId = readString(photoIdValue);
+  if (!photoId) return { ok: false, error: "invalid_photo_id" };
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const nextPlaceReferences = draft.placeReferences.map((reference) => ({
+    ...reference,
+    photoIds: normalizeTripPhotoIds(reference.photoIds).filter((id) => id !== photoId)
+  }));
+  const nextJournalEntries = removePhotoIdFromAllJournalEntries(draft.journalEntries, photoId);
+  if (JSON.stringify(nextPlaceReferences) === JSON.stringify(draft.placeReferences) && JSON.stringify(nextJournalEntries) === JSON.stringify(draft.journalEntries || [])) {
+    return { ok: true, value: current };
+  }
+  return {
+    ok: true,
+    value: replaceDraft(current, {
+      ...draft,
+      placeReferences: nextPlaceReferences,
+      journalEntries: nextJournalEntries,
+      updatedAt: isoNow()
+    })
+  };
+}
+
+export function addTripJournalEntry(
+  state: TripDraftsState,
+  draftId: string,
+  input: CreateTripJournalEntryInput
+): TripDraftMutationResult<{ state: TripDraftsState; entry: TripJournalEntry }> {
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const now = isoNow();
+  const entry = createTripJournalEntry(input, { id: createDraftId(), now, draft });
+  if (!entry) return { ok: false, error: "invalid_journal_entry" };
+  const nextDraft = {
+    ...draft,
+    journalEntries: [...(draft.journalEntries || []), entry],
+    updatedAt: now
+  };
+  return { ok: true, value: { state: replaceDraft(current, nextDraft), entry } };
+}
+
+export function updateTripJournalEntry(
+  state: TripDraftsState,
+  draftId: string,
+  input: UpdateTripJournalEntryInput
+): TripDraftMutationResult<TripDraftsState> {
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const entries = draft.journalEntries || [];
+  const entry = entries.find((item) => item.id === input.entryId);
+  if (!entry) return { ok: false, error: "journal_entry_not_found" };
+  const nextEntry = updateTripJournalEntryValue(entry, input, { now: isoNow(), draft });
+  if (!nextEntry) return { ok: false, error: "invalid_journal_entry" };
+  if (nextEntry === entry) return { ok: true, value: current };
+  return {
+    ok: true,
+    value: replaceDraft(current, {
+      ...draft,
+      journalEntries: entries.map((item) => item.id === input.entryId ? nextEntry : item),
+      updatedAt: nextEntry.updatedAt
+    })
+  };
+}
+
+export function deleteTripJournalEntry(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripJournalEntryTargetInput
+): TripDraftMutationResult<TripDraftsState> {
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const result = removeTripJournalEntryById(draft.journalEntries || [], input.entryId);
+  if (!result.removed) return { ok: false, error: "journal_entry_not_found" };
+  return {
+    ok: true,
+    value: replaceDraft(current, {
+      ...draft,
+      journalEntries: result.entries,
+      updatedAt: isoNow()
+    })
+  };
+}
+
+export function toggleTripJournalEntryFavorite(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripJournalEntryTargetInput
+): TripDraftMutationResult<TripDraftsState> {
+  const draft = normalizeTripDraftsState(state).drafts.find((item) => item.id === draftId);
+  const entry = draft?.journalEntries?.find((item) => item.id === input.entryId);
+  return updateTripJournalEntry(state, draftId, { entryId: input.entryId, favorite: !entry?.favorite });
+}
+
+export function setTripJournalEntryStatus(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripJournalEntryTargetInput & { status: TripJournalEntryStatus }
+): TripDraftMutationResult<TripDraftsState> {
+  return updateTripJournalEntry(state, draftId, { entryId: input.entryId, status: input.status });
+}
+
+export function attachPhotoToTripJournalEntry(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripJournalEntryTargetInput & { photoId: string }
+): TripDraftMutationResult<TripDraftsState> {
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const entry = draft.journalEntries?.find((item) => item.id === input.entryId);
+  if (!entry) return { ok: false, error: "journal_entry_not_found" };
+  const photoIds = attachJournalPhotoId(entry.photoIds, input.photoId);
+  if (photoIds.length >= 20 && !photoIds.includes(readString(input.photoId))) return { ok: false, error: "journal_photo_limit" };
+  return updateTripJournalEntry(state, draftId, { entryId: input.entryId, photoIds });
+}
+
+export function removePhotoFromTripJournalEntry(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripJournalEntryTargetInput & { photoId: string }
+): TripDraftMutationResult<TripDraftsState> {
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const entry = draft.journalEntries?.find((item) => item.id === input.entryId);
+  if (!entry) return { ok: false, error: "journal_entry_not_found" };
+  return updateTripJournalEntry(state, draftId, { entryId: input.entryId, photoIds: removeJournalPhotoId(entry.photoIds, input.photoId) });
+}
+
+export function linkTripJournalEntryToDay(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripJournalEntryTargetInput & { itineraryDayId: string | null }
+): TripDraftMutationResult<TripDraftsState> {
+  return updateTripJournalEntry(state, draftId, { entryId: input.entryId, itineraryDayId: input.itineraryDayId });
+}
+
+export function linkTripJournalEntryToPlace(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripJournalEntryTargetInput & { placeReferenceId: string | null }
+): TripDraftMutationResult<TripDraftsState> {
+  return updateTripJournalEntry(state, draftId, { entryId: input.entryId, placeReferenceId: input.placeReferenceId });
+}
+
 export function moveTripPlaceGroup(
   state: TripDraftsState,
   draftId: string,
@@ -1721,6 +1903,10 @@ export function normalizeTripDraft(value: unknown): TripDraft | null {
     planningActions: normalizePlanningActions(record.planningActions),
     itineraryDays,
     placeReferences,
+    journalEntries: normalizeTripJournalEntries(record.journalEntries, {
+      validDayIds,
+      validPlaceReferenceIds: new Set(placeReferences.map((reference) => reference.logicalPlaceId))
+    }),
     createdAt: validIsoString(record.createdAt) || isoNow(),
     updatedAt: validIsoString(record.updatedAt) || validIsoString(record.createdAt) || isoNow()
   };
@@ -1893,6 +2079,10 @@ function cloneTripDraft(draft: TripDraft): TripDraft {
     destination: draft.destination ? { ...draft.destination } : undefined,
     travelDates: draft.travelDates ? { ...draft.travelDates } : undefined,
     planningActions: draft.planningActions?.map(clonePlanningAction),
+    journalEntries: draft.journalEntries?.map((entry) => ({
+      ...entry,
+      photoIds: entry.photoIds ? [...entry.photoIds] : undefined
+    })),
     itineraryDays: draft.itineraryDays.map((day) => ({ ...day })),
     placeReferences: draft.placeReferences.map((reference) => ({
       ...reference,

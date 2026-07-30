@@ -2,6 +2,306 @@
   box-sizing: border-box;
 }
 
+.travel-insights-page {
+  min-height: 100vh;
+  padding: 18px clamp(14px, 3vw, 34px) 48px;
+  color: #eef6ff;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(14, 165, 233, 0.18), transparent 34%),
+    radial-gradient(circle at 92% 10%, rgba(244, 114, 182, 0.14), transparent 32%),
+    linear-gradient(180deg, #06111f 0%, #091523 100%);
+}
+
+.travel-insights-topbar,
+.travel-insights-hero,
+.insights-section,
+.insights-quality,
+.insights-empty-state {
+  width: min(1120px, 100%);
+  margin-inline: auto;
+}
+
+.travel-insights-topbar,
+.insights-hero-actions,
+.insights-section-header,
+.insights-controls,
+.insights-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.travel-insights-topbar {
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.travel-insights-topbar span,
+.insights-private-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 850;
+}
+
+.travel-insights-hero,
+.insights-empty-state {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(8, 47, 73, 0.82));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+}
+
+.travel-insights-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+  padding: clamp(22px, 4vw, 42px);
+}
+
+.travel-insights-hero h1 {
+  margin: 8px 0;
+  font-size: clamp(34px, 6vw, 64px);
+  letter-spacing: 0;
+}
+
+.travel-insights-hero p,
+.insights-supporting,
+.insights-empty-inline,
+.insights-metric-card span,
+.insights-metric-card small,
+.insights-highlight-card span,
+.insights-highlight-card small,
+.insights-ranking-card small,
+.insights-trip-card small,
+.insights-timeline span {
+  color: #9fb1c8;
+}
+
+.travel-insights-hero strong {
+  display: block;
+  margin-top: 14px;
+  color: #e0f2fe;
+  font-size: clamp(18px, 3vw, 25px);
+}
+
+.insights-private-badge {
+  width: fit-content;
+  margin: 0;
+  border-radius: 999px;
+  background: rgba(14, 165, 233, 0.12);
+  color: #bae6fd;
+  padding: 7px 11px;
+  font-size: 12px;
+}
+
+.insights-hero-actions,
+.insights-toolbar {
+  justify-content: flex-end;
+}
+
+.insights-toolbar {
+  width: min(1120px, 100%);
+  margin: 18px auto 0;
+}
+
+.insights-toolbar select,
+.insights-controls input,
+.insights-controls select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  background: #07111f;
+  color: #eef6ff;
+  padding: 11px;
+}
+
+.insights-toolbar label,
+.insights-controls label {
+  display: grid;
+  gap: 6px;
+  color: #bfd3eb;
+  font-weight: 800;
+}
+
+.insights-summary-grid,
+.insights-highlight-grid,
+.insights-season-grid {
+  width: min(1120px, 100%);
+  margin: 18px auto 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px;
+}
+
+.insights-summary-grid.compact {
+  width: 100%;
+  margin-top: 0;
+}
+
+.insights-metric-card,
+.insights-highlight-card,
+.insights-season-grid article,
+.insights-month-grid article,
+.insights-ranking-card,
+.insights-trip-card,
+.insights-year-list article,
+.insights-timeline article {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+}
+
+.insights-metric-card,
+.insights-highlight-card,
+.insights-season-grid article,
+.insights-month-grid article,
+.insights-year-list article,
+.insights-ranking-card,
+.insights-trip-card,
+.insights-timeline article {
+  padding: 16px;
+}
+
+.insights-metric-card {
+  display: grid;
+  gap: 8px;
+}
+
+.insights-metric-card svg {
+  color: #67e8f9;
+}
+
+.insights-metric-card strong,
+.insights-highlight-card strong,
+.insights-season-grid strong,
+.insights-month-grid strong {
+  font-size: clamp(26px, 4vw, 38px);
+}
+
+.insights-section,
+.insights-quality {
+  margin-top: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 22px;
+  background: rgba(7, 17, 31, 0.58);
+  padding: clamp(16px, 3vw, 24px);
+}
+
+.insights-section h2,
+.insights-quality summary,
+.insights-empty-state h2 {
+  margin: 0 0 14px;
+  font-size: clamp(22px, 3vw, 32px);
+}
+
+.insights-section-header {
+  justify-content: space-between;
+}
+
+.insights-controls {
+  margin: 10px 0 14px;
+}
+
+.insights-controls label {
+  min-width: min(100%, 220px);
+  flex: 1;
+}
+
+.insights-year-list,
+.insights-ranking-list,
+.insights-trip-list,
+.insights-timeline,
+.insights-timeline ul {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.insights-bar {
+  position: relative;
+  overflow: hidden;
+  block-size: 9px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.insights-bar span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22d3ee, #f472b6);
+}
+
+.insights-month-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+  gap: 10px;
+}
+
+.insights-ranking-list,
+.insights-trip-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
+
+.insights-ranking-card h3,
+.insights-trip-card h3 {
+  margin: 0 0 8px;
+}
+
+.insights-timeline article {
+  border-inline-start: 3px solid #22d3ee;
+}
+
+.insights-timeline ul {
+  margin-top: 10px;
+}
+
+.insights-timeline li li {
+  display: grid;
+  gap: 3px;
+  padding: 8px 0;
+  border-block-start: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.insights-quality details {
+  color: #dbeafe;
+}
+
+.insights-quality summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.insights-empty-state {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: clamp(30px, 6vw, 58px);
+}
+
+@media (max-width: 760px) {
+  .travel-insights-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .insights-hero-actions,
+  .insights-toolbar {
+    justify-content: stretch;
+  }
+
+  .insights-hero-actions .secondary-btn,
+  .insights-toolbar label {
+    width: 100%;
+  }
+}
+
 /* ========================================
    FanAtlas Global Travel Design System v1
    ========================================
@@ -7336,6 +7636,418 @@ select option {
 @media (prefers-reduced-motion: reduce) {
   .passport-stamp {
     transform: none;
+  }
+}
+
+.travel-journal-page {
+  display: grid;
+  gap: 16px;
+  color: #eef6ff;
+}
+
+.travel-journal-page__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.travel-journal-page__topbar > span,
+.journal-private-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+}
+
+.travel-journal-hero,
+.journal-story-hero {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(244, 114, 182, 0.22);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(244, 114, 182, 0.14), rgba(15, 23, 42, 0.96)),
+    repeating-linear-gradient(135deg, rgba(251, 191, 36, 0.06) 0 1px, transparent 1px 18px);
+  padding: 20px;
+}
+
+.travel-journal-hero h1,
+.journal-story-hero h1,
+.journal-story-list h2,
+.journal-timeline h2,
+.journal-favorites h2,
+.journal-entry-list h2 {
+  margin: 0;
+}
+
+.travel-journal-hero p,
+.journal-story-hero p {
+  margin: 6px 0 0;
+  color: #cbd5e1;
+}
+
+.journal-private-badge {
+  width: fit-content;
+  border: 1px solid rgba(244, 114, 182, 0.24);
+  border-radius: 999px;
+  background: rgba(244, 114, 182, 0.1);
+  color: #f9a8d4;
+  padding: 7px 11px;
+  font-size: 12px;
+}
+
+.travel-journal-hero__metrics,
+.journal-quick-actions,
+.journal-filter-row,
+.journal-editor-actions,
+.journal-entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.journal-filter-selects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 10px;
+}
+
+.travel-journal-hero__metrics span,
+.journal-summary-card,
+.journal-story-card,
+.journal-entry-card,
+.journal-empty-state,
+.journal-search-panel {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.84);
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.22);
+}
+
+.travel-journal-hero__metrics span,
+.journal-summary-card {
+  min-inline-size: 135px;
+  display: grid;
+  gap: 5px;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.travel-journal-hero__metrics strong,
+.journal-summary-card strong {
+  font-size: 28px;
+}
+
+.journal-summary-grid,
+.journal-story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 10px;
+}
+
+.journal-summary-card svg {
+  color: #f9a8d4;
+}
+
+.journal-summary-card span,
+.journal-story-card small,
+.journal-story-card em,
+.journal-entry-card small,
+.journal-empty-inline {
+  color: #9fb1c8;
+}
+
+.journal-quick-actions .primary-btn,
+.journal-quick-actions .secondary-btn {
+  min-block-size: 44px;
+}
+
+.journal-story-list,
+.journal-entry-list,
+.journal-timeline,
+.journal-favorites,
+.journal-story-view {
+  display: grid;
+  gap: 14px;
+}
+
+.journal-story-card {
+  display: grid;
+  gap: 8px;
+  border-radius: 16px;
+  padding: 15px;
+  color: #eef6ff;
+  text-align: start;
+}
+
+.journal-story-card span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #f9a8d4;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.journal-story-card strong {
+  overflow-wrap: anywhere;
+}
+
+.journal-story-card em {
+  font-style: normal;
+}
+
+.journal-search-panel {
+  display: grid;
+  gap: 12px;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.journal-search-panel label {
+  display: grid;
+  gap: 8px;
+}
+
+.journal-search-panel input,
+.journal-editor-dialog input,
+.journal-editor-dialog textarea,
+.journal-editor-dialog select,
+.journal-filter-selects select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  background: #07111f;
+  color: #eef6ff;
+  padding: 12px;
+}
+
+.journal-filter-row button,
+.journal-mood-picker button {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbeafe;
+  padding: 9px 12px;
+  font-weight: 850;
+}
+
+.journal-filter-row button.active,
+.journal-mood-picker button.active {
+  border-color: rgba(244, 114, 182, 0.48);
+  background: rgba(244, 114, 182, 0.16);
+  color: #fce7f3;
+}
+
+.journal-entry-list ul,
+.journal-timeline ol {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.journal-entry-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.journal-entry-card__body {
+  display: grid;
+  gap: 10px;
+  min-inline-size: 0;
+}
+
+.journal-entry-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.journal-entry-header h3,
+.journal-entry-header p,
+.journal-entry-text {
+  margin: 0;
+}
+
+.journal-entry-text {
+  color: #dbeafe;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+
+.journal-entry-meta {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.journal-entry-meta span {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.1);
+  color: #cbd5e1;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.journal-timeline-marker {
+  inline-size: 12px;
+  block-size: 12px;
+  margin-block-start: 8px;
+  border-radius: 999px;
+  background: #f9a8d4;
+  box-shadow: 0 0 0 5px rgba(244, 114, 182, 0.12);
+}
+
+.journal-photo-strip,
+.journal-memory-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+  gap: 8px;
+}
+
+.journal-photo-strip img,
+.journal-photo-strip span,
+.journal-memory-picker img,
+.journal-memory-picker button > span:first-child {
+  aspect-ratio: 1;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.12);
+  object-fit: cover;
+  color: #9fb1c8;
+  font-size: 11px;
+  text-align: center;
+}
+
+.journal-memory-picker button {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.84);
+  color: #dbeafe;
+  padding: 8px;
+}
+
+.journal-memory-picker button.selected {
+  border-color: rgba(244, 114, 182, 0.52);
+  background: rgba(244, 114, 182, 0.16);
+}
+
+.journal-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, 0.78);
+  padding: 16px;
+}
+
+.journal-editor-dialog {
+  width: min(100%, 760px);
+  max-block-size: calc(100dvh - 32px);
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(244, 114, 182, 0.24);
+  border-radius: 20px;
+  background: #081221;
+  padding: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.journal-editor-header,
+.journal-delete-confirm {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.journal-editor-header h2,
+.journal-photo-picker h3 {
+  margin: 0;
+}
+
+.journal-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+
+.journal-mood-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 0;
+  padding: 0;
+}
+
+.journal-mood-picker legend {
+  inline-size: 100%;
+  color: #dce9fb;
+  font-weight: 850;
+}
+
+.journal-favorite-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.journal-photo-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.secondary-btn.danger {
+  color: #fb7185;
+}
+
+.journal-empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.journal-empty-state h2,
+.journal-empty-state p {
+  margin: 0;
+}
+
+@media (min-width: 760px) {
+  .travel-journal-hero,
+  .journal-story-hero {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .travel-journal-page__topbar,
+  .journal-story-hero,
+  .journal-editor-header,
+  .journal-editor-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .journal-entry-card {
+    grid-template-columns: 1fr;
   }
 }
 

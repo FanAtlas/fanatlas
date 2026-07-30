@@ -181,6 +181,9 @@ export function translateTripDraftError(error: TripDraftMutationError | null, tr
   if (error === "stale_planning_action") return translate("tripDrafts.planningActions.errors.stale");
   if (error === "invalid_photo_id") return translate("tripDrafts.photos.errors.addFailed");
   if (error === "photo_not_found") return translate("tripDrafts.photos.unavailable");
+  if (error === "journal_entry_not_found") return translate("travelJournal.errors.entryNotFound");
+  if (error === "invalid_journal_entry") return translate("travelJournal.errors.invalidEntry");
+  if (error === "journal_photo_limit") return translate("travelJournal.errors.photoLimit");
   if (error === "place_not_found") return translate("tripDrafts.itinerary.errors.placeNotFound");
   if (error === "reserved_day_operation") return translate("tripDrafts.itinerary.errors.dayNotFound");
   if (error === "storage_unavailable") return translate("tripDrafts.errors.storageUnavailable");
