@@ -45,6 +45,12 @@ Use this checklist for release validation that is not fully automated.
 - Explorer privacy check: seeded Journal body text and raw photo IDs do not appear in visible text, DOM attributes, URLs, replay labels, panels, or console output.
 - Explorer local-only check: no map tile, geocoding, OSRM, AI, or analytics request is triggered by opening or using `/explorer`.
 - Explorer cross-tab check: Trip Draft changes in another tab update derived Explorer data through existing storage synchronization.
+- Travel Intelligence context minimization excludes unrelated trips, Journal body by default, raw photo IDs, authentication data, and precise location unless explicitly permitted for a compatible task.
+- Travel Intelligence tool plans block disabled network tools and all write/external-action behavior.
+- Travel Intelligence orchestration uses provider-neutral model profiles and rejects incapable fallbacks.
+- Travel Intelligence feature flags fail closed: provider calls, tool execution, diagnostics, image analysis, document analysis, research, and write actions are disabled unless explicitly enabled in a future step.
+- Travel Intelligence safe trace/log review contains only reason codes, aggregate context presence, cost/latency classes, warning codes, and tool/model IDs.
+- Travel Intelligence local-only check: no OpenAI, Anthropic, Gemini, AI gateway, geocoding, weather, visa, routing, external logging, or analytics request is introduced by the foundation.
 
 ## Accessibility
 

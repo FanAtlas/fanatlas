@@ -209,6 +209,26 @@ Step 52 release notes:
 - Authenticated Explorer Playwright coverage is deferred until FanAtlas has a safe nonproduction auth strategy. The current E2E suite verifies private route behavior through the existing auth gate, while component and domain tests cover seeded Explorer interactions.
 - Explorer must not create remote map, geocoding, routing, analytics, AI, IndexedDB Blob, or photo-CDN requests during initial render.
 
+## FanAtlas Travel Intelligence Foundation
+
+FanAtlas Travel Intelligence is the provider-neutral foundation for future FanAtlas AI. Part 1 adds no live AI calls, no provider SDKs, no chatbot UI, no streaming, no tool execution, and no context persistence.
+
+Architecture:
+
+- FanAtlas UI creates a structured `TravelIntelligenceRequest`.
+- The Travel Context Engine builds minimized projections from Trip Drafts, Passport, Insights, Explorer, Journal metadata, Memory metadata, Saved Places, profile preferences, and current-location context only when explicitly scoped and permitted.
+- Field policies classify data as public, application, personal, sensitive, or highly sensitive.
+- Tool planning uses a static read/suggest registry and blocks disabled network tools by default.
+- The AI Orchestrator matches tasks to provider-neutral capabilities and model profiles without exposing provider brands to users.
+- Usage estimates are planning classes only; no fake currency amounts are shown.
+- Safe logs and traces contain reason codes and aggregate context presence only, never raw prompts, Journal body, photo IDs, precise coordinates, documents, storage keys, tokens, or API keys.
+
+Default feature flags fail closed. Only `travelIntelligenceFoundation` is enabled by default; provider calls, tool execution, image understanding, document analysis, external research, write actions, developer diagnostics, and the future FanAtlas AI user experience remain disabled.
+
+High-stakes and current-information tasks such as emergency, visa, customs, transportation, and availability-dependent guidance are marked as requiring current information or authoritative tools in future phases. Stored FanAtlas data is not treated as enough for those tasks.
+
+See `docs/travel-intelligence-architecture.md` for the source-of-truth, privacy, tool-planning, orchestration, and logging boundaries.
+
 ## Vercel deployment
 
 1. Go to Vercel
