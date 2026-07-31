@@ -62,6 +62,7 @@ const TravelLocationPage = lazy(() => import("./pages/TravelLocationPage").then(
 const TravelPassportPage = lazy(() => import("./pages/TravelPassportPage").then((module) => ({ default: module.TravelPassportPage })));
 const TravelJournalPage = lazy(() => import("./pages/TravelJournalPage").then((module) => ({ default: module.TravelJournalPage })));
 const TravelInsightsPage = lazy(() => import("./pages/TravelInsightsPage").then((module) => ({ default: module.TravelInsightsPage })));
+const TravelExplorerPage = lazy(() => import("./pages/TravelExplorerPage").then((module) => ({ default: module.TravelExplorerPage })));
 
 type IdleWindow = Window & {
   requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
@@ -73,7 +74,7 @@ const LEGACY_LANGUAGE_STORAGE_KEY = "fanatlas.language";
 const ADMIN_EMAIL = "kadsimohamedads@gmail.com";
 const pageFallback = <div className="page-loading">Loading...</div>;
 let highTrafficPagesPrefetched = false;
-type PublicRoute = "/" | "/app" | "/passport" | "/journal" | "/insights" | "/privacy" | "/terms" | "/support";
+type PublicRoute = "/" | "/app" | "/passport" | "/journal" | "/insights" | "/explorer" | "/privacy" | "/terms" | "/support";
 
 export type Tab =
   | "home"
@@ -121,7 +122,8 @@ export type Tab =
   | "travelLocation"
   | "passport"
   | "journal"
-  | "insights";
+  | "insights"
+  | "explorer";
 
 function isLanguage(value: string | null): value is Language {
   return value === "en" || value === "es" || value === "fr" || value === "ar" || value === "pt";
@@ -145,7 +147,7 @@ function initialLanguage(): Language {
 function App() {
   const [session, setSession] = useState<any>(null);
   const [isAdminEmail, setIsAdminEmail] = useState(false);
-  const [tab, setTab] = useState<Tab>(() => window.location.pathname === "/passport" ? "passport" : window.location.pathname === "/journal" ? "journal" : window.location.pathname === "/insights" ? "insights" : "home");
+  const [tab, setTab] = useState<Tab>(() => window.location.pathname === "/passport" ? "passport" : window.location.pathname === "/journal" ? "journal" : window.location.pathname === "/insights" ? "insights" : window.location.pathname === "/explorer" ? "explorer" : "home");
   const [route, setRoute] = useState<PublicRoute>(() => routeFromPath(window.location.pathname));
   const [previousTab, setPreviousTab] = useState<Tab | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
@@ -162,6 +164,7 @@ function App() {
     if (pathname === "/passport") return "/passport";
     if (pathname === "/journal") return "/journal";
     if (pathname === "/insights") return "/insights";
+    if (pathname === "/explorer") return "/explorer";
     if (pathname === "/privacy") return "/privacy";
     if (pathname === "/terms") return "/terms";
     if (pathname === "/support") return "/support";
@@ -211,7 +214,7 @@ function App() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       updateAdminAccess(session);
-      if (session?.user && window.location.pathname !== "/passport" && window.location.pathname !== "/journal" && window.location.pathname !== "/insights") {
+      if (session?.user && window.location.pathname !== "/passport" && window.location.pathname !== "/journal" && window.location.pathname !== "/insights" && window.location.pathname !== "/explorer") {
         setTab("home");
       }
     });
@@ -228,7 +231,8 @@ function App() {
       if (nextRoute === "/passport") setTab("passport");
       if (nextRoute === "/journal") setTab("journal");
       if (nextRoute === "/insights") setTab("insights");
-      if (nextRoute === "/app") setTab((current) => current === "passport" || current === "journal" || current === "insights" ? "profile" : current);
+      if (nextRoute === "/explorer") setTab("explorer");
+      if (nextRoute === "/app") setTab((current) => current === "passport" || current === "journal" || current === "insights" || current === "explorer" ? "profile" : current);
     }
 
     window.addEventListener("popstate", handlePopState);
@@ -292,7 +296,7 @@ function App() {
   }, [route, session, tab]);
 
   function navigateTo(nextTab: Tab) {
-    const nextRoute = nextTab === "passport" ? "/passport" : nextTab === "journal" ? "/journal" : nextTab === "insights" ? "/insights" : "/app";
+    const nextRoute = nextTab === "passport" ? "/passport" : nextTab === "journal" ? "/journal" : nextTab === "insights" ? "/insights" : nextTab === "explorer" ? "/explorer" : "/app";
     if (route !== nextRoute) {
       navigateRoute(nextRoute);
     }
@@ -355,7 +359,7 @@ function App() {
     );
   }
 
-  if (route !== "/app" && route !== "/passport" && route !== "/journal" && route !== "/insights") {
+  if (route !== "/app" && route !== "/passport" && route !== "/journal" && route !== "/insights" && route !== "/explorer") {
     return (
       <LanguageContext.Provider value={{ language, setLanguage, t }}>
         <LandingPage
@@ -462,6 +466,7 @@ function App() {
     }
     if (tab === "journal") return <TravelJournalPage onBack={goBack} />;
     if (tab === "insights") return <TravelInsightsPage onBack={goBack} setTab={navigateTo} />;
+    if (tab === "explorer") return <TravelExplorerPage onBack={goBack} setTab={navigateTo} />;
     if (tab === "privacy") return <PrivacyPage onBack={goHome} />;
     if (tab === "terms") return <TermsPage onBack={goHome} />;
     if (tab === "support") return <SupportPage onBack={goHome} />;

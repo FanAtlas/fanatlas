@@ -21,6 +21,9 @@ test("private travel routes resolve through the existing auth gate", async ({ pa
 
   await page.goto("/insights");
   await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
+
+  await page.goto("/explorer");
+  await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
 });
 
 test("mobile viewport keeps the auth shell within the page width", async ({ page }) => {

@@ -178,6 +178,37 @@ fanatlas
 
 Then upload this project.
 
+## Global Travel Explorer
+
+The Global Travel Explorer is a private derived view built from existing FanAtlas data. It does not store Explorer statistics, create a new database, call remote geocoding, load map tiles, or send travel history to a map provider.
+
+Source-of-truth boundaries:
+
+- Trip Drafts own trip metadata, itinerary, visit status, journal entries, and photo references.
+- Travel Passport owns completed-trip destination eligibility.
+- Travel Insights owns aggregate statistics and rankings.
+- Travel Explorer owns only map-ready read models, layers, route projections, coordinate validation, and UI selection state.
+
+Country identity is matched deterministically by ISO alpha-2 code first, then a small explicit alias table for known naming differences. City identity includes country context, using the same Passport city-key rule where possible.
+
+Explorer map behavior uses locally available destination coordinates from the bundled FanAtlas destination table and structured Trip Draft destination fields. There is no bundled world-country geometry dataset yet, so countries without trusted local coordinates remain available in the destination browser and data-quality notice instead of being guessed.
+
+Routes connect known trip destination points in itinerary order. They are not turn-by-turn directions and do not represent exact physical travel paths.
+
+The interactive Explorer experience supports country, city, trip and route selection, local search, status and year filters, status/frequency/travel-day/route modes, a keyboard-accessible destination browser, and manual Travel Replay. Replay never autoplays and respects reduced-motion preferences. Explorer memory integration uses aggregate photo, journal and favorite counts only; it does not load photo Blobs or render journal body text.
+
+Step 52 release notes:
+
+- Source-of-truth chain: Trip Drafts -> Passport -> Insights -> Explorer -> Explorer view helpers -> Explorer UI.
+- Year membership currently uses the trip start year. Cross-year trips are not expanded into every intersected year in Step 52.
+- Route-point deduplication removes only consecutive identical coordinates. Repeated visits separated by another destination remain visible.
+- Antimeridian-aware bounds may use a wrapped box where `east < west`; route lines remain straight SVG segments and are labeled as approximate itinerary connections.
+- Frequency mode is based on completed-trip counts. Travel Days mode is based on completed trips with valid inclusive durations.
+- Wishlist remains empty unless a future canonical structured wishlist destination source is added. Saved Places are not inferred as wishlist destinations.
+- Country polygon geometry is deferred. The current release uses local marker projection, local route lines, and the Destination Browser as the accessible full alternative. This avoids adding a new map dependency, a large geometry bundle, licensing review, and accessibility risk late in Step 52.
+- Authenticated Explorer Playwright coverage is deferred until FanAtlas has a safe nonproduction auth strategy. The current E2E suite verifies private route behavior through the existing auth gate, while component and domain tests cover seeded Explorer interactions.
+- Explorer must not create remote map, geocoding, routing, analytics, AI, IndexedDB Blob, or photo-CDN requests during initial render.
+
 ## Vercel deployment
 
 1. Go to Vercel

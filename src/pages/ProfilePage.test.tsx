@@ -28,9 +28,10 @@ describe("ProfilePage", () => {
     expect(screen.getByRole("button", { name: /Travel Passport/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Travel Journal/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Travel Insights/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Global Travel Explorer/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Travel Insights/i }));
+    await user.click(screen.getByRole("button", { name: /Global Travel Explorer/i }));
 
-    expect(setTab).toHaveBeenCalledWith("insights");
+    expect(setTab).toHaveBeenCalledWith("explorer");
   });
 });
