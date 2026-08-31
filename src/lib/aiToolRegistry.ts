@@ -10,10 +10,10 @@ import type {
 } from "./travelIntelligenceTypes";
 
 export const TRAVEL_TOOL_REGISTRY: TravelToolDefinition[] = [
-  tool("weather_lookup", "Weather lookup", ["packing_guidance", "trip_planning"], true, false, ["allowCurrentLocation"]),
+  tool("weather_lookup", "Weather lookup", ["packing_guidance", "trip_planning"], true, true, []),
   tool("visa_rules_lookup", "Visa rules lookup", ["visa_rule_research"], true, false, []),
   tool("customs_rules_lookup", "Customs rules lookup", ["customs_rule_research"], true, false, []),
-  tool("emergency_services_lookup", "Emergency services lookup", ["emergency_guidance"], true, false, ["allowCurrentLocation"]),
+  tool("emergency_services_lookup", "Emergency services lookup", ["emergency_guidance"], false, true, []),
   tool("translation", "Translation", ["translation", "language_assistance", "menu_translation"], false, false, []),
   tool("image_analysis", "Image analysis", ["image_understanding", "landmark_recognition", "menu_translation"], false, true, ["allowImageContent"]),
   tool("document_analysis", "Document analysis", ["document_analysis", "visa_rule_research", "customs_rule_research"], false, true, ["allowUploadedDocuments"]),
@@ -23,7 +23,8 @@ export const TRAVEL_TOOL_REGISTRY: TravelToolDefinition[] = [
   tool("travel_insights_read", "Travel insights reader", ["travel_summary", "travel_insight_explanation", "trip_reflection"], false, true, ["allowInsights"]),
   tool("place_search", "Place search", ["place_recommendation"], true, false, []),
   tool("route_planning", "Route planning", ["transport_guidance", "map_reasoning"], true, false, ["allowCurrentLocation"]),
-  tool("currency_conversion", "Currency conversion", ["budget_guidance"], true, false, []),
+  tool("currency_conversion", "Currency conversion", ["budget_guidance"], true, true, []),
+  tool("destination_current_information", "Destination current information", ["transport_guidance", "safety_guidance"], true, true, []),
   tool("flight_search", "Flight search", ["transport_guidance"], true, false, []),
   tool("hotel_search", "Hotel search", ["trip_planning"], true, false, []),
   tool("restaurant_search", "Restaurant search", ["place_recommendation"], true, false, []),
@@ -138,6 +139,8 @@ function toolsForTask(task: TravelTask): TravelToolId[] {
     case "trip_reflection":
       return ["passport_summary_read", "travel_insights_read"];
     case "transport_guidance":
+    case "safety_guidance":
+      return ["destination_current_information"];
     case "map_reasoning":
       return ["route_planning"];
     case "budget_guidance":

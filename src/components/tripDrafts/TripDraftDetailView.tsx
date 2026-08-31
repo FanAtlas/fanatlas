@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Copy, Edit3, Trash2 } from "lucide-react";
+import { BookOpen, CalendarDays, CheckSquare, Copy, Edit3, Trash2 } from "lucide-react";
 import type { HydratedTripDraft, TripDraft, TripItineraryDay, TripPlaceVisitStatus, TripTimeBlock } from "../../lib/tripDrafts";
 import { calculateTripProgress, UNSCHEDULED_TRIP_DAY_ID } from "../../lib/tripDrafts";
 import { collectTripDraftPhotoReferences } from "../../lib/tripJournal";
@@ -17,6 +17,7 @@ import type { PlanningActionCallbacks, TripNearbyGroupMoveRequest, TripPhotoCall
 export function TripDraftDetailView({
   deleteId,
   deleteDayId,
+  destinationGuideId,
   detailsDestination,
   detailsEndDate,
   detailsStartDate,
@@ -41,6 +42,9 @@ export function TripDraftDetailView({
   onDayDeleteRequest,
   onDeleteRequest,
   onDuplicate,
+  onOpenDestination,
+  onOpenPreparation,
+  onOpenTripDay,
   onEditDayTitle,
   onEditDetailsDestination,
   onEditDetailsEndDate,
@@ -70,6 +74,7 @@ export function TripDraftDetailView({
 }: {
   deleteId: string | null;
   deleteDayId: string | null;
+  destinationGuideId: string | null;
   detailsDestination: string;
   detailsEndDate: string;
   detailsStartDate: string;
@@ -94,6 +99,9 @@ export function TripDraftDetailView({
   onDayDeleteRequest: (dayId: string) => void;
   onDeleteRequest: (draftId: string) => void;
   onDuplicate: (draft: TripDraft) => void;
+  onOpenDestination?: (destinationId: string) => void;
+  onOpenPreparation?: (tripId: string) => void;
+  onOpenTripDay?: (tripId: string) => void;
   onEditDayTitle: (title: string) => void;
   onEditDetailsDestination: (destination: string) => void;
   onEditDetailsEndDate: (date: string) => void;
@@ -183,6 +191,24 @@ export function TripDraftDetailView({
             <Copy size={14} aria-hidden="true" />
             {translate("tripDrafts.duplicate")}
           </button>
+          {destinationGuideId && onOpenDestination && (
+            <button className="secondary-btn" onClick={() => onOpenDestination(destinationGuideId)} type="button">
+              <BookOpen size={14} aria-hidden="true" />
+              {translate("destinationHub.destinationGuide")}
+            </button>
+          )}
+          {onOpenPreparation && (
+            <button className="secondary-btn" onClick={() => onOpenPreparation(draft.draft.id)} type="button">
+              <CheckSquare size={14} aria-hidden="true" />
+              {translate("travelPreparation.prepareForTrip")}
+            </button>
+          )}
+          {onOpenTripDay && (
+            <button className="secondary-btn" onClick={() => onOpenTripDay(draft.draft.id)} type="button">
+              <CalendarDays size={14} aria-hidden="true" />
+              {translate("tripDay.title")}
+            </button>
+          )}
           <button className="secondary-btn" onClick={() => onDeleteRequest(draft.draft.id)} type="button">
             <Trash2 size={14} aria-hidden="true" />
             {translate("tripDrafts.delete")}

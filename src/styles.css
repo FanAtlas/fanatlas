@@ -3699,6 +3699,200 @@ select option {
   white-space: nowrap;
 }
 
+.home-command-center {
+  gap: var(--fa-space-5);
+  min-width: 0;
+  padding-bottom: calc(var(--fa-bottom-nav-height) + var(--fa-safe-area-bottom) + var(--fa-space-8));
+}
+
+.home-command-center button:focus-visible,
+.home-command-center input:focus-visible,
+.home-command-center select:focus-visible {
+  outline: 2px solid rgba(103, 232, 249, 0.95);
+  outline-offset: 3px;
+}
+
+.home-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--fa-space-4);
+  margin: -10px -12px 0;
+  background: rgba(5, 11, 22, 0.96);
+}
+
+.home-hero-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--fa-space-5);
+  align-items: start;
+}
+
+.home-hero-copy {
+  display: grid;
+  gap: var(--fa-space-3);
+  min-width: 0;
+}
+
+.home-hero-copy h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(24px, 5vw, 34px);
+  line-height: 1.08;
+}
+
+.home-hero-copy p,
+.home-hero-copy small {
+  margin: 0;
+  color: var(--fa-color-text-muted);
+  line-height: var(--fa-line-height-normal);
+}
+
+.home-hero-meta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  justify-items: start;
+}
+
+.home-hero-meta strong {
+  color: #fff;
+  font-size: var(--fa-text-lg);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.home-hero-meta span {
+  color: var(--fa-color-text-muted);
+  font-size: var(--fa-text-sm);
+}
+
+.home-actions-row {
+  display: flex;
+  gap: var(--fa-space-3);
+  overflow-x: auto;
+  padding-bottom: var(--fa-space-2);
+  scrollbar-width: none;
+}
+
+.home-action-chip {
+  min-height: 42px;
+  padding-inline: var(--fa-space-4);
+  white-space: nowrap;
+}
+
+.home-action-chip svg {
+  color: var(--fa-color-primary-hover);
+}
+
+.home-context-card {
+  display: grid;
+  gap: var(--fa-space-4);
+}
+
+.home-context-card-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--fa-space-4);
+}
+
+.home-context-card-heading > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.home-context-card-heading span {
+  color: var(--fa-color-primary-hover);
+  font-size: var(--fa-text-xs);
+  font-weight: var(--fa-weight-bold);
+  text-transform: uppercase;
+}
+
+.home-context-card-heading h2 {
+  margin: 0;
+  color: #fff;
+  font-size: var(--fa-text-xl);
+  line-height: 1.15;
+}
+
+.home-trip-list {
+  display: grid;
+  gap: var(--fa-space-3);
+}
+
+.home-trip-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: var(--fa-radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fa-color-text-primary);
+  padding: var(--fa-space-4);
+  text-align: left;
+}
+
+[dir="rtl"] .home-trip-item {
+  text-align: right;
+}
+
+.home-trip-item strong,
+.home-trip-item small,
+.home-trip-item em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-trip-item strong {
+  color: #fff;
+  font-size: var(--fa-text-md);
+}
+
+.home-trip-item small,
+.home-trip-item em {
+  color: var(--fa-color-text-muted);
+  font-size: var(--fa-text-sm);
+  font-style: normal;
+}
+
+.home-trip-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fa-space-3);
+}
+
+.home-trip-summary-grid > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--fa-radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  padding: var(--fa-space-3);
+}
+
+.home-trip-summary-grid span {
+  color: var(--fa-color-primary-hover);
+  font-size: 10px;
+  font-weight: var(--fa-weight-bold);
+  text-transform: uppercase;
+}
+
+.home-trip-summary-grid strong {
+  color: #fff;
+  font-size: var(--fa-text-md);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.home-memory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fa-space-3);
+}
+
 .home-dashboard {
   gap: var(--fa-space-5);
   min-width: 0;
@@ -9183,6 +9377,323 @@ label {
   font-weight: 900;
 }
 
+.fanatlas-ai-page {
+  display: grid;
+  gap: 16px;
+  min-height: 100%;
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+}
+
+.fanatlas-ai-page .topbar {
+  gap: 12px;
+}
+
+.fanatlas-ai-page h1.brand {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.05;
+}
+
+.fanatlas-ai-privacy,
+.fanatlas-ai-context,
+.fanatlas-ai-empty,
+.fanatlas-ai-error,
+.fanatlas-ai-composer {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.82);
+  box-shadow: 0 18px 50px rgba(2, 6, 23, 0.24);
+}
+
+.fanatlas-ai-privacy {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  color: #bae6fd;
+}
+
+.fanatlas-ai-privacy h2,
+.fanatlas-ai-context h2,
+.fanatlas-ai-empty h2 {
+  margin: 0;
+  color: #eef6ff;
+  font-size: 16px;
+}
+
+.fanatlas-ai-privacy p,
+.fanatlas-ai-empty p {
+  margin: 5px 0 0;
+  color: #9fb2cf;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.fanatlas-ai-context {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.fanatlas-ai-context .section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fanatlas-ai-context .section-row span {
+  color: #67e8f9;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.fanatlas-ai-context-details summary {
+  min-height: 38px;
+  cursor: pointer;
+  color: #dbeafe;
+  font-weight: 900;
+}
+
+.fanatlas-ai-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+
+.fanatlas-ai-toggle {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.28);
+  padding: 8px 10px;
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fanatlas-ai-toggle input {
+  accent-color: #22d3ee;
+}
+
+.fanatlas-ai-empty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 18px;
+}
+
+.fanatlas-ai-prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.fanatlas-ai-prompt-grid button {
+  min-height: 44px;
+  justify-content: center;
+  text-align: center;
+}
+
+.fanatlas-ai-conversation {
+  display: grid;
+  gap: 12px;
+}
+
+.fanatlas-ai-message {
+  width: min(92%, 680px);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.86);
+  padding: 13px 14px;
+  color: #e5eefb;
+}
+
+.fanatlas-ai-message.user {
+  justify-self: end;
+  background: rgba(34, 211, 238, 0.14);
+  border-color: rgba(34, 211, 238, 0.28);
+}
+
+.fanatlas-ai-message.assistant {
+  justify-self: start;
+}
+
+.fanatlas-ai-message strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.fanatlas-ai-message p {
+  margin: 7px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.fanatlas-ai-citations {
+  margin-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  padding-top: 8px;
+}
+
+.fanatlas-ai-citations summary {
+  cursor: pointer;
+  color: #bae6fd;
+  font-weight: 900;
+}
+
+.fanatlas-ai-citations ul {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fanatlas-ai-citations li {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.fanatlas-ai-citations a {
+  color: #67e8f9;
+  overflow-wrap: anywhere;
+}
+
+.fanatlas-ai-citations span {
+  color: #94a3b8;
+}
+
+.fanatlas-ai-structured-card {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(2, 6, 23, 0.32);
+}
+
+.fanatlas-ai-structured-card h3 {
+  margin: 0 0 7px;
+  color: #f8fafc;
+  font-size: 15px;
+}
+
+.fanatlas-ai-structured-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 9px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fanatlas-ai-structured-card li {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.fanatlas-ai-structured-card a {
+  color: #67e8f9;
+  overflow-wrap: anywhere;
+}
+
+.fanatlas-ai-structured-card.emergency {
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.fanatlas-ai-emergency-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 8px;
+  margin-top: 8px;
+  padding: 9px 12px;
+  background: #b91c1c;
+  color: #fff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.fanatlas-ai-freshness {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
+}
+
+.fanatlas-ai-tool-activity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fanatlas-ai-tool-activity span {
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 999px;
+  background: rgba(8, 145, 178, 0.12);
+  color: #bae6fd;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.fanatlas-ai-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-color: rgba(248, 113, 113, 0.28);
+  background: rgba(127, 29, 29, 0.24);
+  padding: 12px;
+  color: #fecaca;
+}
+
+.fanatlas-ai-composer {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 10;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  backdrop-filter: blur(14px);
+}
+
+.fanatlas-ai-composer textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.fanatlas-ai-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fanatlas-ai-page button:focus-visible,
+.fanatlas-ai-page textarea:focus-visible,
+.fanatlas-ai-page select:focus-visible,
+.fanatlas-ai-context-details summary:focus-visible,
+.fanatlas-ai-citations summary:focus-visible {
+  outline: 3px solid rgba(34, 211, 238, 0.55);
+  outline-offset: 3px;
+}
+
 @media (max-width: 360px) {
   .install-banner {
     grid-template-columns: minmax(0, 1fr) 34px;
@@ -9191,6 +9702,25 @@ label {
   .install-banner-action {
     grid-column: 1 / -1;
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .fanatlas-ai-toggle-grid,
+  .fanatlas-ai-prompt-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fanatlas-ai-error,
+  .fanatlas-ai-composer-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fanatlas-ai-error button,
+  .fanatlas-ai-composer-actions button {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -9310,5 +9840,985 @@ label {
   .external-map-actions,
   .map-stadium-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+.destination-hub-page {
+  min-height: 100%;
+  padding: 18px 16px 96px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(20, 184, 166, 0.14), transparent 26%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.96));
+  color: #0f172a;
+  overflow-x: hidden;
+}
+
+.destination-hub-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.destination-hub-header h1 {
+  margin: 4px 0 4px;
+  font-size: 2rem;
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+
+.destination-hub-header p {
+  margin: 0;
+  color: #475569;
+}
+
+.destination-hub-private,
+.destination-hub-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.destination-hub-private {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.destination-hub-badges {
+  margin-top: 10px;
+}
+
+.destination-hub-badges span,
+.destination-chip-list li,
+.destination-status-grid span,
+.destination-source-details li {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.destination-hub-badges span {
+  padding: 6px 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.destination-hub-search,
+.destination-hub-card,
+.destination-hub-empty {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.destination-hub-search {
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.destination-hub-search h2,
+.destination-hub-card h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.destination-hub-search label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.destination-hub-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+}
+
+.destination-hub-search-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.destination-hub-search-results button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  inline-size: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+  color: #0f172a;
+  text-align: start;
+}
+
+.destination-hub-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.destination-hub-card,
+.destination-hub-empty {
+  padding: 14px;
+}
+
+.destination-hub-card--warning {
+  border-color: rgba(180, 83, 9, 0.28);
+  background: rgba(255, 251, 235, 0.9);
+}
+
+.destination-hub-card h2 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #0f172a;
+}
+
+.destination-hub-card p,
+.destination-hub-note,
+.destination-source-details,
+.destination-source-details span {
+  color: #475569;
+}
+
+.destination-field-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.destination-field-list div {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.9fr) minmax(0, 1.2fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.destination-field-list dt {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.destination-field-list dd {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.destination-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 12px;
+  list-style: none;
+}
+
+.destination-chip-list li {
+  padding: 7px 9px;
+  color: #334155;
+  font-size: 0.86rem;
+}
+
+.destination-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.destination-status-grid span {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.destination-status-grid strong {
+  color: #0f172a;
+}
+
+.destination-action-row {
+  display: grid;
+  gap: 8px;
+}
+
+.destination-source-details {
+  margin-top: 12px;
+}
+
+.destination-source-details summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.destination-source-details ul {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 10px 0 0;
+  list-style: none;
+}
+
+.destination-source-details li {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+}
+
+.destination-hub-card .primary-btn,
+.destination-hub-card .secondary-btn {
+  margin-top: 12px;
+  inline-size: 100%;
+  justify-content: center;
+}
+
+.destination-hub-empty {
+  display: grid;
+  gap: 8px;
+  place-items: start;
+}
+
+.travel-preparation-page {
+  min-height: 100%;
+  padding: 18px 16px 96px;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(34, 197, 94, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.96));
+  color: #0f172a;
+  overflow-x: hidden;
+}
+
+.travel-preparation-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
+.travel-preparation-header h1,
+.travel-preparation-section h2,
+.travel-preparation-custom h2,
+.travel-preparation-empty h1 {
+  letter-spacing: 0;
+}
+
+.travel-preparation-header h1 {
+  margin: 4px 0;
+  font-size: 2rem;
+  line-height: 1.04;
+}
+
+.travel-preparation-header p,
+.travel-preparation-empty p,
+.travel-preparation-network-note {
+  color: #475569;
+}
+
+.travel-preparation-progress-card,
+.travel-preparation-notice,
+.travel-preparation-reminders,
+.travel-preparation-section,
+.travel-preparation-custom,
+.travel-preparation-empty {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.travel-preparation-progress-card {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  padding: 14px;
+}
+
+.travel-preparation-progress-card strong {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.travel-preparation-progress-card span {
+  color: #475569;
+  font-size: 0.86rem;
+}
+
+.travel-preparation-progress {
+  block-size: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.travel-preparation-progress i {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: #0f766e;
+}
+
+.travel-preparation-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-color: rgba(180, 83, 9, 0.28);
+  background: rgba(255, 251, 235, 0.9);
+  color: #92400e;
+}
+
+.travel-preparation-notice p {
+  margin: 0;
+}
+
+.travel-preparation-notice ul {
+  display: grid;
+  gap: 4px;
+  padding-inline-start: 18px;
+  margin: 8px 0 0;
+}
+
+.travel-preparation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.travel-preparation-actions .secondary-btn {
+  min-height: 40px;
+}
+
+.travel-preparation-network-note {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+}
+
+.travel-preparation-reminders {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.travel-preparation-reminders p {
+  margin: 0;
+  color: #475569;
+}
+
+.travel-preparation-reminder-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.travel-preparation-reminder-controls label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.86);
+  font-weight: 800;
+}
+
+.travel-preparation-reminder-note {
+  font-size: 0.88rem;
+}
+
+.travel-preparation-due-reminders {
+  display: grid;
+  gap: 8px;
+}
+
+.travel-preparation-due-reminder {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  border-radius: 8px;
+  background: rgba(240, 253, 250, 0.88);
+}
+
+.travel-preparation-due-reminder strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.travel-preparation-phase-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.travel-preparation-phase-tabs button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 9px 11px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.travel-preparation-phase-tabs button.active {
+  border-color: rgba(15, 118, 110, 0.44);
+  background: rgba(204, 251, 241, 0.86);
+  color: #134e4a;
+}
+
+.travel-preparation-phase-tabs span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.travel-preparation-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.travel-preparation-section,
+.travel-preparation-custom,
+.travel-preparation-empty {
+  padding: 14px;
+}
+
+.travel-preparation-section .section-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.travel-preparation-section h2,
+.travel-preparation-custom h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.travel-preparation-section .section-row span {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.travel-preparation-items {
+  display: grid;
+  gap: 8px;
+}
+
+.travel-preparation-empty-group {
+  margin: 0;
+  color: #64748b;
+}
+
+.travel-preparation-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.travel-preparation-item.checked {
+  background: rgba(240, 253, 244, 0.78);
+}
+
+.travel-preparation-item label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  margin: 0;
+}
+
+.travel-preparation-item input {
+  margin-block-start: 2px;
+}
+
+.travel-preparation-item.checked label span {
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.travel-preparation-item-source {
+  grid-column: 1 / -1;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.travel-preparation-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.travel-preparation-custom {
+  margin-top: 12px;
+}
+
+.travel-preparation-custom .planning-action-editor {
+  margin-top: 10px;
+}
+
+.home-today-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0;
+  padding: 14px;
+}
+
+.home-today-card span {
+  color: #0f766e;
+  font-weight: 900;
+  font-size: 0.82rem;
+}
+
+.home-today-card h2,
+.home-today-card p {
+  margin: 2px 0 0;
+}
+
+.home-today-card h2 {
+  font-size: 1.05rem;
+}
+
+.home-today-card p {
+  color: #64748b;
+}
+
+.trip-day-page {
+  min-height: 100%;
+  padding: 18px 16px 96px;
+  background: linear-gradient(180deg, #f8fafc, #eef2f7);
+  color: #0f172a;
+  overflow-x: hidden;
+}
+
+.trip-day-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 14px;
+  align-items: stretch;
+  margin: 0 0 14px;
+}
+
+.trip-day-header h1,
+.trip-day-empty h1,
+.trip-day-next-card h2,
+.trip-day-section h2,
+.trip-day-nearby h2,
+.trip-day-destination h2 {
+  letter-spacing: 0;
+}
+
+.trip-day-header h1 {
+  margin: 4px 0;
+  font-size: 2rem;
+  line-height: 1.04;
+}
+
+.trip-day-header p,
+.trip-day-empty p,
+.trip-day-network-note,
+.trip-day-empty-block {
+  color: #475569;
+}
+
+.trip-day-progress-card,
+.trip-day-next-card,
+.trip-day-section,
+.trip-day-nearby,
+.trip-day-destination,
+.trip-day-empty,
+.trip-day-notices,
+.trip-day-place-card {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.trip-day-progress-card {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  padding: 14px;
+}
+
+.trip-day-progress-card strong {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.trip-day-progress-card span {
+  color: #475569;
+  font-size: 0.86rem;
+}
+
+.trip-day-actions,
+.trip-day-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.trip-day-actions .secondary-btn,
+.trip-day-navigation .secondary-btn {
+  min-height: 40px;
+}
+
+.trip-day-notices {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-color: rgba(180, 83, 9, 0.28);
+  background: rgba(255, 251, 235, 0.9);
+  color: #92400e;
+}
+
+.trip-day-notices h2,
+.trip-day-notices ul {
+  margin: 0;
+}
+
+.trip-day-notices ul {
+  display: grid;
+  gap: 4px;
+  padding-inline-start: 18px;
+  margin-top: 8px;
+}
+
+.trip-day-next-card,
+.trip-day-section,
+.trip-day-nearby,
+.trip-day-destination,
+.trip-day-empty {
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.trip-day-next-card > span {
+  display: inline-block;
+  margin-bottom: 3px;
+  color: #0f766e;
+  font-weight: 900;
+  font-size: 0.8rem;
+}
+
+.trip-day-next-card h2,
+.trip-day-section h2,
+.trip-day-nearby h2,
+.trip-day-destination h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.trip-day-blocks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.trip-day-section .section-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.trip-day-section .section-row span {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.trip-day-place-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  margin-top: 8px;
+  box-shadow: none;
+}
+
+.trip-day-place-card.compact {
+  margin-top: 10px;
+  background: #f8fafc;
+}
+
+.trip-day-place-card span,
+.trip-day-place-card small {
+  display: inline-block;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.trip-day-place-card h3,
+.trip-day-place-card p {
+  margin: 4px 0 0;
+}
+
+.trip-day-place-card h3 {
+  font-size: 1rem;
+}
+
+.trip-day-place-actions,
+.trip-day-candidate-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trip-day-place-actions {
+  justify-content: flex-end;
+}
+
+.trip-day-place-actions .secondary-btn {
+  min-height: 36px;
+}
+
+.trip-day-candidate-list {
+  margin: 12px 0;
+}
+
+.trip-day-candidate-list button {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.trip-day-candidate-list small {
+  color: #64748b;
+}
+
+.trip-day-nearby p,
+.trip-day-destination-grid span {
+  display: block;
+  margin: 8px 0 0;
+  padding: 10px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 8px;
+  background: rgba(240, 253, 250, 0.86);
+}
+
+.trip-day-destination-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trip-day-network-note {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 340px) {
+  .destination-hub-page,
+  .travel-preparation-page,
+  .trip-day-page {
+    padding-inline: 12px;
+  }
+
+  .destination-field-list div,
+  .destination-status-grid,
+  .travel-preparation-header,
+  .travel-preparation-grid,
+  .travel-preparation-item,
+  .travel-preparation-due-reminder,
+  .trip-day-header,
+  .trip-day-blocks,
+  .trip-day-place-card,
+  .trip-day-destination-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .travel-preparation-item-actions,
+  .travel-preparation-due-reminder,
+  .trip-day-place-actions {
+    justify-content: flex-start;
+  }
+
+  .travel-preparation-due-reminder {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .destination-hub-page,
+  .travel-preparation-page,
+  .trip-day-page {
+    background: linear-gradient(180deg, #0f172a, #111827);
+    color: #e5e7eb;
+  }
+
+  .destination-hub-header h1,
+  .destination-hub-card h2,
+  .destination-field-list dd,
+  .destination-status-grid strong,
+  .destination-source-details summary,
+    .travel-preparation-header h1,
+    .travel-preparation-progress-card strong,
+    .travel-preparation-section h2,
+    .travel-preparation-custom h2,
+    .travel-preparation-empty h1,
+    .trip-day-header h1,
+    .trip-day-progress-card strong,
+    .trip-day-empty h1,
+    .trip-day-next-card h2,
+    .trip-day-section h2,
+    .trip-day-nearby h2,
+    .trip-day-destination h2,
+    .trip-day-place-card h3,
+    .home-today-card h2 {
+    color: #f8fafc;
+  }
+
+  .destination-hub-header p,
+  .destination-hub-card p,
+  .destination-hub-note,
+  .destination-source-details,
+  .destination-source-details span,
+  .destination-field-list dt,
+  .travel-preparation-header p,
+  .travel-preparation-empty p,
+    .travel-preparation-network-note,
+    .travel-preparation-progress-card span,
+    .travel-preparation-section .section-row span,
+    .travel-preparation-item-source,
+    .trip-day-header p,
+    .trip-day-empty p,
+    .trip-day-network-note,
+    .trip-day-progress-card span,
+    .trip-day-section .section-row span,
+    .trip-day-place-card span,
+    .trip-day-place-card small,
+    .trip-day-empty-block,
+    .home-today-card p {
+    color: #cbd5e1;
+  }
+
+  .destination-hub-search,
+  .destination-hub-card,
+  .destination-hub-empty,
+    .travel-preparation-progress-card,
+    .travel-preparation-reminders,
+    .travel-preparation-section,
+    .travel-preparation-custom,
+    .travel-preparation-empty,
+    .trip-day-progress-card,
+    .trip-day-next-card,
+    .trip-day-section,
+    .trip-day-nearby,
+    .trip-day-destination,
+    .trip-day-empty,
+    .trip-day-place-card,
+    .home-today-card {
+    border-color: rgba(148, 163, 184, 0.22);
+    background: rgba(15, 23, 42, 0.82);
+  }
+
+  .destination-hub-card--warning,
+  .travel-preparation-notice,
+  .trip-day-notices {
+    border-color: rgba(245, 158, 11, 0.36);
+    background: rgba(69, 44, 12, 0.48);
+    color: #fcd34d;
+  }
+
+  .destination-hub-search label,
+  .destination-hub-search-results button,
+  .destination-hub-badges span,
+  .destination-chip-list li,
+  .destination-status-grid span,
+  .destination-source-details li,
+    .travel-preparation-item,
+    .travel-preparation-reminder-controls label,
+    .travel-preparation-due-reminder,
+    .travel-preparation-phase-tabs button,
+    .trip-day-place-card.compact,
+    .trip-day-nearby p,
+    .trip-day-destination-grid span {
+    border-color: rgba(148, 163, 184, 0.22);
+    background: rgba(30, 41, 59, 0.72);
+    color: #e5e7eb;
+  }
+
+  .travel-preparation-phase-tabs button.active {
+    border-color: rgba(45, 212, 191, 0.42);
+    background: rgba(20, 83, 45, 0.42);
+    color: #ccfbf1;
+  }
+
+  .travel-preparation-item.checked {
+    background: rgba(20, 83, 45, 0.42);
+  }
+
+  .travel-preparation-reminders p {
+    color: #cbd5e1;
+  }
+
+  .destination-hub-search input {
+    color: #f8fafc;
+  }
+}
+
+@media (max-width: 760px) {
+  .travel-preparation-header,
+  .travel-preparation-grid,
+  .trip-day-header,
+  .trip-day-blocks,
+  .trip-day-place-card,
+  .trip-day-destination-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trip-day-place-actions,
+  .home-today-card {
+    justify-content: flex-start;
+  }
+
+  .home-today-card {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

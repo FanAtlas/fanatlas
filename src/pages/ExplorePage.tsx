@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { LegalFooter } from "../components/LegalFooter";
 import { useLanguage } from "../LanguageContext";
+import { useConnectivity } from "../hooks/useConnectivity";
+import { useDestinationIntelligence } from "../hooks/useDestinationIntelligence";
 import { distanceKm, formatDistance } from "../lib/location";
 import { languages, text } from "../i18n";
 import { Tab } from "../main";
@@ -27,13 +29,13 @@ import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
 import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
 import { ExploreImageCategory, imageForCategory } from "../data/categoryImages";
 import { ensureMinimumPlaces } from "../data/globalFallbackContent";
-import { fanZones, stadiums as knownStadiums } from "../data/mockData";
 import { buildExploreCandidates, candidateOriginalPlace, type ExploreCandidate } from "../lib/exploreCandidates";
+import { deriveTravelDiscovery, type TravelDiscoverySection } from "../lib/travelDiscovery";
 
 type ExploreCopy = typeof text.en;
 type ExploreCategory = "Highlights" | "Attractions" | "Restaurants" | "Cafes" | "Stays" | "Parks" | "Museums" | "Family" | "Events";
 type ExploreCardCategory = "attraction" | "restaurant" | "hotel";
-type SuggestionAction = "map" | "explore" | "restaurants" | "hotels" | "ai" | "guides" | "events" | "external-food";
+type SuggestionAction = "map" | "explore" | "restaurants" | "hotels" | "guides" | "events" | "external-food" | "traveltools";
 
 type ExploreCardData = {
   id: string;
@@ -117,11 +119,23 @@ export function ExplorePage({
 }) {
   const { language, t } = useLanguage();
   const { travelLocation } = useTravelLocation();
-  const { groups, loading, message, refreshPlaces } = useGlobalPlaces();
+  const connectivity = useConnectivity();
+  const intelligence = useDestinationIntelligence();
+  const currentDate = useMemo(() => new Date(), []);
+  const { groups, loading, message, refreshPlaces } = useGlobalPlaces({ autoFetch: false });
   const [active, setActive] = useState<ExploreCategory>(() => normalizeCategory(initialCategory));
   const [query, setQuery] = useState("");
   const [savedCards, setSavedCards] = useState<string[]>(() => readSavedExploreCards());
   const activeChipRef = useRef<HTMLButtonElement | null>(null);
+  const discovery = useMemo(
+    () => deriveTravelDiscovery({
+      travelLocation,
+      intelligence,
+      currentDate,
+      connectivity: connectivity.status
+    }),
+    [connectivity.status, currentDate, intelligence, travelLocation]
+  );
 
   useEffect(() => setActive(normalizeCategory(initialCategory)), [initialCategory]);
 
@@ -132,11 +146,6 @@ export function ExplorePage({
   useEffect(() => {
     activeChipRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [active]);
-
-  const isEventDestination = useMemo(() => {
-    const city = travelLocation.destinationCity.toLowerCase();
-    return [...knownStadiums, ...fanZones].some((item) => item.city.toLowerCase().includes(city) || city.includes(item.city.toLowerCase()));
-  }, [travelLocation.destinationCity]);
 
   const exploreCandidates = useMemo(
     () => buildExploreCandidates({
@@ -170,7 +179,7 @@ export function ExplorePage({
       ...ensureMinimumPlaces(travelLocation, groups.restaurants, "restaurant").filter(isSuggestionPlace).map((item, index) => suggestionFromPlace(item, "restaurant", index, t)),
       ...ensureMinimumPlaces(travelLocation, groups.hotels, "hotel").filter(isSuggestionPlace).map((item, index) => suggestionFromPlace(item, "hotel", index, t))
     ];
-    const extraSuggestions = destinationSuggestions(travelLocation, isEventDestination, t);
+    const extraSuggestions = destinationSuggestions(travelLocation, discovery.worldCup.eligible, t);
     const queryText = query.trim().toLowerCase();
     const allSuggestions = [...suggestionPlaces, ...extraSuggestions];
     if (!queryText) return allSuggestions;
@@ -178,7 +187,7 @@ export function ExplorePage({
     return allSuggestions.filter((item) =>
       `${item.title} ${item.label} ${item.detail} ${item.city} ${item.country}`.toLowerCase().includes(queryText)
     );
-  }, [groups.attractions, groups.hotels, groups.restaurants, isEventDestination, query, travelLocation, t]);
+  }, [discovery.worldCup.eligible, groups.attractions, groups.hotels, groups.restaurants, query, travelLocation, t]);
 
   const supportedCategories = useMemo(() => {
     const categoryOrder: ExploreCategory[] = ["Highlights", "Attractions", "Restaurants", "Cafes", "Stays", "Parks", "Museums", "Family"];
@@ -187,9 +196,9 @@ export function ExplorePage({
       return allCards.some((card) => cardMatchesCategory(card, category)) ||
         suggestions.some((suggestion) => suggestionMatchesCategory(suggestion, category));
     });
-    if (isEventDestination) supported.push("Events");
+    if (discovery.worldCup.eligible) supported.push("Events");
     return supported;
-  }, [allCards, isEventDestination, suggestions]);
+  }, [allCards, discovery.worldCup.eligible, suggestions]);
 
   useEffect(() => {
     if (!supportedCategories.includes(active)) setActive("Highlights");
@@ -258,13 +267,13 @@ export function ExplorePage({
       return;
     }
 
-    if (card.action === "ai") {
-      setTab("ai");
+    if (card.action === "guides") {
+      setTab("guides");
       return;
     }
 
-    if (card.action === "guides") {
-      setTab("guides");
+    if (card.action === "traveltools") {
+      setTab("traveltools");
       return;
     }
 
@@ -284,6 +293,30 @@ export function ExplorePage({
   function setExploreCategoryAndOpen(category: string) {
     setTab("explore");
     setActive(normalizeCategory(category));
+  }
+
+  function handleDiscoveryAction(section: TravelDiscoverySection) {
+    if (section.action.kind === "exploreCategory" && section.action.category) {
+      setExploreCategoryAndOpen(section.action.category);
+      return;
+    }
+
+    if (section.action.tab === "transport") {
+      setTab("transport");
+      return;
+    }
+
+    if (section.action.tab === "matches") {
+      setTab("matches");
+      return;
+    }
+
+    if (section.action.tab === "traveltools") {
+      setTab("traveltools");
+      return;
+    }
+
+    setTab(section.action.tab || "explore");
   }
 
   return (
@@ -340,9 +373,32 @@ export function ExplorePage({
         ))}
       </div>
 
+      <section className="explore-discovery-card fa-card" aria-labelledby="explore-discovery-title">
+        <div className="explore-discovery-header">
+          <div>
+            <span>{t["travelDiscovery.title"]}</span>
+            <h2 id="explore-discovery-title">{discovery.destination?.destinationLabel || t.exploreTitle}</h2>
+          </div>
+          <small>{discovery.hasResolvedDestination ? t["travelDiscovery.available"] : t["travelDiscovery.unknown"]}</small>
+        </div>
+        <div className="explore-discovery-grid" role="list">
+            {discovery.sections.filter((section) => section.visible).map((section) => (
+              <button
+                className="explore-discovery-item"
+                key={section.id}
+                type="button"
+                onClick={() => handleDiscoveryAction(section)}
+            >
+              <strong>{categoryLabelForDiscovery(section.id, t)}</strong>
+              <small>{availabilityLabel(section.availability, t)}</small>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="explore-summary-card fa-summary-card">
         <div>
-          <span>{verifiedCount > 0 ? `${verifiedCount} ${t.verifiedNearby}` : t.destinationSuggestion}</span>
+          <span>{verifiedCount > 0 ? t.placesToExplore : t.destinationSuggestion}</span>
           <strong>{t.aroundDestination} {travelLocation.destinationCity}</strong>
           <p>{t.exploreSummaryText}</p>
         </div>
@@ -374,10 +430,10 @@ export function ExplorePage({
         <section className="explore-featured-section fa-page-section" aria-labelledby="explore-featured-title">
           <div className="explore-group-heading fa-section-header">
             <div>
-              <span>{t.verifiedNearby}</span>
+              <span>{t.placesToExplore}</span>
               <h2 id="explore-featured-title" className="fa-section-title">{t.highlights}</h2>
             </div>
-            <small>{featuredCards.length} {t.nearby}</small>
+            <small>{featuredCards.length} {t["travelDiscovery.available"]}</small>
           </div>
           <div className="explore-card-rail">
             {featuredCards.map((card) => (
@@ -608,7 +664,7 @@ function suggestionFromPlace(item: GlobalPlace, category: ExploreCardCategory, i
     label: t.searchSuggestion,
     detail: item.detail,
     category,
-    action: category === "hotel" ? "hotels" : category === "restaurant" ? "external-food" : "ai",
+    action: category === "hotel" ? "hotels" : category === "restaurant" ? "external-food" : "map",
     image: imageForCategory(category as ExploreImageCategory, index),
     city: item.city,
     country: item.country
@@ -633,17 +689,6 @@ function destinationSuggestions(
       country: travelLocation.destinationCountry
     },
     {
-      id: `destination-hidden-${travelLocation.destinationCity}`,
-      title: t.askAiHiddenPlaces,
-      label: t.exploreSuggestion,
-      detail: t.askFanAtlasDesc,
-      category: "guide" as const,
-      action: "ai" as const,
-      image: imageForCategory("attraction", 4),
-      city: travelLocation.destinationCity,
-      country: travelLocation.destinationCountry
-    },
-    {
       id: `destination-guides-${travelLocation.destinationCity}`,
       title: t.browseTravelGuides,
       label: t.destinationSuggestion,
@@ -651,6 +696,17 @@ function destinationSuggestions(
       category: "guide" as const,
       action: "guides" as const,
       image: imageForCategory("attraction", 5),
+      city: travelLocation.destinationCity,
+      country: travelLocation.destinationCountry
+    },
+    {
+      id: `destination-tools-${travelLocation.destinationCity}`,
+      title: t.travelTools,
+      label: t.destinationSuggestion,
+      detail: t.travelToolsSubtitle,
+      category: "guide" as const,
+      action: "traveltools" as const,
+      image: imageForCategory("attraction", 1),
       city: travelLocation.destinationCity,
       country: travelLocation.destinationCountry
     }
@@ -768,9 +824,27 @@ function cardToDestination(card: ExploreCardData): MapDestination {
 function suggestionActionLabel(action: SuggestionAction, t: ExploreCopy) {
   if (action === "hotels") return t.showAllStays;
   if (action === "restaurants" || action === "external-food") return t.showAllRestaurants;
-  if (action === "ai") return t.askFanAtlas;
   if (action === "guides") return t.travelGuides;
+  if (action === "traveltools") return t.travelTools;
   if (action === "events") return t.openMatchCenter;
   if (action === "map") return t.exploreOnMap;
   return t.explore;
+}
+
+function availabilityLabel(availability: TravelDiscoverySection["availability"], t: ExploreCopy) {
+  if (availability === "available") return t["travelDiscovery.available"];
+  if (availability === "limited") return t["travelDiscovery.limited"];
+  if (availability === "online_required") return t["travelDiscovery.onlineRequired"];
+  if (availability === "unsupported") return t["travelDiscovery.unsupported"];
+  return t["travelDiscovery.unknown"];
+}
+
+function categoryLabelForDiscovery(category: TravelDiscoverySection["id"], t: ExploreCopy) {
+  if (category === "places") return t.placesToExplore;
+  if (category === "food") return t.restaurants;
+  if (category === "stays") return t.stays;
+  if (category === "transport") return t.transportation;
+  if (category === "events") return t.events;
+  if (category === "world_cup") return t.worldCup2026Mode;
+  return t.travelTools;
 }

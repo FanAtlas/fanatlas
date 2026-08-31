@@ -5,6 +5,7 @@ import {
   addTripJournalEntry as addTripJournalEntryDomain,
   addPlaceToTripDraft,
   addTripPlanningAction as addTripPlanningActionDomain,
+  acknowledgeTripPreparationReminder as acknowledgeTripPreparationReminderDomain,
   createTripDraft,
   createTripDraftFromCollection,
   createTripDraftWithPlace,
@@ -14,6 +15,7 @@ import {
   deleteTripDay,
   deleteTripJournalEntry as deleteTripJournalEntryDomain,
   duplicateTripDraft,
+  markTripPreparationReminderNotified as markTripPreparationReminderNotifiedDomain,
   attachPhotoToTripJournalEntry as attachPhotoToTripJournalEntryDomain,
   hydrateTripDrafts,
   moveTripPlace,
@@ -39,6 +41,7 @@ import {
   updateTripDetails,
   updatePlacePlanningAction as updatePlacePlanningActionDomain,
   updateTripPlanningAction as updateTripPlanningActionDomain,
+  updateTripPreparationReminderSettings as updateTripPreparationReminderSettingsDomain,
   updateTripPlaceNote,
   updateTripPlaceVisitStatus,
   writeTripDrafts,
@@ -58,6 +61,8 @@ import {
   type MoveTripPlaceGroupInput,
   type UpdatePlacePlanningActionInput,
   type UpdatePlanningActionInput,
+  type UpdateTripPreparationReminderSettingsInput,
+  type TripPreparationReminderOccurrenceInput,
   type TripTimeBlock,
   type UpdateTripPlaceNoteInput,
   type UpdateTripPlaceVisitStatusInput,
@@ -153,6 +158,9 @@ type UseTripDraftsResult = {
   updateTripPlanningAction: (draftId: string, input: UpdatePlanningActionInput) => TripDraftMutationResult<TripDraftsState>;
   toggleTripPlanningAction: (draftId: string, input: PlanningActionTargetInput) => TripDraftMutationResult<TripDraftsState>;
   removeTripPlanningAction: (draftId: string, input: PlanningActionTargetInput) => TripDraftMutationResult<TripDraftsState>;
+  updateTripPreparationReminderSettings: (draftId: string, input: UpdateTripPreparationReminderSettingsInput) => TripDraftMutationResult<TripDraftsState>;
+  acknowledgeTripPreparationReminder: (draftId: string, input: TripPreparationReminderOccurrenceInput) => TripDraftMutationResult<TripDraftsState>;
+  markTripPreparationReminderNotified: (draftId: string, input: TripPreparationReminderOccurrenceInput) => TripDraftMutationResult<TripDraftsState>;
   addPlacePlanningAction: (draftId: string, input: AddPlacePlanningActionInput) => TripDraftMutationResult<TripDraftsState>;
   updatePlacePlanningAction: (draftId: string, input: UpdatePlacePlanningActionInput) => TripDraftMutationResult<TripDraftsState>;
   togglePlacePlanningAction: (draftId: string, input: PlacePlanningActionTargetInput) => TripDraftMutationResult<TripDraftsState>;
@@ -599,6 +607,16 @@ export function useTripDrafts(savedPlaces: readonly SavedPlace[]): UseTripDrafts
     );
   }, [submitTripPlanningActionMutation]);
 
+  const updateTripPreparationReminderSettings = useCallback((draftId: string, input: UpdateTripPreparationReminderSettingsInput): TripDraftMutationResult<TripDraftsState> => {
+    const beforeState = stateRef.current;
+    return submitTripPlanningActionMutation(
+      draftId,
+      updateTripPreparationReminderSettingsDomain(beforeState, draftId, input),
+      "update-trip-action",
+      beforeState
+    );
+  }, [submitTripPlanningActionMutation]);
+
   const addPlacePlanningAction = useCallback((draftId: string, input: AddPlacePlanningActionInput): TripDraftMutationResult<TripDraftsState> => {
     const beforeState = stateRef.current;
     return submitTripPlanningActionMutation(
@@ -652,6 +670,14 @@ export function useTripDrafts(savedPlaces: readonly SavedPlace[]): UseTripDrafts
     clearUndo();
     return result;
   }, [clearUndo, persist]);
+
+  const acknowledgeTripPreparationReminder = useCallback((draftId: string, input: TripPreparationReminderOccurrenceInput): TripDraftMutationResult<TripDraftsState> => {
+    return commitNonUndoablePhotoMutation(acknowledgeTripPreparationReminderDomain(stateRef.current, draftId, input));
+  }, [commitNonUndoablePhotoMutation]);
+
+  const markTripPreparationReminderNotified = useCallback((draftId: string, input: TripPreparationReminderOccurrenceInput): TripDraftMutationResult<TripDraftsState> => {
+    return commitNonUndoablePhotoMutation(markTripPreparationReminderNotifiedDomain(stateRef.current, draftId, input));
+  }, [commitNonUndoablePhotoMutation]);
 
   const addPlacePhotoIds = useCallback((draftId: string, input: PlacePhotoIdsInput): TripDraftMutationResult<TripDraftsState> => {
     return commitNonUndoablePhotoMutation(addPlacePhotoIdsDomain(stateRef.current, draftId, input));
@@ -832,6 +858,9 @@ export function useTripDrafts(savedPlaces: readonly SavedPlace[]): UseTripDrafts
     updateTripPlanningAction,
     toggleTripPlanningAction,
     removeTripPlanningAction,
+    updateTripPreparationReminderSettings,
+    acknowledgeTripPreparationReminder,
+    markTripPreparationReminderNotified,
     addPlacePlanningAction,
     updatePlacePlanningAction,
     togglePlacePlanningAction,

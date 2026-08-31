@@ -4,5 +4,7 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+tests/e2e/.auth/
+*.storage-state.json
 .env
 .env.*

@@ -205,7 +205,7 @@ export const emergencyServices = [
 
 export const guides = [
   { phase: "Before Travel", title: "Documents & Entry", country: "USA / Canada / Mexico", content: "Check passport validity, visa/ETA requirements, travel insurance, and match ticket rules before departure." },
-  { phase: "Before Travel", title: "Download Essentials", country: "All Host Countries", content: "Download FanAtlas, airline app, eSIM, transport apps, and offline city maps before flying." },
+  { phase: "Before Travel", title: "Download Essentials", country: "All Host Countries", content: "Download FanAtlas, airline app, eSIM, transport apps, and destination essentials before flying." },
   { phase: "After Arrival", title: "Airport Safety", country: "All Host Cities", content: "Use official taxis, rideshare pickup zones, or public transit. Avoid people offering unofficial rides." },
   { phase: "During Stay", title: "Match Day Rules", country: "All Stadiums", content: "Arrive 2 hours early, check bag policy, hydrate, and plan your route home before kickoff." }
 ];

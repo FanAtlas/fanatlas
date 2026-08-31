@@ -10,6 +10,7 @@ describe("i18n key coverage", () => {
       || key.startsWith("travelJournal.")
       || key.startsWith("travelInsights.")
       || key.startsWith("travelExplorer.")
+      || key.startsWith("fanAtlasAI.")
     );
 
     for (const language of languages) {

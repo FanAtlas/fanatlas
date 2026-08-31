@@ -12,6 +12,10 @@ test("public app shell launches without fatal runtime errors", async ({ page }) 
 });
 
 test("private travel routes resolve through the existing auth gate", async ({ page }) => {
+  await page.goto("/ai");
+  await expect(page.getByRole("heading", { name: "FanAtlas" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
+
   await page.goto("/passport");
   await expect(page.getByRole("heading", { name: "FanAtlas" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
@@ -23,6 +27,9 @@ test("private travel routes resolve through the existing auth gate", async ({ pa
   await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
 
   await page.goto("/explorer");
+  await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
+
+  await page.goto("/today");
   await expect(page.getByRole("button", { name: "Login" })).toBeVisible();
 });
 

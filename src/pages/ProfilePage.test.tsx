@@ -29,9 +29,12 @@ describe("ProfilePage", () => {
     expect(screen.getByRole("button", { name: /Travel Journal/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Travel Insights/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Global Travel Explorer/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /FanAtlas AI/i })).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: /FanAtlas AI/i }));
     await user.click(screen.getByRole("button", { name: /Global Travel Explorer/i }));
 
+    expect(setTab).toHaveBeenCalledWith("ai");
     expect(setTab).toHaveBeenCalledWith("explorer");
   });
 });

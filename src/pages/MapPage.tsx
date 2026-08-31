@@ -9,12 +9,29 @@ import { Tab } from "../main";
 import { MapDestination, MapDestinationType } from "../mapDestinations";
 import { reminderDate, scheduleNotification } from "../services/notifications";
 import { useLocation } from "../LocationContext";
+import { useConnectivity } from "../hooks/useConnectivity";
 import { distanceKm } from "../lib/location";
 import { useTravelLocation } from "../TravelLocationContext";
 import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
 import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
+import {
+  buildNavigationDestinationFromMapDestination,
+  buildNavigationMapLinks,
+  buildNavigationOrigin,
+  buildNavigationRequestFromMapDestination,
+  formatNavigationCoordinate,
+  formatNavigationDistance,
+  formatNavigationDuration,
+  navigationRouteFreshnessLabel,
+  navigationRouteFreshnessState,
+  navigationModeCapability,
+  navigationRequestToDestination,
+  normalizeNavigationRouteResponse,
+  type NavigationRoute,
+  type NavigationMode,
+  type NavigationRequest
+} from "../lib/navigation";
 
-type TravelMode = "walking" | "driving";
 type CategoryFilter = "All" | "Hotels" | "Restaurants" | "Attractions" | "Transport" | "SOS";
 
 const categoryFilters: CategoryFilter[] = [
@@ -35,13 +52,11 @@ const createIcon = (emoji: string) =>
 
 function FitPreview({
   destination,
-  focusRequest,
   route,
   userLocation,
   destinationCenter
 }: {
   destination: MapDestination | null;
-  focusRequest: number;
   route: [number, number][];
   userLocation: [number, number] | null;
   destinationCenter: [number, number];
@@ -60,7 +75,7 @@ function FitPreview({
     } else {
       map.setView(destinationCenter, 12, { animate: true });
     }
-  }, [destination, destinationCenter, focusRequest, map, route, userLocation]);
+  }, [destination, destinationCenter, map, route, userLocation]);
 
   return null;
 }
@@ -105,16 +120,6 @@ function destinationDetails(destination: MapDestination, nearbyDistance: string 
   ].filter((item): item is { label: string; value: string } => Boolean(item.value));
 }
 
-function mapLinks(destination: MapDestination) {
-  const encodedLatLng = encodeURIComponent(`${destination.lat},${destination.lng}`);
-
-  return {
-    apple: `https://maps.apple.com/?daddr=${encodedLatLng}`,
-    google: `https://www.google.com/maps/dir/?api=1&destination=${encodedLatLng}`,
-    waze: `https://waze.com/ul?ll=${encodedLatLng}&navigate=yes`
-  };
-}
-
 function globalPlaceDestination(place: GlobalPlace): MapDestination {
   return {
     name: place.name,
@@ -137,27 +142,26 @@ function globalPlaceDestination(place: GlobalPlace): MapDestination {
 }
 
 export function MapPage({
-  initialDestination,
+  initialNavigationRequest,
   setSelectedStadium,
   setTab
 }: {
-  initialDestination: MapDestination | null;
+  initialNavigationRequest: NavigationRequest | null;
   setSelectedStadium: (destination: MapDestination | null) => void;
   setTab: (tab: Tab) => void;
 }) {
-  const { language } = useLanguage();
-  const { location, status: locationStatus } = useLocation();
+  const { language, t } = useLanguage();
+  const { location, status: locationStatus, requestLocation } = useLocation();
+  const connectivity = useConnectivity();
   const { travelLocation } = useTravelLocation();
   const { groups, loading: placesLoading, message: placesMessage, refreshPlaces } = useGlobalPlaces();
   const userLocation: [number, number] | null = location
     ? [location.latitude, location.longitude]
     : null;
-  const [focusRequest, setFocusRequest] = useState(0);
+  const [selectedRequest, setSelectedRequest] = useState<NavigationRequest | null>(initialNavigationRequest);
   const [selectedPlace, setSelectedPlace] = useState<MapDestination | null>(null);
-  const [route, setRoute] = useState<[number, number][]>([]);
-  const [distance, setDistance] = useState("");
-  const [duration, setDuration] = useState("");
-  const [mode, setMode] = useState<TravelMode>("driving");
+  const [routeSnapshot, setRouteSnapshot] = useState<NavigationRoute | null>(null);
+  const [mode, setMode] = useState<NavigationMode>("driving");
   const [routeError, setRouteError] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
   const [routeLoading, setRouteLoading] = useState(false);
@@ -166,12 +170,25 @@ export function MapPage({
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const routeRequestId = useRef(0);
 
-  const externalLinks = selectedPlace ? mapLinks(selectedPlace) : null;
-  const selectedDistance = selectedPlace && location ? `${distanceKm(location, selectedPlace).toFixed(1)} km` : null;
-  const selectedDetails = selectedPlace ? destinationDetails(selectedPlace, selectedDistance) : [];
+  const selectedRouteDestination = useMemo(() => navigationRequestToDestination(selectedRequest), [selectedRequest]);
+  const activeDestination = selectedPlace || selectedRouteDestination;
+  const route = routeSnapshot?.geometry || [];
+  const distance = routeSnapshot ? formatNavigationDistance(routeSnapshot.distanceMeters || 0, language) : "";
+  const duration = routeSnapshot ? formatNavigationDuration(routeSnapshot.durationSeconds || 0, language) : "";
+  const routeFreshness = navigationRouteFreshnessState(routeSnapshot, {
+    currentRequest: selectedRequest,
+    isOnline: connectivity.isOnline
+  });
+  const routeFreshnessLabel = navigationRouteFreshnessLabel(routeSnapshot, {
+    currentRequest: selectedRequest,
+    isOnline: connectivity.isOnline
+  });
+  const externalLinks = activeDestination ? buildNavigationMapLinks(buildNavigationDestinationFromMapDestination(activeDestination, "manual")) : null;
+  const selectedDistance = activeDestination && location ? `${distanceKm(location, activeDestination).toFixed(1)} km` : null;
+  const selectedDetails = activeDestination ? destinationDetails(activeDestination, selectedDistance) : [];
   const destinationCenter: [number, number] = [travelLocation.latitude, travelLocation.longitude];
-  const mapCenter: [number, number] = selectedPlace
-    ? [selectedPlace.lat, selectedPlace.lng]
+  const mapCenter: [number, number] = activeDestination
+    ? [activeDestination.lat, activeDestination.lng]
     : destinationCenter;
 
   const filteredDestinations = useMemo(() => {
@@ -193,10 +210,10 @@ export function MapPage({
       return distanceKm(origin, a) - distanceKm(origin, b);
     });
   }, [category, groups.attractions, groups.hotels, groups.restaurants, groups.sos, groups.transport, search, travelLocation.latitude, travelLocation.longitude]);
-  const showSelectedMarker = selectedPlace && !filteredDestinations.some((place) => (
-    place.name === selectedPlace.name &&
-    Math.abs(place.lat - selectedPlace.lat) < 0.0001 &&
-    Math.abs(place.lng - selectedPlace.lng) < 0.0001
+  const showSelectedMarker = activeDestination && !filteredDestinations.some((place) => (
+    place.name === activeDestination.name &&
+    Math.abs(place.lat - activeDestination.lat) < 0.0001 &&
+    Math.abs(place.lng - activeDestination.lng) < 0.0001
   ));
   const visibleMapDestinations = filteredDestinations.slice(0, 25);
   const placeCountLabel = `${filteredDestinations.length} ${filteredDestinations.length === 1 ? "place" : "places"}`;
@@ -206,113 +223,132 @@ export function MapPage({
     : `${travelLocation.destinationCity}, ${travelLocation.destinationCountry} · ${placeCountLabel}`;
 
   useEffect(() => {
-    if (initialDestination) {
-      selectDestination(initialDestination, mode);
-    } else {
-      setSelectedPlace(null);
-      setRoute([]);
-      setDistance("");
-      setDuration("");
-      setRouteError("");
-    }
-  }, [initialDestination]);
+    const nextPlace = initialNavigationRequest ? navigationRequestToDestination(initialNavigationRequest) : null;
+    setSelectedRequest(initialNavigationRequest);
+    setSelectedPlace(nextPlace);
+    setMode(initialNavigationRequest?.mode || "driving");
+    setRouteSnapshot(null);
+    setRouteError("");
+    setNotificationMessage("");
+    routeRequestId.current += 1;
+  }, [initialNavigationRequest]);
 
   async function buildRoute(
     place: MapDestination,
-    travelMode: TravelMode = mode,
+    travelMode: NavigationMode = mode,
     origin: [number, number] | null = userLocation
   ) {
+    const request = buildNavigationRequestFromMapDestination(place, "manual", {
+      mode: travelMode,
+      origin: origin ? buildNavigationOrigin({ latitude: origin[0], longitude: origin[1] }, "user_location") : null
+    });
+
     setSelectedPlace(place);
+    setSelectedRequest(request);
     setMode(travelMode);
     const requestId = routeRequestId.current + 1;
     routeRequestId.current = requestId;
     setRouteError("");
     setNotificationMessage("");
-    setRoute([]);
-    setDistance("");
-    setDuration("");
+    setRouteSnapshot(null);
+
+    if (connectivity.isOffline) {
+      setRouteLoading(false);
+      setRouteError("Routing requires a connection.");
+      return;
+    }
+
+    const capability = navigationModeCapability(travelMode);
+    if (!capability.supported) {
+      setRouteLoading(false);
+      setRouteError(capability.reason || "Route unavailable.");
+      return;
+    }
+
+    const destinationCoordinates = request.destination.coordinates;
+    if (!destinationCoordinates) {
+      setRouteLoading(false);
+      setRouteError("Route unavailable.");
+      return;
+    }
 
     if (!origin) {
       setRouteLoading(false);
-      setRouteError("Route preview unavailable.");
+      setRouteError("Location unavailable.");
       return;
     }
 
     setRouteLoading(true);
-    const profile = travelMode === "walking" ? "foot" : "car";
     const url =
-      `https://router.project-osrm.org/route/v1/${profile}/` +
-      `${origin[1]},${origin[0]};${place.lng},${place.lat}` +
+      `https://router.project-osrm.org/route/v1/${capability.profile}/` +
+      `${origin[1]},${origin[0]};${destinationCoordinates.longitude},${destinationCoordinates.latitude}` +
       "?overview=full&geometries=geojson&steps=true";
 
     try {
       const response = await fetch(url);
-      if (!response.ok) throw new Error("Route preview unavailable.");
+      if (!response.ok) throw new Error("Route unavailable.");
 
       const data = await response.json();
-      if (!data.routes?.length) throw new Error("Route preview unavailable.");
-
-      const routeData = data.routes[0];
-      if (
-        typeof routeData.distance !== "number" ||
-        typeof routeData.duration !== "number" ||
-        !routeData.geometry?.coordinates?.length
-      ) {
-        throw new Error("Route preview unavailable.");
-      }
-
-      const coordinates = routeData.geometry.coordinates.map(
-        ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
-      );
+      const normalized = normalizeNavigationRouteResponse(data, request);
+      if (!normalized) throw new Error("Route unavailable.");
 
       if (requestId !== routeRequestId.current) return;
-      setRoute(coordinates);
-      setDistance(`${(routeData.distance / 1000).toFixed(1)} km`);
-      setDuration(`${Math.round(routeData.duration / 60)} min`);
+      setRouteSnapshot(normalized);
     } catch {
       if (requestId !== routeRequestId.current) return;
-      setRouteError("Route preview unavailable.");
+      setRouteError("Route unavailable.");
     } finally {
       if (requestId === routeRequestId.current) setRouteLoading(false);
     }
   }
 
-  function selectDestination(place: MapDestination, travelMode: TravelMode = mode) {
-    setSelectedPlace(place);
+  function selectDestination(place: MapDestination, travelMode: NavigationMode = mode) {
     buildRoute(place, travelMode);
   }
 
-  function useMyLocation() {
-    if (!userLocation) {
-      setRouteError("Enable location for nearby recommendations.");
+  async function useMyLocation() {
+    const activeDestination = selectedPlace || selectedRouteDestination;
+    if (!activeDestination) {
+      setRouteError("Open a destination first.");
       return;
     }
 
-    setSelectedPlace(null);
-    setRoute([]);
-    setDistance("");
-    setDuration("");
-    setRouteError("");
-    setFocusRequest((request) => request + 1);
+    if (connectivity.isOffline) {
+      setRouteError("Routing requires a connection.");
+      return;
+    }
+
+    const explicitLocation = await requestLocation();
+    if (!explicitLocation) {
+      setRouteError(locationStatus === "denied"
+        ? "Location permission denied."
+        : locationStatus === "unsupported"
+          ? "Location unavailable."
+          : locationStatus === "timeout"
+            ? "Location timed out."
+            : "Location unavailable.");
+      return;
+    }
+
+    await buildRoute(activeDestination, mode, [explicitLocation.latitude, explicitLocation.longitude]);
   }
 
   function clearRoute() {
     setSelectedPlace(null);
-    setRoute([]);
-    setDistance("");
-    setDuration("");
+    setSelectedRequest(null);
+    setRouteSnapshot(null);
     setRouteError("");
     setNotificationMessage("");
     routeRequestId.current += 1;
   }
 
   async function addStadiumArrivalReminder() {
-    if (!selectedPlace || selectedPlace.type !== "stadium") return;
+    if (!activeDestination || activeDestination.type !== "stadium") return;
 
     const { permission } = await scheduleNotification({
       type: "stadium-arrival",
-      title: `Stadium arrival: ${selectedPlace.name}`,
-      message: `Leave early for ${selectedPlace.name}. Recheck route, gate, bag policy, and ticket QR before arrival.`,
+      title: `Stadium arrival: ${activeDestination.name}`,
+      message: `Leave early for ${activeDestination.name}. Recheck route, gate, bag policy, and ticket QR before arrival.`,
       dueAt: reminderDate(90),
       source: "Map",
       actionTab: "map"
@@ -321,13 +357,13 @@ export function MapPage({
     setNotificationMessage(
       permission === "denied"
         ? "Stadium arrival reminder saved in FanAtlas. Browser notifications are blocked."
-        : `Stadium arrival reminder saved for ${selectedPlace.name}.`
+        : `Stadium arrival reminder saved for ${activeDestination.name}.`
     );
   }
 
   function openStadiumPage() {
-    if (!selectedPlace || selectedPlace.type !== "stadium") return;
-    setSelectedStadium(selectedPlace);
+    if (!activeDestination || activeDestination.type !== "stadium") return;
+    setSelectedStadium(activeDestination);
     setTab("stadium");
   }
 
@@ -346,7 +382,7 @@ export function MapPage({
           aria-label="Change destination"
           title="Change destination"
         >
-          Change
+          Change destination
         </button>
       </div>
 
@@ -387,16 +423,22 @@ export function MapPage({
         </div>
       </section>
 
+      {connectivity.isOffline && (
+        <div className="fa-inline-message" role="status">
+          <strong>{t.offline}</strong>
+          <span>{t.offlineRouting} {t.offlineMapTiles}</span>
+        </div>
+      )}
+
       <div className="map-preview-card">
-        <MapContainer center={mapCenter} zoom={selectedPlace ? 13 : 12} className="map-hub-leaflet">
+          <MapContainer center={mapCenter} zoom={activeDestination ? 13 : 12} className="map-hub-leaflet">
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="© OpenStreetMap"
           />
 
           <FitPreview
-            destination={selectedPlace}
-            focusRequest={focusRequest}
+            destination={activeDestination}
             route={route}
             userLocation={userLocation}
             destinationCenter={destinationCenter}
@@ -424,12 +466,12 @@ export function MapPage({
           ))}
 
           {showSelectedMarker && (
-            <Marker position={[selectedPlace.lat, selectedPlace.lng]} icon={createIcon(selectedPlace.emoji)}>
-              <Popup>{selectedPlace.name}</Popup>
+            <Marker position={[activeDestination.lat, activeDestination.lng]} icon={createIcon(activeDestination.emoji)}>
+              <Popup>{activeDestination.name}</Popup>
             </Marker>
           )}
 
-          {route.length > 0 && (
+          {route.length > 0 && routeFreshness === "fresh" && (
             <>
               <Polyline positions={route} />
             </>
@@ -437,16 +479,16 @@ export function MapPage({
         </MapContainer>
 
         <div className="map-floating-controls" aria-label="Map controls">
-          <button type="button" onClick={useMyLocation} aria-label="Show my location on the map" title="My location">
+          <button type="button" onClick={useMyLocation} aria-label="Use my location" title="Use my location">
             <LocateFixed size={18} />
           </button>
           <button type="button" onClick={refreshPlaces} aria-label="Refresh nearby places" title="Refresh places">
             <RefreshCw size={18} />
           </button>
-          {selectedPlace && (
+          {activeDestination && (
             <button
               type="button"
-              onClick={() => buildRoute(selectedPlace, mode)}
+              onClick={() => buildRoute(activeDestination, mode)}
               disabled={routeLoading}
               aria-label="Rebuild route to selected place"
               title="Route"
@@ -461,17 +503,23 @@ export function MapPage({
           {locationStatus === "available" && <small>Current location on map</small>}
         </div>
 
-        {selectedPlace && (
+        {activeDestination && (
           <section className="map-route-overlay" aria-label="Route summary">
             <div className="selected-destination-row compact">
-              <span>{selectedPlace.emoji}</span>
+              <span>{activeDestination.emoji}</span>
               <div>
-                <strong>{selectedPlace.name}</strong>
-                <p>{categoryLabel(selectedPlace.type)} · {mode}</p>
+                <strong>{activeDestination.name}</strong>
+                <p>{categoryLabel(activeDestination.type)} · {navigationModeCapability(mode).label}</p>
               </div>
             </div>
+            {selectedRequest?.destination.coordinates && (
+              <p className="map-destination-coordinates" dir="ltr">
+                {formatNavigationCoordinate(selectedRequest.destination.coordinates.latitude, language)}, {formatNavigationCoordinate(selectedRequest.destination.coordinates.longitude, language)}
+              </p>
+            )}
 
             {routeLoading && <div className="route-status">Building route preview...</div>}
+            {!routeLoading && routeFreshnessLabel && <div className={`route-status ${routeFreshness === "stale" ? "warning" : ""}`}>{routeFreshnessLabel}</div>}
             {routeError && <div className="route-status error">{routeError}</div>}
 
             {distance && duration && (
@@ -482,20 +530,20 @@ export function MapPage({
             )}
 
             <div className="travel-mode-row compact">
-              <button
-                className={`travel-mode ${mode === "walking" ? "active" : ""}`}
-                disabled={routeLoading}
-                onClick={() => buildRoute(selectedPlace, "walking")}
-              >
-                Walking
-              </button>
-              <button
-                className={`travel-mode ${mode === "driving" ? "active" : ""}`}
-                disabled={routeLoading}
-                onClick={() => buildRoute(selectedPlace, "driving")}
-              >
-                Driving
-              </button>
+              {(["walking", "driving", "cycling", "transit"] as NavigationMode[]).map((travelMode) => {
+                const capability = navigationModeCapability(travelMode);
+                return (
+                  <button
+                    key={travelMode}
+                    className={`travel-mode ${mode === travelMode ? "active" : ""}`}
+                    disabled={routeLoading || !capability.supported}
+                    onClick={() => buildRoute(activeDestination, travelMode)}
+                    title={capability.supported ? capability.label : capability.reason || "Not supported"}
+                  >
+                    {capability.label}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="map-route-actions">
@@ -543,7 +591,7 @@ export function MapPage({
 
             return (
               <button
-                className={`destination-card ${selectedPlace?.name === place.name ? "active" : ""}`}
+                className={`destination-card ${activeDestination?.name === place.name ? "active" : ""}`}
                 key={`${place.type}-${place.name}`}
                 onClick={() => selectDestination(place, mode)}
                 type="button"
@@ -562,9 +610,9 @@ export function MapPage({
           })}
         </div>
 
-        {selectedPlace && sheetExpanded && (
+        {activeDestination && sheetExpanded && (
           <div className="nearby-selected-details">
-            {selectedPlace.type === "stadium" && (
+            {activeDestination.type === "stadium" && (
               <div className="map-stadium-actions">
                 <button className="secondary-btn" onClick={openStadiumPage}>View Stadium Page</button>
                 <button className="secondary-btn" onClick={addStadiumArrivalReminder}>Add stadium arrival reminder</button>
@@ -591,7 +639,7 @@ export function MapPage({
             {route.length > 0 && (
               <div className="route-note-card">
                 <strong>Preview route in FanAtlas</strong>
-                <p>This is a planning preview. Use Apple Maps, Google Maps, or Waze for live navigation, traffic, closures, and rerouting.</p>
+                <p>This is a planning preview. Open the destination in Apple Maps, Google Maps, or Waze for external navigation.</p>
               </div>
             )}
           </div>

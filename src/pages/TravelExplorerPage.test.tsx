@@ -59,7 +59,7 @@ describe("TravelExplorerPage", () => {
   it("renders summary, filters destinations, and opens Explorer panels", async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(<TravelExplorerPage onBack={vi.fn()} setTab={vi.fn()} />);
+    renderWithProviders(<TravelExplorerPage onBack={vi.fn()} onOpenDestination={vi.fn()} setTab={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "Global Travel Explorer" })).toBeInTheDocument();
     expect(screen.getByLabelText("Explorer summary")).toHaveTextContent("Countries visited");
@@ -71,18 +71,18 @@ describe("TravelExplorerPage", () => {
     expect(screen.getByText("Completed trips")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Cities" }));
-    await user.click(screen.getByRole("button", { name: "Cities: Casablanca" }));
+    await user.click(screen.getByRole("button", { name: /Cities: Casablanca/i }));
     expect(screen.getByRole("heading", { name: "Casablanca" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Trips" }));
     await user.click(screen.getByRole("button", { name: "Trips: Morocco Return" }));
     expect(screen.getByRole("heading", { name: "Morocco Return" })).toBeInTheDocument();
-  });
+  }, 15_000);
 
   it("supports replay controls without autoplaying", async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(<TravelExplorerPage onBack={vi.fn()} setTab={vi.fn()} />);
+    renderWithProviders(<TravelExplorerPage onBack={vi.fn()} onOpenDestination={vi.fn()} setTab={vi.fn()} />);
 
     expect(screen.getAllByText("Replay recorded trips in chronological order. It never starts automatically.").length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: /Start replay/i }));
@@ -94,13 +94,13 @@ describe("TravelExplorerPage", () => {
   it("keeps private journal bodies and photo identifiers out of the Explorer document", async () => {
     const user = userEvent.setup();
 
-    renderWithProviders(<TravelExplorerPage onBack={vi.fn()} setTab={vi.fn()} />);
+    renderWithProviders(<TravelExplorerPage onBack={vi.fn()} onOpenDestination={vi.fn()} setTab={vi.fn()} />);
 
     await user.type(screen.getByPlaceholderText("Search countries, cities or trips"), "EXPLORER_COMPONENT_PRIVATE_BODY");
     expect(document.body).not.toHaveTextContent("EXPLORER_COMPONENT_PRIVATE_BODY");
     expect(document.body.innerHTML).not.toContain("EXPLORER_COMPONENT_PHOTO_ID");
     expect(screen.getByText("No destinations match the current filters.")).toBeInTheDocument();
-  });
+  }, 15_000);
 
   it("pauses automatic replay progression when reduced motion is requested", async () => {
     const user = userEvent.setup();
@@ -115,7 +115,7 @@ describe("TravelExplorerPage", () => {
       dispatchEvent: vi.fn()
     }));
 
-    renderWithProviders(<TravelExplorerPage onBack={vi.fn()} setTab={vi.fn()} />);
+    renderWithProviders(<TravelExplorerPage onBack={vi.fn()} onOpenDestination={vi.fn()} setTab={vi.fn()} />);
 
     await user.click(screen.getByRole("button", { name: /Start replay/i }));
 

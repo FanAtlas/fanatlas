@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { BackButton } from "../components/BackButton";
 import { useLanguage } from "../LanguageContext";
+import { useConnectivity } from "../hooks/useConnectivity";
 import { getExchangeRates } from "../services/exchangeRates";
 
-const AUTO_REFRESH_MS = 30 * 60 * 1000;
 const COMMON_CURRENCIES = [
   "USD",
   "CAD",
@@ -88,6 +88,7 @@ function formatUpdatedTime(value: string | number) {
 
 export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
   const { language, t } = useLanguage();
+  const connectivity = useConnectivity();
   const [amount, setAmount] = useState(100);
   const [converted, setConverted] = useState<ConversionResult | null>(null);
   const [error, setError] = useState("");
@@ -97,8 +98,15 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
   const [provider, setProvider] = useState("");
   const [rates, setRates] = useState<Record<string, number>>({});
   const [to, setTo] = useState("MXN");
+  const [didAttemptInitialLoad, setDidAttemptInitialLoad] = useState(false);
 
   async function loadRates() {
+    if (connectivity.isOffline) {
+      setLoading(false);
+      setError("Current exchange rates are unavailable offline.");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -118,10 +126,17 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
   }
 
   useEffect(() => {
-    loadRates();
-    const id = window.setInterval(loadRates, AUTO_REFRESH_MS);
-    return () => window.clearInterval(id);
-  }, []);
+    if (didAttemptInitialLoad) return;
+    setDidAttemptInitialLoad(true);
+
+    if (connectivity.isOffline) {
+      setLoading(false);
+      setError("Current exchange rates are unavailable offline.");
+      return;
+    }
+
+    void loadRates();
+  }, [connectivity.isOffline, didAttemptInitialLoad]);
 
   const codes = useMemo(() => {
     const liveCodes = Object.keys(rates);
@@ -166,7 +181,7 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
     setConverted(null);
   }
 
-  const display = converted || currentConversion;
+  const display = connectivity.isOffline ? null : converted || currentConversion;
 
   return (
     <div dir={language === "ar" ? "rtl" : "ltr"}>
@@ -181,6 +196,12 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="converter-card">
+        {connectivity.isOffline && (
+          <div className="route-status error" role="status">
+            Current exchange rates are unavailable offline.
+          </div>
+        )}
+
         {error && (
           <div className="route-status error">
             {error}
@@ -238,7 +259,7 @@ export function CurrencyConverterPage({ onBack }: { onBack: () => void }) {
         <p className="subtle">
           Live rates from {provider || "exchange-rate provider"}.
           {lastUpdated ? ` Updated: ${formatUpdatedTime(lastUpdated)}.` : ""}
-          {" "}Auto-refreshes every 30 minutes.
+          {" "}Refresh manually to check for new rates.
         </p>
       </div>
     </div>

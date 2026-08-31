@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../LanguageContext";
 import { useTravelExplorer } from "../hooks/useTravelExplorer";
+import { destinationHubTranslate } from "../lib/destinationHubI18n";
 import type { Tab } from "../main";
 import type {
   TravelExplorerCity,
@@ -46,10 +47,11 @@ import {
 
 type TravelExplorerPageProps = {
   onBack: () => void;
+  onOpenDestination: (destinationId: string) => void;
   setTab: (tab: Tab) => void;
 };
 
-export function TravelExplorerPage({ onBack, setTab }: TravelExplorerPageProps) {
+export function TravelExplorerPage({ onBack, onOpenDestination, setTab }: TravelExplorerPageProps) {
   const { language, t } = useLanguage();
   const { explorer } = useTravelExplorer();
   const [search, setSearch] = useState("");
@@ -128,6 +130,7 @@ export function TravelExplorerPage({ onBack, setTab }: TravelExplorerPageProps) 
   }, [replayState, replaySteps.length]);
 
   function translate(key: string) {
+    if (key.startsWith("destinationHub.")) return destinationHubTranslate(language, key);
     return (t as Record<string, string>)[key] || key;
   }
 
@@ -316,6 +319,7 @@ export function TravelExplorerPage({ onBack, setTab }: TravelExplorerPageProps) 
                   translate={translate}
                   onSelectTrip={(id) => setSelection({ type: "trip", id })}
                   onSelectCountry={(id) => setSelection({ type: "country", id })}
+                  onOpenDestination={onOpenDestination}
                 />
               ) : selectedTrip ? (
                 <TripPanel
@@ -340,6 +344,7 @@ export function TravelExplorerPage({ onBack, setTab }: TravelExplorerPageProps) 
                   setTab={setTab}
                   onSelectCity={(id) => setSelection({ type: "city", id })}
                   onSelectTrip={(id) => setSelection({ type: "trip", id })}
+                  onOpenDestination={onOpenDestination}
                 />
               ) : (
                 <div className="travel-explorer-panel-empty">
@@ -358,6 +363,7 @@ export function TravelExplorerPage({ onBack, setTab }: TravelExplorerPageProps) 
             translate={translate}
             numberFormat={numberFormat}
             onSelect={setSelection}
+            onOpenDestination={onOpenDestination}
           />
 
           <DestinationBrowser
@@ -584,7 +590,8 @@ function CountryPanel({
   translate,
   setTab,
   onSelectCity,
-  onSelectTrip
+  onSelectTrip,
+  onOpenDestination
 }: {
   country: TravelExplorerCountry;
   cities: readonly TravelExplorerCity[];
@@ -596,6 +603,7 @@ function CountryPanel({
   setTab: (tab: Tab) => void;
   onSelectCity: (id: string) => void;
   onSelectTrip: (id: string) => void;
+  onOpenDestination: (destinationId: string) => void;
 }) {
   const travelDays = getCountryTravelDays(country, explorerTrips);
   const years = getTravelYearsForTripIds(country.completedTripIds, explorerTrips);
@@ -621,7 +629,7 @@ function CountryPanel({
         <div><dt>{translate("travelExplorer.nextPlanned")}</dt><dd>{formatDate(country.nextPlannedDate)}</dd></div>
         <div><dt>{translate("travelExplorer.travelYears")}</dt><dd>{years.length ? years.join(", ") : translate("travelExplorer.notAvailable")}</dd></div>
       </dl>
-      <PanelActions setTab={setTab} translate={translate} />
+      <PanelActions destinationId={country.id} onOpenDestination={onOpenDestination} setTab={setTab} translate={translate} />
       <RelatedList title={translate("travelExplorer.relatedCities")} empty={translate("travelExplorer.noResults")}>
         {cities.slice(0, 6).map((city) => (
           <button type="button" key={city.id} onClick={() => onSelectCity(city.id)}>
@@ -650,7 +658,8 @@ function CityPanel({
   formatDate,
   translate,
   onSelectTrip,
-  onSelectCountry
+  onSelectCountry,
+  onOpenDestination
 }: {
   city: TravelExplorerCity;
   trips: readonly TravelExplorerTrip[];
@@ -660,6 +669,7 @@ function CityPanel({
   translate: (key: string) => string;
   onSelectTrip: (id: string) => void;
   onSelectCountry: (id: string) => void;
+  onOpenDestination: (destinationId: string) => void;
 }) {
   const travelDays = getCityTravelDays(city, explorerTrips);
   const years = getTravelYearsForTripIds(city.completedTripIds, explorerTrips);
@@ -688,6 +698,9 @@ function CityPanel({
           {translate("travelExplorer.returnToCountry")}
         </button>
       )}
+      <button type="button" className="secondary-btn" onClick={() => onOpenDestination(city.id)}>
+        {translate("destinationHub.viewDestination")}
+      </button>
       <RelatedList title={translate("travelExplorer.relatedTrips")} empty={translate("travelExplorer.noResults")}>
         {trips.slice(0, 6).map((trip) => (
           <button type="button" key={trip.id} onClick={() => onSelectTrip(trip.id)}>
@@ -751,9 +764,10 @@ function TripPanel({
   );
 }
 
-function PanelActions({ setTab, translate }: { setTab: (tab: Tab) => void; translate: (key: string) => string }) {
+function PanelActions({ destinationId, onOpenDestination, setTab, translate }: { destinationId?: string; onOpenDestination?: (destinationId: string) => void; setTab: (tab: Tab) => void; translate: (key: string) => string }) {
   return (
     <div className="travel-explorer-panel-actions">
+      {destinationId && onOpenDestination && <button type="button" className="secondary-btn" onClick={() => onOpenDestination(destinationId)}>{translate("destinationHub.viewDestination")}</button>}
       <button type="button" className="secondary-btn" onClick={() => setTab("passport")}>{translate("travelExplorer.openPassport")}</button>
       <button type="button" className="secondary-btn" onClick={() => setTab("journal")}>{translate("travelExplorer.openJournal")}</button>
       <button type="button" className="secondary-btn" onClick={() => setTab("tripDrafts")}>{translate("travelExplorer.openPlanner")}</button>
@@ -776,7 +790,8 @@ function ExplorerHighlights({
   trips,
   translate,
   numberFormat,
-  onSelect
+  onSelect,
+  onOpenDestination
 }: {
   countries: readonly TravelExplorerCountry[];
   cities: readonly TravelExplorerCity[];
@@ -784,6 +799,7 @@ function ExplorerHighlights({
   translate: (key: string) => string;
   numberFormat: Intl.NumberFormat;
   onSelect: (selection: ExplorerSelection) => void;
+  onOpenDestination: (destinationId: string) => void;
 }) {
   const mostVisitedCountry = sortExplorerCountries(countries.filter((country) => country.completedTripIds.length > 0), "mostVisited")[0];
   const mostVisitedCity = sortExplorerCities(cities.filter((city) => city.completedTripIds.length > 0), "mostVisited")[0];
@@ -794,17 +810,17 @@ function ExplorerHighlights({
       <h2>{translate("travelExplorer.highlights")}</h2>
       <div>
         {mostVisitedCountry && (
-          <button type="button" onClick={() => onSelect({ type: "country", id: mostVisitedCountry.id })}>
+          <button type="button" onClick={() => { onSelect({ type: "country", id: mostVisitedCountry.id }); onOpenDestination(mostVisitedCountry.id); }}>
             <span>{translate("travelExplorer.mostVisitedCountry")}</span>
             <strong>{mostVisitedCountry.countryName}</strong>
-            <small>{numberFormat.format(mostVisitedCountry.completedTripIds.length)} {translate("travelExplorer.trips")}</small>
+            <small>{numberFormat.format(mostVisitedCountry.completedTripIds.length)} {translate("travelExplorer.trips")} · {translate("destinationHub.viewDestination")}</small>
           </button>
         )}
         {mostVisitedCity && (
-          <button type="button" onClick={() => onSelect({ type: "city", id: mostVisitedCity.id })}>
+          <button type="button" onClick={() => { onSelect({ type: "city", id: mostVisitedCity.id }); onOpenDestination(mostVisitedCity.id); }}>
             <span>{translate("travelExplorer.mostVisitedCity")}</span>
             <strong>{mostVisitedCity.cityName}</strong>
-            <small>{numberFormat.format(mostVisitedCity.completedTripIds.length)} {translate("travelExplorer.trips")}</small>
+            <small>{numberFormat.format(mostVisitedCity.completedTripIds.length)} {translate("travelExplorer.trips")} · {translate("destinationHub.viewDestination")}</small>
           </button>
         )}
         {longestTrip && (

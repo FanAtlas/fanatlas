@@ -1,5 +1,7 @@
 import { geocodeCity } from "./geocoding";
 import { fetchGooglePlaces, hasGooglePlacesKey } from "./googlePlaces";
+import { isOffline } from "../lib/connectivity";
+import { getFallbackPlaces } from "../data/globalFallbackContent";
 
 export type GlobalPlaceCategory =
   | "hotel"
@@ -310,6 +312,7 @@ export function getCachedGlobalPlaces(input: GlobalPlacesInput): GlobalPlacesRes
 
 export async function getGlobalPlaces(input: GlobalPlacesInput, options: GlobalPlacesOptions = {}): Promise<GlobalPlacesResult> {
   cleanupLegacyPlacesCache();
+  const offline = isOffline();
   const initialCachedCoordinates = hasCoordinates(input)
     ? { latitude: input.latitude!, longitude: input.longitude! }
     : null;
@@ -321,6 +324,24 @@ export async function getGlobalPlaces(input: GlobalPlacesInput, options: GlobalP
       ...cached,
       source: "cache",
       message: "Using saved travel content."
+    };
+  }
+
+  if (offline) {
+    if (cached && cached.places.length > 0) {
+      return {
+        ...cached,
+        source: "stale-cache",
+        message: "Offline. Showing saved travel content."
+      };
+    }
+
+    return {
+      places: getFallbackPlaces(input),
+      source: "live",
+      message: `Offline. Showing saved travel content near ${input.destinationCity}.`,
+      latitude: input.latitude || 0,
+      longitude: input.longitude || 0
     };
   }
 

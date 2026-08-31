@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { Destination, fallbackDestination, findDestination } from "./data/destinations";
 import { useLocation } from "./LocationContext";
+import { useConnectivity } from "./hooks/useConnectivity";
 import { supabase } from "./lib/supabase";
 import { geocodeCity, GeocodingResult } from "./services/geocoding";
 import { cleanupLegacyPlacesCache } from "./services/globalPlaces";
@@ -80,6 +81,7 @@ async function saveProfileLocation(value: TravelLocationInput) {
 
 export function TravelLocationProvider({ children }: { children: ReactNode }) {
   const { location } = useLocation();
+  const connectivity = useConnectivity();
   const [manualLocation, setManualLocation] = useState<TravelLocationInput>(() => readManualLocation());
   const [manualGeocode, setManualGeocode] = useState<GeocodingResult | null>(null);
 
@@ -128,6 +130,11 @@ export function TravelLocationProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function resolveManualCoordinates() {
+      if (connectivity.isOffline) {
+        setManualGeocode(null);
+        return;
+      }
+
       if (!hasCompleteLocation(manualLocation)) {
         setManualGeocode(null);
         return;
@@ -147,7 +154,7 @@ export function TravelLocationProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [manualLocation.destinationCity, manualLocation.destinationCountry]);
+  }, [connectivity.isOffline, manualLocation.destinationCity, manualLocation.destinationCountry]);
 
   const value = useMemo<TravelLocationContextValue>(() => {
     const manualDestination = hasCompleteLocation(manualLocation)
@@ -187,10 +194,10 @@ export function TravelLocationProvider({ children }: { children: ReactNode }) {
           longitude: manualGeocode.longitude,
           currency: "",
           language: "",
-          emergencyNumber: "112 / local emergency services",
-          policeNumber: "112 / local emergency services",
-          ambulanceNumber: "112 / local emergency services",
-          fireNumber: "112 / local emergency services"
+          emergencyNumber: "Not available yet",
+          policeNumber: "Not available yet",
+          ambulanceNumber: "Not available yet",
+          fireNumber: "Not available yet"
         },
         hasManualDestination: true,
         saveTravelLocation

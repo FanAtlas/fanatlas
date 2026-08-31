@@ -1,3 +1,5 @@
+import { isOffline } from "../lib/connectivity";
+
 export type GeocodingResult = {
   latitude: number;
   longitude: number;
@@ -17,6 +19,8 @@ function cacheKey(city: string, country: string) {
 }
 
 export async function geocodeCity(city: string, country: string): Promise<GeocodingResult | null> {
+  if (isOffline()) return null;
+
   const key = cacheKey(city, country);
   const cached = localStorage.getItem(key);
 

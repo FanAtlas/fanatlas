@@ -355,6 +355,7 @@ export type TravelToolId =
   | "place_search"
   | "route_planning"
   | "currency_conversion"
+  | "destination_current_information"
   | "emergency_services_lookup"
   | "visa_rules_lookup"
   | "customs_rules_lookup"
@@ -560,6 +561,10 @@ export type TravelStructuredOutput =
   | { type: "destination_comparison"; version: string; destinations: string[] }
   | { type: "recommendation_list"; version: string; items: Array<{ title: string; reason: string }> }
   | { type: "safety_notice"; version: string; notices: string[] }
+  | { type: "weather_result"; version: string; destination: string; forecastStart: string; forecastEnd: string; units: "metric" | "imperial"; daily: Array<{ date: string; condition: string; temperatureMin: number | null; temperatureMax: number | null; precipitationChance: number | null }>; alerts: Array<{ title: string; severity: string; effectiveAt?: string; expiresAt?: string }>; retrievedAt: string; freshness: string; citationIds: string[] }
+  | { type: "currency_result"; version: string; baseCurrency: string; targetCurrency: string; amount?: number; rate: number; convertedAmount?: number; rateDate: string; retrievedAt: string; freshness: string; citationIds: string[] }
+  | { type: "emergency_information"; version: string; country: string; category: string; phoneNumber: string; availabilityNote: string; reviewedAt: string; sosPath: "/sos"; retrievedAt: string; freshness: string; citationIds: string[] }
+  | { type: "current_information_result"; version: string; destination: string; category: string; findings: Array<{ title: string; source: string; url: string; fact: string; sourceQuality: string; retrievedAt: string; updatedAt?: string }>; retrievedAt: string; freshness: string; citationIds: string[] }
   | { type: "translation"; version: string; sourceLocale?: string; targetLocale: string }
   | { type: "document_summary"; version: string; sectionCount: number }
   | { type: "tool_request"; version: string; toolIds: TravelToolId[] }

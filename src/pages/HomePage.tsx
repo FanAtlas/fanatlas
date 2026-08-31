@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bot,
+  BookOpen,
   CalendarDays,
   Compass,
   Hotel,
@@ -9,68 +9,89 @@ import {
   MapPin,
   Search,
   Shield,
-  Sparkles,
-  Trophy,
-  Utensils,
   Wallet,
-  Wifi,
   Wrench,
   X
 } from "lucide-react";
 import { useLanguage } from "../LanguageContext";
 import { LegalFooter } from "../components/LegalFooter";
 import { fanZones, places, stadiums as knownStadiums } from "../data/mockData";
+import { destinations } from "../data/destinations";
 import { Language } from "../i18n";
 import { Tab } from "../main";
-import { getFanZoneDestination, getStadiumDestination, MapDestination } from "../mapDestinations";
+import { getFanZoneDestination, getStadiumDestination, type MapDestination } from "../mapDestinations";
 import { InstallBanner } from "./InstallBanner";
-import { distanceKm, formatDistance } from "../lib/location";
-import { destinations } from "../data/destinations";
 import { useTravelLocation } from "../TravelLocationContext";
-import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
-import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
+import { useConnectivity } from "../hooks/useConnectivity";
+import { useTripDrafts } from "../hooks/useTripDrafts";
 import { countryFlag } from "../data/countries";
-import { ExploreImageCategory, imageForCategory } from "../data/categoryImages";
-
-type HomePlaceCard = {
-  id: string;
-  title: string;
-  category: "attraction" | "restaurant" | "hotel";
-  badge: string;
-  image: string;
-  sourceLabel: string;
-  action: string;
-  distance?: string;
-  place?: GlobalPlace;
-  isVerified: boolean;
-};
+import { imageForCategory } from "../data/categoryImages";
+import { GlobalPlace } from "../services/globalPlaces";
+import { deriveDestinationIntelligence } from "../lib/destinationIntelligence";
+import { deriveTravelHome, type TravelHomeAction, type TravelHomeState, type TravelHomeViewModel } from "../lib/travelHome";
+import { deriveTravelDiscovery, type TravelDiscoverySection } from "../lib/travelDiscovery";
+import { resolveDestinationId } from "../lib/destinationHub";
+import type { TripDayProgress } from "../lib/tripDay";
+import { tripDayTranslate } from "../lib/tripDayI18n";
 
 type HomeSearchResult = {
   type: string;
   label: string;
   name: string;
   city: string;
+  destinationId?: string | null;
   item?: GlobalPlace | Record<string, unknown>;
 };
 
 type HomeCopy = typeof import("../i18n").text.en;
 
-export function HomePage({
-  setExploreCategory,
-  setMapDestination,
-  setSelectedRestaurant,
-  setTab
-}: {
+type HomePageProps = {
   setExploreCategory: (category: string) => void;
   setMapDestination: (destination: MapDestination | null) => void;
   setSelectedRestaurant: (restaurant: any) => void;
   setTab: (tab: Tab) => void;
-}) {
+  onOpenDestination?: (destinationId: string) => void;
+  onOpenPreparation?: (tripId: string) => void;
+  onOpenTripDay?: (tripId: string) => void;
+};
+
+export function HomePage({
+  setExploreCategory,
+  setMapDestination,
+  setSelectedRestaurant,
+  setTab,
+  onOpenDestination,
+  onOpenPreparation,
+  onOpenTripDay
+}: HomePageProps) {
   const { language, setLanguage, t } = useLanguage();
+  const connectivity = useConnectivity();
   const { travelLocation } = useTravelLocation();
-  const { groups, loading: placesLoading, message: placesMessage, refreshPlaces } = useGlobalPlaces();
+  const { drafts } = useTripDrafts([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState("");
+
+  const currentDate = useMemo(() => new Date(), []);
+  const intelligence = useMemo(() => deriveDestinationIntelligence({ tripDrafts: drafts, generatedAt: "session" }), [drafts]);
+  const home = useMemo(
+    () => deriveTravelHome({
+      trips: drafts,
+      intelligence,
+      currentDate,
+      connectivity: connectivity.status
+    }),
+    [connectivity.status, currentDate, drafts, intelligence]
+  );
+  const discovery = useMemo(
+    () => deriveTravelDiscovery({
+      home,
+      travelLocation,
+      intelligence,
+      currentDate,
+      connectivity: connectivity.status
+    }),
+    [connectivity.status, currentDate, home, intelligence, travelLocation]
+  );
 
   useEffect(() => {
     const message = sessionStorage.getItem("fanatlas_travel_toast");
@@ -82,76 +103,43 @@ export function HomePage({
     return () => window.clearTimeout(timer);
   }, []);
 
-  const isEventDestination = useMemo(() => {
-    const city = travelLocation.destinationCity.toLowerCase();
-    return [...knownStadiums, ...fanZones].some((item) => item.city.toLowerCase().includes(city) || city.includes(item.city.toLowerCase()));
-  }, [travelLocation.destinationCity]);
-
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [] as HomeSearchResult[];
 
     const hotels = [
-      { name: "Marriott Times Square", city: "New York" },
-      { name: "Ibis Mexico City", city: "Mexico City" },
-      { name: "Delta Hotels Toronto", city: "Toronto" }
+      { name: "Marriott Times Square", city: "New York", country: "United States" },
+      { name: "Ibis Mexico City", city: "Mexico City", country: "Mexico" },
+      { name: "Delta Hotels Toronto", city: "Toronto", country: "Canada" }
     ];
-    const cities = destinations.map((destination) => `${destination.city}, ${destination.country}`);
+    const destinationsList = destinations.map((destination) => ({
+      type: "destination",
+      label: t.travelGuides,
+      name: `${destination.city}, ${destination.country}`,
+      city: destination.city,
+      destinationId: resolveDestinationId({ city: destination.city, country: destination.country })
+    }));
     const results: HomeSearchResult[] = [
-      ...knownStadiums.map((item) => ({ type: "stadium", label: t.stadiumArchive, name: item.name, city: item.city })),
-      ...places.map((item) => ({ type: "restaurant", label: t.restaurantSuggestion, name: item.name, city: item.city, item })),
-      ...fanZones.map((item) => ({ type: "fan-zone", label: t.fanZoneArchive, name: item.name, city: item.city })),
-      ...[...groups.hotels, ...groups.restaurants, ...groups.attractions].map((item) => ({
-        type: item.category,
-        label: isVerifiedPlace(item) ? t.nearbyPlace : t.searchSuggestion,
-        name: item.name,
-        city: item.city,
-        item
-      })),
-      ...hotels.map((item) => ({ type: "hotel", label: t.hotelSearch, name: item.name, city: item.city })),
-      ...cities.map((city) => ({ type: "city", label: t.destinationResult, name: city, city }))
+      ...knownStadiums.map((item) => ({ type: "stadium", label: t.matchCenter, name: item.name, city: item.city })),
+      ...places.map((item) => ({ type: "restaurant", label: t.restaurants, name: item.name, city: item.city, item })),
+      ...fanZones.map((item) => ({ type: "fan-zone", label: t.fanZones, name: item.name, city: item.city })),
+      ...hotels.map((item) => ({ type: "hotel", label: t.hotels, name: item.name, city: item.city })),
+      ...destinationsList
     ];
 
     return results
       .filter((item) => `${item.name} ${item.city} ${item.type} ${item.label}`.toLowerCase().includes(query))
       .slice(0, 7);
-  }, [groups.attractions, groups.hotels, groups.restaurants, searchQuery, t]);
+  }, [searchQuery, t]);
 
-  const primaryActions = [
-    { label: t.explore, icon: Compass, tab: "explore" as Tab, ariaLabel: t.openExplore },
-    { label: t.map, icon: MapPin, tab: "map" as Tab, ariaLabel: t.openMap },
-    { label: t.hotels, icon: Hotel, tab: "hotels" as Tab, ariaLabel: t.openHotels },
-    { label: t.sos, icon: Shield, tab: "sos" as Tab, ariaLabel: t.openSos }
-  ];
-  const secondaryActions = [
-    { label: t.restaurants, icon: Utensils, tab: "explore" as Tab, category: "Restaurants", ariaLabel: t.showAllRestaurants },
-    { label: t.travelTools, icon: Wrench, tab: "traveltools" as Tab, ariaLabel: t.travelTools },
-    { label: t.aiChat, icon: Bot, tab: "ai" as Tab, ariaLabel: t.openAiAssistant }
-  ];
-  const travelTools = [
-    { label: t.translate, icon: Languages, tab: "translator" as Tab },
-    { label: t.currency, icon: Wallet, tab: "currency" as Tab },
-    { label: t.esim, icon: Wifi, tab: "esim" as Tab },
-    { label: t.offline, icon: MapPin, tab: "offline" as Tab },
-    { label: t.travelGuides, icon: Compass, tab: "guides" as Tab },
-    { label: t.events, icon: CalendarDays, tab: "matches" as Tab }
-  ];
-  const homeCards = useMemo(() => ({
-    attractions: buildHomeCards(groups.attractions, "attraction", travelLocation, t),
-    restaurants: buildHomeCards(groups.restaurants, "restaurant", travelLocation, t),
-    hotels: buildHomeCards(groups.hotels, "hotel", travelLocation, t)
-  }), [groups.attractions, groups.hotels, groups.restaurants, travelLocation, t]);
-  const verifiedCounts = {
-    attractions: homeCards.attractions.filter((card) => card.isVerified).length,
-    restaurants: homeCards.restaurants.filter((card) => card.isVerified).length,
-    hotels: homeCards.hotels.filter((card) => card.isVerified).length
-  };
+  const hero = buildHeroCopy(home, t, language);
+  const primaryActionLabel = resolveLabel(language, t, home.primaryAction.labelKey);
 
   return (
-    <div className="home-compact-page home-dashboard fa-page" dir={language === "ar" ? "rtl" : "ltr"}>
+    <div className="home-page home-command-center fa-page" dir={language === "ar" ? "rtl" : "ltr"}>
       <InstallBanner />
 
-      <header className="home-dashboard-header fa-page-header fa-page-header-sticky">
+      <header className="home-header fa-page-header fa-page-header-sticky">
         <div className="home-header-main">
           <div>
             <div className="brand">FanAtlas</div>
@@ -188,6 +176,53 @@ export function HomePage({
         </div>
       )}
 
+      {home.offlineSummary.status === "offline" && (
+        <div className="fa-inline-message" role="status">
+          <strong>{t.offline}</strong>
+          <span>{t.offlineTripEssentials}</span>
+        </div>
+      )}
+
+      <section className="home-hero-card fa-summary-card" aria-labelledby="home-hero-title">
+        <div className="home-hero-copy">
+          <span className="fa-badge">{hero.badge}</span>
+          <h1 id="home-hero-title">{hero.title}</h1>
+          <p>{hero.body}</p>
+          {hero.detail && <small>{hero.detail}</small>}
+        </div>
+        <div className="home-hero-meta">
+          {home.hero?.destinationLabel && <strong>{home.hero.destinationLabel}</strong>}
+          {home.hero?.dayLabel && <span>{home.hero.dayLabel}</span>}
+          {home.hero?.nextPlaceLabel && <span>{home.hero.nextPlaceLabel}</span>}
+          {home.hero?.progress && <span>{formatProgress(home.hero.progress, language)}</span>}
+          {home.hero?.daysUntilDeparture != null && home.hero.daysUntilDeparture > 0 && (
+            <span>{tripDayTranslate(language, "tripDay.homeUpcoming").replace("{days}", String(home.hero.daysUntilDeparture))}</span>
+          )}
+          {home.hero?.daysUntilDeparture === 0 && <span>{tripDayTranslate(language, "tripDay.beforeTrip")}</span>}
+          {home.hero?.daysSinceEnd != null && home.hero.daysSinceEnd > 0 && (
+            <span>{tripDayTranslate(language, "tripDay.ended")}</span>
+          )}
+          <button className="fa-button-primary" type="button" onClick={() => runAction(home.primaryAction, { setExploreCategory, setMapDestination, setSelectedRestaurant, setTab, onOpenDestination, onOpenPreparation, onOpenTripDay })}>
+            {primaryActionLabel}
+          </button>
+        </div>
+      </section>
+
+      <section className="home-actions-row" aria-label={t.fastActions}>
+        {home.secondaryActions.map((action) => (
+          <button
+            className="home-action-chip fa-button-ghost"
+            key={action.id}
+            type="button"
+            aria-label={resolveLabel(language, t, action.labelKey)}
+            onClick={() => runAction(action, { setExploreCategory, setMapDestination, setSelectedRestaurant, setTab, onOpenDestination, onOpenPreparation, onOpenTripDay })}
+          >
+            {iconForAction(action.labelKey)}
+            <span>{resolveLabel(language, t, action.labelKey)}</span>
+          </button>
+        ))}
+      </section>
+
       <label className="home-search-shell fa-search">
         <Search className="fa-search-icon" size={18} aria-hidden="true" />
         <span className="sr-only">{t.search}</span>
@@ -216,7 +251,7 @@ export function HomePage({
               className="fan-list-item"
               key={`${result.type}-${result.name}`}
               type="button"
-              onClick={() => openSearchResult(result, setMapDestination, setSelectedRestaurant, setExploreCategory, setTab)}
+              onClick={() => openSearchResult(result, setMapDestination, setSelectedRestaurant, setExploreCategory, setTab, onOpenDestination)}
             >
               <span className="home-search-type">{result.label}</span>
               <strong>{result.name}</strong>
@@ -226,111 +261,177 @@ export function HomePage({
         </div>
       )}
 
-      <section className="home-primary-actions" aria-labelledby="home-primary-actions-title">
-        <div className="home-section-heading fa-section-header">
-          <div>
-            <span>{t.fastActions}</span>
-            <h1 id="home-primary-actions-title" className="fa-section-title">{travelLocation.destinationCity}</h1>
+      {home.tripChooser && (
+        <section className="home-context-card fa-card" aria-labelledby="home-chooser-title">
+          <div className="home-context-card-heading">
+            <div>
+              <span>{copyKey(t, home.tripChooser.titleKey)}</span>
+              <h2 id="home-chooser-title">{copyKey(t, home.tripChooser.titleKey)}</h2>
+            </div>
+            <CalendarDays size={20} aria-hidden="true" />
           </div>
-        </div>
-        <div className="home-primary-action-grid">
-          {primaryActions.map((action) => {
-            const Icon = action.icon;
-            return (
+          <div className="home-trip-list" role="list">
+            {home.tripChooser.trips.map((trip) => (
               <button
-                className="home-primary-action-card fa-card-compact fa-card-interactive"
-                key={action.label}
+                key={trip.tripId}
+                className="home-trip-item"
                 type="button"
-                aria-label={action.ariaLabel}
-                onClick={() => {
-                  if (action.tab === "map") setMapDestination(null);
-                  if (action.tab === "explore") setExploreCategory("All");
-                  setTab(action.tab);
-                }}
+                onClick={() => runAction({ id: `trip:${trip.tripId}`, labelKey: "tripDay.chooseTrip", target: { kind: "tripDay", tripId: trip.tripId }, kind: "secondary" }, { setExploreCategory, setMapDestination, setSelectedRestaurant, setTab, onOpenDestination, onOpenPreparation, onOpenTripDay })}
               >
-                <Icon size={22} aria-hidden="true" />
-                <span>{action.label}</span>
+                <strong>{trip.tripName}</strong>
+                {trip.destinationLabel && <small>{trip.destinationLabel}</small>}
+                {trip.startDate && <em>{formatTripDateRange(trip.startDate, trip.endDate)}</em>}
               </button>
-            );
-          })}
-        </div>
-        <div className="home-secondary-actions" aria-label={t.secondaryTools}>
-          {secondaryActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                className="home-secondary-action fa-button-ghost"
-                key={action.label}
-                type="button"
-                aria-label={action.ariaLabel}
-                onClick={() => {
-                  if (action.category) setExploreCategory(action.category);
-                  setTab(action.tab);
-                }}
-              >
-                <Icon size={16} aria-hidden="true" />
-                <span>{action.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="home-travel-picks" aria-label={t.nearbyHighlights}>
-        <div className="home-section-heading fa-section-header">
-          <div>
-            <span>{t.verifiedNearby}</span>
-            <h2 className="fa-section-title">{t.nearbyHighlights}</h2>
+            ))}
           </div>
-          {placesLoading && <em role="status" aria-live="polite">{t.refreshingLocalPlaces}</em>}
-        </div>
+        </section>
+      )}
 
-        {!placesLoading && placesMessage && (
-          <div className="home-refresh-pill" role="status" aria-live="polite">
-            {placesMessage.includes("saved") ? t.showingSavedPlaces : t.nearbyUnavailable}
-            {placesMessage.includes("Finding live places") && <button type="button" onClick={refreshPlaces}>{t.refresh}</button>}
+      {home.tripSummary && home.state !== "multiple_trips" && (
+        <section className="home-context-card fa-card" aria-labelledby="home-trip-title">
+          <div className="home-context-card-heading">
+            <div>
+              <span>{copyKey(t, stateTitleKey(home.state))}</span>
+              <h2 id="home-trip-title">{home.tripSummary.tripName}</h2>
+            </div>
+            {home.state === "active_trip" || home.state === "day_complete" || home.state === "departure_day"
+              ? <CalendarDays size={20} aria-hidden="true" />
+              : <Compass size={20} aria-hidden="true" />}
+          </div>
+
+          <div className="home-trip-summary-grid">
+            {home.tripSummary.destinationLabel && <div><span>{t.travelGuides}</span><strong>{home.tripSummary.destinationLabel}</strong></div>}
+            {home.tripSummary.dayLabel && <div><span>{tripDayTranslate(language, "tripDay.dayOf").replace("{day}", String(home.tripSummary.dayIndex !== null ? home.tripSummary.dayIndex + 1 : 1)).replace("{total}", String(home.tripSummary.dayCount || 0))}</span><strong>{home.tripSummary.nextPlaceLabel || resolveLabel(language, t, stateTitleKey(home.state))}</strong></div>}
+            {home.tripSummary.nextPlaceLabel && <div><span>{tripDayTranslate(language, "tripDay.whatsNext")}</span><strong>{home.tripSummary.nextPlaceLabel}</strong></div>}
+            {home.tripSummary.progress && <div><span>{tripDayTranslate(language, "tripDay.progress").replace("{visited}", String(home.tripSummary.progress.visited)).replace("{remaining}", String(home.tripSummary.progress.remaining)).replace("{skipped}", String(home.tripSummary.progress.skipped))}</span><strong>{formatProgress(home.tripSummary.progress, language)}</strong></div>}
+          </div>
+        </section>
+      )}
+
+      {home.todaySummary && (home.state === "active_trip" || home.state === "departure_day" || home.state === "day_complete") && (
+        <section className="home-context-card fa-card" aria-labelledby="home-today-title">
+          <div className="home-context-card-heading">
+            <div>
+              <span>{tripDayTranslate(language, "tripDay.title")}</span>
+              <h2 id="home-today-title">{home.todaySummary.tripName}</h2>
+            </div>
+            <CalendarDays size={20} aria-hidden="true" />
+          </div>
+          <div className="home-trip-summary-grid">
+            {home.todaySummary.dayLabel && <div><span>{tripDayTranslate(language, "tripDay.dayOf").replace("{day}", String(home.todaySummary.dayIndex !== null ? home.todaySummary.dayIndex + 1 : 1)).replace("{total}", String(home.todaySummary.dayCount || 0))}</span><strong>{home.todaySummary.dayLabel}</strong></div>}
+            {home.todaySummary.nextPlaceLabel && <div><span>{tripDayTranslate(language, "tripDay.whatsNext")}</span><strong>{home.todaySummary.nextPlaceLabel}</strong></div>}
+            {home.todaySummary.progress && <div><span>{tripDayTranslate(language, "tripDay.progress").replace("{visited}", String(home.todaySummary.progress.visited)).replace("{remaining}", String(home.todaySummary.progress.remaining)).replace("{skipped}", String(home.todaySummary.progress.skipped))}</span><strong>{formatProgress(home.todaySummary.progress, language)}</strong></div>}
+          </div>
+          <button className="fa-button-secondary" type="button" onClick={() => runAction({ ...home.primaryAction, target: { kind: "tab", tab: "today" } }, { setExploreCategory, setMapDestination, setSelectedRestaurant, setTab, onOpenDestination, onOpenPreparation, onOpenTripDay })}>
+            {tripDayTranslate(language, "tripDay.title")}
+          </button>
+        </section>
+      )}
+
+      {home.preparationSummary && home.state !== "ended_trip" && home.state !== "multiple_trips" && home.preparationSummary.attentionCount > 0 && (
+        <section className="home-context-card fa-card" aria-labelledby="home-preparation-title">
+          <div className="home-context-card-heading">
+            <div>
+              <span>{copyKey(t, "travelPreparation.title")}</span>
+              <h2 id="home-preparation-title">{copyKey(t, "travelPreparation.title")}</h2>
+            </div>
+            <Wrench size={20} aria-hidden="true" />
+          </div>
+          <p>{tripDayTranslate(language, "tripDay.notice.preparation_attention")}</p>
+          <button className="fa-button-secondary" type="button" onClick={() => runAction({ ...home.primaryAction, target: home.tripSummary ? { kind: "preparation", tripId: home.tripSummary.tripId } : { kind: "tab", tab: "tripDrafts" } }, { setExploreCategory, setMapDestination, setSelectedRestaurant, setTab, onOpenDestination, onOpenPreparation, onOpenTripDay })}>
+            {copyKey(t, "travelPreparation.title")}
+          </button>
+        </section>
+      )}
+
+      {home.destinationSummary && (
+        <section className="home-context-card fa-card" aria-labelledby="home-destination-title">
+          <div className="home-context-card-heading">
+            <div>
+              <span>{t.travelGuides}</span>
+              <h2 id="home-destination-title">{home.destinationSummary.cityLabel || home.destinationSummary.countryLabel || t.travelGuides}</h2>
+            </div>
+            <Compass size={20} aria-hidden="true" />
+          </div>
+          <div className="home-trip-summary-grid">
+            {home.destinationSummary.countryLabel && <div><span>{t.travelGuides}</span><strong>{home.destinationSummary.countryLabel}</strong></div>}
+            {home.destinationSummary.currencyCode && <div><span>{t.currency}</span><strong>{home.destinationSummary.currencyCode}</strong></div>}
+            {home.destinationSummary.languages.length > 0 && <div><span>{t.translate}</span><strong>{home.destinationSummary.languages.join(" · ")}</strong></div>}
+            <div><span>{t.sosEmergency}</span><strong>{home.destinationSummary.emergencyAvailable ? t.offlineEmergencyNumbers : t.offlineLiveUnavailable}</strong></div>
+            {home.destinationSummary.timezone && <div><span>Timezone</span><strong>{home.destinationSummary.timezone}</strong></div>}
+          </div>
+          <button className="fa-button-secondary" type="button" onClick={() => {
+            if (home.destinationSummary?.destinationId && onOpenDestination) {
+              onOpenDestination(home.destinationSummary.destinationId);
+              return;
+            }
+            setTab("guides");
+          }}>
+            {t.travelGuides}
+          </button>
+        </section>
+      )}
+
+      <section className="home-context-card fa-card" aria-labelledby="home-discovery-title">
+        <div className="home-context-card-heading">
+          <div>
+            <span>{copyKey(t, "travelDiscovery.title")}</span>
+            <h2 id="home-discovery-title">{discovery.destination?.destinationLabel || t.exploreTitle}</h2>
+          </div>
+          <Compass size={20} aria-hidden="true" />
+        </div>
+        <p>{copyKey(t, "travelDiscovery.subtitle")}</p>
+        {discovery.hasResolvedDestination ? (
+          <div className="home-discovery-grid" role="list" aria-label={copyKey(t, "travelDiscovery.title")}>
+            {discovery.sections.filter((section) => section.visible).map((section) => (
+              <button
+                key={section.id}
+                className="home-discovery-item"
+                type="button"
+                onClick={() => openDiscoverySection(section, { setExploreCategory, setTab })}
+              >
+                <strong>{copyKey(t, section.labelKey)}</strong>
+                <small>{copyKey(t, availabilityLabelKey(section.availability))}</small>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="home-discovery-empty">
+            <button className="fa-button-secondary" type="button" onClick={() => setTab("explore")}>
+              {t.explore}
+            </button>
           </div>
         )}
-
-        <HomeCardSection
-          title={t.nearbyHighlights}
-          count={`${verifiedCounts.attractions} ${t.nearby}`}
-          cards={homeCards.attractions}
-          emptyText={t.noVerifiedNearby}
-          suggestionTitle={`${t.suggestionsForDestination} ${travelLocation.destinationCity}`}
-          seeAllLabel={t.seeAll}
-          onSeeAll={() => {
-            setExploreCategory("Attractions");
-            setTab("explore");
-          }}
-          onOpen={(card) => openHomeCard(card, setMapDestination, setSelectedRestaurant, setExploreCategory, setTab)}
-        />
       </section>
 
-      <HomeCardSection
-        title={t.eatNearby}
-        count={`${verifiedCounts.restaurants} ${t.nearby}`}
-        cards={homeCards.restaurants}
-        emptyText={t.noVerifiedRestaurants}
-        suggestionTitle={`${t.suggestionsForDestination} ${travelLocation.destinationCity}`}
-        seeAllLabel={t.showAllRestaurants}
-        onSeeAll={() => {
-          setExploreCategory("Restaurants");
-          setTab("explore");
-        }}
-        onOpen={(card) => openHomeCard(card, setMapDestination, setSelectedRestaurant, setExploreCategory, setTab)}
-      />
-
-      <HomeCardSection
-        title={t.stayNearby}
-        count={`${verifiedCounts.hotels} ${t.nearby}`}
-        cards={homeCards.hotels}
-        emptyText={t.noVerifiedHotels}
-        suggestionTitle={t.staySearchSuggestions}
-        seeAllLabel={t.showAllStays}
-        onSeeAll={() => setTab("hotels")}
-        onOpen={(card) => openHomeCard(card, setMapDestination, setSelectedRestaurant, setExploreCategory, setTab)}
-      />
+      {(home.state === "ended_trip" || home.state === "no_trip") && (
+        <section className="home-context-card fa-card" aria-labelledby="home-memory-title">
+          <div className="home-context-card-heading">
+            <div>
+              <span>{copyKey(t, "travelPassport.title")}</span>
+              <h2 id="home-memory-title">{home.state === "ended_trip" ? copyKey(t, "home.state.ended.title") : copyKey(t, "home.state.noTrip.title")}</h2>
+            </div>
+            <BookOpen size={20} aria-hidden="true" />
+          </div>
+          <p>{home.state === "ended_trip" ? copyKey(t, "home.state.ended.body") : copyKey(t, "home.state.noTrip.body")}</p>
+          <div className="home-memory-actions">
+            {[
+              { key: "travelPassport.title", tab: "passport" as Tab },
+              { key: "travelJournal.title", tab: "journal" as Tab },
+              { key: "travelExplorer.title", tab: "explorer" as Tab }
+            ].map((item) => (
+              <button
+                key={item.key}
+                className="fa-button-secondary"
+                type="button"
+                onClick={() => setTab(item.tab)}
+              >
+                {copyKey(t, item.key)}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="home-safety-card fa-card" aria-labelledby="home-safety-title">
         <div>
@@ -344,81 +445,248 @@ export function HomePage({
         </button>
       </section>
 
-      <section className="home-tools-section" aria-labelledby="home-tools-title">
-        <div className="home-section-heading fa-section-header">
-          <div>
-            <span>{t.travelEssentials}</span>
-            <h2 id="home-tools-title" className="fa-section-title">{t.usefulTravelTools}</h2>
-          </div>
-        </div>
-        <div className="home-tools-grid">
-          {travelTools.map((tool) => {
-            const Icon = tool.icon;
-            return (
-              <button
-                className="home-tool-card fa-card-compact fa-card-interactive"
-                key={tool.label}
-                type="button"
-                onClick={() => {
-                  if (tool.tab === "offline") setMapDestination(null);
-                  setTab(tool.tab);
-                }}
-              >
-                <Icon size={17} aria-hidden="true" />
-                <span>{tool.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="home-ai-card fa-summary-card" aria-labelledby="home-ai-title">
-        <Sparkles size={22} aria-hidden="true" />
-        <div>
-          <span className="fa-badge">{t.askFanAtlas}</span>
-          <h2 id="home-ai-title">{t.askFanAtlas}</h2>
-          <p>{t.askFanAtlasDesc}</p>
-        </div>
-        <button className="fa-button-primary" type="button" onClick={() => setTab("ai")} aria-label={t.openAiAssistant}>
-          {t.openAiAssistant}
-        </button>
-      </section>
-
-      {isEventDestination && (
-        <section className="home-events-archive-card fa-card" aria-labelledby="home-events-title">
-          <div className="section-row">
-            <div>
-              <span>{t.eventsArchive}</span>
-              <h2 id="home-events-title">World Cup 2026</h2>
-            </div>
-            <Trophy size={22} aria-hidden="true" />
-          </div>
-
-          <div className="events-archive-mini-grid">
-            <div>
-              <span>Status</span>
-              <strong>{t.completedEvent}</strong>
-              <p>{t.worldCupArchiveDesc}</p>
-            </div>
-            <div>
-              <span>Stadiums</span>
-              <strong>Host venue archive</strong>
-            </div>
-            <div>
-              <span>Fan Zones</span>
-              <strong>Past city events</strong>
-            </div>
-          </div>
-
-          <button className="fa-button-secondary full-width" type="button" onClick={() => setTab("matches")} aria-label={t.openMatchCenter}>
-            {t.openMatchCenter}
-          </button>
-        </section>
-      )}
-
       <LegalFooter setTab={setTab} />
     </div>
   );
+}
+
+function stateTitleKey(state: TravelHomeState) {
+  if (state === "no_trip") return "home.state.noTrip.title";
+  if (state === "planned_trip") return "home.state.planned.title";
+  if (state === "approaching_trip") return "home.state.approaching.title";
+  if (state === "departure_day") return "home.state.departure.title";
+  if (state === "active_trip") return "home.state.active.title";
+  if (state === "day_complete") return "home.state.dayComplete.title";
+  if (state === "ended_trip") return "home.state.ended.title";
+  if (state === "undated_trip") return "tripDay.noDate";
+  return "tripDay.chooseTrip";
+}
+
+function buildHeroCopy(home: TravelHomeViewModel, t: HomeCopy, language: Language) {
+  const badge = copyKey(t, stateTitleKey(home.state));
+
+  if (!home.tripSummary) {
+    if (home.state === "multiple_trips") {
+      return {
+        badge,
+        title: tripDayTranslate(language, "tripDay.chooseTrip"),
+        body: tripDayTranslate(language, "tripDay.chooseTrip"),
+        detail: home.tripChooser?.trips.map((trip) => trip.tripName).join(" · ") || null
+      };
+    }
+
+    if (home.state === "no_trip") {
+      return {
+        badge,
+        title: copyKey(t, "home.state.noTrip.title"),
+        body: copyKey(t, "home.state.noTrip.body"),
+        detail: null
+      };
+    }
+
+    return {
+      badge,
+      title: tripDayTranslate(language, "tripDay.noDate"),
+      body: tripDayTranslate(language, "tripDay.undated"),
+      detail: null
+    };
+  }
+
+  const title = home.tripSummary.tripName;
+  const detail = [home.tripSummary.destinationLabel, home.tripSummary.dayLabel, home.tripSummary.nextPlaceLabel]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (home.state === "planned_trip") {
+    return {
+      badge,
+      title,
+      body: copyKey(t, "home.state.planned.body").replace("{destination}", home.tripSummary.destinationLabel || ""),
+      detail
+    };
+  }
+
+  if (home.state === "approaching_trip") {
+    return {
+      badge,
+      title,
+      body: home.tripSummary.daysUntilDeparture !== null
+        ? tripDayTranslate(language, "tripDay.homeUpcoming").replace("{days}", String(home.tripSummary.daysUntilDeparture))
+        : copyKey(t, "home.state.planned.body").replace("{destination}", home.tripSummary.destinationLabel || ""),
+      detail
+    };
+  }
+
+  if (home.state === "departure_day") {
+    return {
+      badge,
+      title,
+      body: tripDayTranslate(language, "tripDay.beforeTrip"),
+      detail
+    };
+  }
+
+  if (home.state === "active_trip") {
+    return {
+      badge,
+      title,
+      body: home.tripSummary.nextPlaceLabel || tripDayTranslate(language, "tripDay.homeActive"),
+      detail
+    };
+  }
+
+  if (home.state === "day_complete") {
+    return {
+      badge,
+      title,
+      body: tripDayTranslate(language, "tripDay.dayComplete"),
+      detail
+    };
+  }
+
+  if (home.state === "ended_trip") {
+    return {
+      badge,
+      title,
+      body: copyKey(t, "home.state.ended.body"),
+      detail
+    };
+  }
+
+  return {
+    badge,
+    title,
+    body: tripDayTranslate(language, "tripDay.undated"),
+    detail
+  };
+}
+
+function copyKey(t: HomeCopy, key: string) {
+  const value = t[key as keyof HomeCopy];
+  return typeof value === "string" ? value : key;
+}
+
+function resolveLabel(language: Language, t: HomeCopy, key: string) {
+  if (key.startsWith("tripDay.")) {
+    return tripDayTranslate(language, key);
+  }
+  return copyKey(t, key);
+}
+
+function formatProgress(progress: TripDayProgress, language: Language) {
+  return tripDayTranslate(language, "tripDay.progress")
+    .replace("{visited}", String(progress.visited))
+    .replace("{remaining}", String(progress.remaining))
+    .replace("{skipped}", String(progress.skipped));
+}
+
+function formatTripDateRange(startDate: string, endDate: string | null) {
+  return endDate ? `${startDate} → ${endDate}` : startDate;
+}
+
+function availabilityLabelKey(availability: TravelDiscoverySection["availability"]) {
+  if (availability === "available") return "travelDiscovery.available";
+  if (availability === "limited") return "travelDiscovery.limited";
+  if (availability === "online_required") return "travelDiscovery.onlineRequired";
+  if (availability === "unsupported") return "travelDiscovery.unsupported";
+  return "travelDiscovery.unknown";
+}
+
+function openDiscoverySection(
+  section: TravelDiscoverySection,
+  helpers: {
+    setExploreCategory: (category: string) => void;
+    setTab: (tab: Tab) => void;
+  }
+) {
+  if (section.action.kind === "exploreCategory" && section.action.category) {
+    helpers.setExploreCategory(section.action.category);
+    helpers.setTab("explore");
+    return;
+  }
+
+  if (section.action.tab === "transport") {
+    helpers.setTab("transport");
+    return;
+  }
+
+  if (section.action.tab === "matches") {
+    helpers.setTab("matches");
+    return;
+  }
+
+  if (section.action.tab === "traveltools") {
+    helpers.setTab("traveltools");
+    return;
+  }
+
+  helpers.setTab(section.action.tab || "explore");
+}
+
+function runAction(
+  action: TravelHomeAction,
+  helpers: {
+    setExploreCategory: (category: string) => void;
+    setMapDestination: (destination: MapDestination | null) => void;
+    setSelectedRestaurant: (restaurant: any) => void;
+    setTab: (tab: Tab) => void;
+    onOpenDestination?: (destinationId: string) => void;
+    onOpenPreparation?: (tripId: string) => void;
+    onOpenTripDay?: (tripId: string) => void;
+  }
+) {
+  const target = action.target;
+  if (target.kind === "tab") {
+    if (target.tab === "map") helpers.setMapDestination(null);
+    if (target.tab === "explore") helpers.setExploreCategory("All");
+    helpers.setTab(target.tab);
+    return;
+  }
+
+  if (target.kind === "destination") {
+    if (helpers.onOpenDestination) {
+      helpers.onOpenDestination(target.destinationId);
+      return;
+    }
+    helpers.setTab("guides");
+    return;
+  }
+
+  if (target.kind === "preparation") {
+    if (helpers.onOpenPreparation) {
+      helpers.onOpenPreparation(target.tripId);
+      return;
+    }
+    helpers.setTab("tripDrafts");
+    return;
+  }
+
+  if (target.kind === "tripDay") {
+    if (helpers.onOpenTripDay) {
+      helpers.onOpenTripDay(target.tripId);
+      return;
+    }
+    helpers.setTab("today");
+    return;
+  }
+
+  if (target.kind === "map") {
+    helpers.setTab("map");
+  }
+}
+
+function iconForAction(labelKey: string) {
+  if (labelKey === "travelPreparation.title") return <Wrench size={16} aria-hidden="true" />;
+  if (labelKey === "travelGuides" || labelKey === "travelExplorer.title" || labelKey === "tripDay.chooseTrip") return <Compass size={16} aria-hidden="true" />;
+  if (labelKey === "travelPassport.title" || labelKey === "travelJournal.title") return <BookOpen size={16} aria-hidden="true" />;
+  if (labelKey === "sosEmergency") return <Shield size={16} aria-hidden="true" />;
+  if (labelKey === "map" || labelKey === "travelLocation") return <MapPin size={16} aria-hidden="true" />;
+  if (labelKey === "translate") return <Languages size={16} aria-hidden="true" />;
+  if (labelKey === "currency") return <Wallet size={16} aria-hidden="true" />;
+  if (labelKey === "hotels") return <Hotel size={16} aria-hidden="true" />;
+  if (labelKey === "travelTools") return <Wrench size={16} aria-hidden="true" />;
+  if (labelKey === "tripDay.title" || labelKey === "tripDay.homeActive" || labelKey === "home.reviewTrip") return <CalendarDays size={16} aria-hidden="true" />;
+  return <Compass size={16} aria-hidden="true" />;
 }
 
 function openSearchResult(
@@ -426,7 +694,8 @@ function openSearchResult(
   setMapDestination: (destination: MapDestination | null) => void,
   setSelectedRestaurant: (restaurant: any) => void,
   setExploreCategory: (category: string) => void,
-  setTab: (tab: Tab) => void
+  setTab: (tab: Tab) => void,
+  onOpenDestination?: (destinationId: string) => void
 ) {
   if (result.type === "restaurant" && result.item) {
     const item = result.item as any;
@@ -455,9 +724,8 @@ function openSearchResult(
     return;
   }
 
-  if (result.item && "category" in result.item) {
-    setMapDestination(globalPlaceDestination(result.item as GlobalPlace));
-    setTab("map");
+  if (result.type === "destination" && result.destinationId && onOpenDestination) {
+    onOpenDestination(result.destinationId);
     return;
   }
 
@@ -468,202 +736,4 @@ function openSearchResult(
 
   setExploreCategory("All");
   setTab("explore");
-}
-
-function globalPlaceDestination(place: GlobalPlace): MapDestination {
-  return {
-    name: place.name,
-    city: place.city,
-    lat: place.lat,
-    lng: place.lng,
-    emoji: placeEmoji(place.category),
-    type: place.category === "restaurant" ? "restaurant" :
-      place.category === "hotel" ? "hotel" :
-      place.category === "hospital" ? "hospital" :
-      place.category === "police" ? "police" :
-      place.category === "embassy" ? "embassy" :
-      "place",
-    address: place.address,
-    openingHours: place.detail,
-    safetyNotes: place.source === "openstreetmap" ? "OpenStreetMap community place data. Verify critical details before travel." : undefined
-  };
-}
-
-function buildHomeCards(
-  places: GlobalPlace[],
-  category: HomePlaceCard["category"],
-  travelLocation: { destinationCity: string; destinationCountry: string; latitude: number; longitude: number },
-  t: HomeCopy
-): HomePlaceCard[] {
-  const verifiedCards = places.filter(isVerifiedPlace).slice(0, 4).map((place, index) => ({
-    id: place.id,
-    title: place.name,
-    category,
-    badge: categoryLabel(category, t),
-    distance: `${formatDistance(distanceKm(travelLocation, place))}`,
-    image: (place as GlobalPlace & { image?: string }).image || imageForCategory(category as ExploreImageCategory, index),
-    place,
-    isVerified: true,
-    sourceLabel: place.source === "google_places" ? "Google Places" : "OpenStreetMap",
-    action: category === "restaurant" ? t.viewDetails : category === "hotel" ? t.showAllStays : t.openMap
-  }));
-
-  const fallbackCards = fallbackCardsForCategory(category, t).slice(0, verifiedCards.length > 0 ? 2 : 3).map((item, index) => ({
-    id: `home-fallback-${category}-${index}-${travelLocation.destinationCity}`,
-    title: item.title,
-    category,
-    badge: item.badge,
-    image: imageForCategory(category as ExploreImageCategory, index),
-    isVerified: false,
-    sourceLabel: t.searchSuggestion,
-    action: item.action
-  }));
-
-  return [...verifiedCards, ...fallbackCards];
-}
-
-function isVerifiedPlace(place: GlobalPlace) {
-  return (place.source === "google_places" || place.source === "openstreetmap") &&
-    Number.isFinite(place.lat) &&
-    Number.isFinite(place.lng);
-}
-
-function fallbackCardsForCategory(category: HomePlaceCard["category"], t: HomeCopy) {
-  if (category === "restaurant") {
-    return [
-      { title: t.findRestaurantsNearby, badge: t.searchSuggestion, action: t.showAllRestaurants },
-      { title: t.searchLocalFood, badge: t.destinationSuggestion, action: t.showAllRestaurants },
-      { title: t.askAiFood, badge: t.aiSuggestion, action: t.askFanAtlas }
-    ];
-  }
-
-  if (category === "hotel") {
-    return [
-      { title: t.searchHotelsDestination, badge: t.hotelSearch, action: t.showAllStays },
-      { title: t.compareStayAreas, badge: t.stayPlanning, action: t.showAllStays },
-      { title: t.askAiStays, badge: t.aiSuggestion, action: t.askFanAtlas }
-    ];
-  }
-
-  return [
-    { title: t.exploreLandmarksNearby, badge: t.searchSuggestion, action: t.openExplore },
-    { title: t.openDestinationMap, badge: t.destinationSuggestion, action: t.openMap },
-    { title: t.askAiAttractions, badge: t.aiSuggestion, action: t.askFanAtlas }
-  ];
-}
-
-function categoryLabel(category: HomePlaceCard["category"], t: HomeCopy) {
-  if (category === "restaurant") return t.restaurants;
-  if (category === "hotel") return t.hotels;
-  return t.attractions;
-}
-
-function openHomeCard(
-  card: HomePlaceCard,
-  setMapDestination: (destination: MapDestination | null) => void,
-  setSelectedRestaurant: (restaurant: any) => void,
-  setExploreCategory: (category: string) => void,
-  setTab: (tab: Tab) => void
-) {
-  if (card.place && card.category === "restaurant") {
-    setSelectedRestaurant({ ...card.place, cuisine: card.place.detail, price: "", image: card.image });
-    setTab("restaurant");
-    return;
-  }
-
-  if (!card.place && card.category === "restaurant") {
-    setExploreCategory("Restaurants");
-    setTab("explore");
-    return;
-  }
-
-  if (!card.place && card.category === "attraction") {
-    setExploreCategory("Attractions");
-    setTab("explore");
-    return;
-  }
-
-  if (card.category === "hotel" && !card.place) {
-    setTab("hotels");
-    return;
-  }
-
-  if (card.place) {
-    setMapDestination(globalPlaceDestination(card.place));
-  } else {
-    setMapDestination(null);
-  }
-
-  setTab(card.category === "hotel" ? "hotels" : "map");
-}
-
-function HomeCardSection({
-  title,
-  cards,
-  count,
-  emptyText,
-  suggestionTitle,
-  seeAllLabel,
-  onSeeAll,
-  onOpen
-}: {
-  title: string;
-  cards: HomePlaceCard[];
-  count: string;
-  emptyText: string;
-  suggestionTitle: string;
-  seeAllLabel: string;
-  onSeeAll: () => void;
-  onOpen: (card: HomePlaceCard) => void;
-}) {
-  const verifiedCards = cards.filter((card) => card.isVerified);
-  const suggestionCards = cards.filter((card) => !card.isVerified);
-  const sectionId = `home-section-${title.replace(/\s+/g, "-").toLowerCase()}`;
-
-  return (
-    <section className="home-card-section fa-page-section" aria-labelledby={sectionId}>
-      <div className="home-card-section-title fa-section-header">
-        <div>
-          <h2 id={sectionId} className="fa-section-title">{title}</h2>
-          <span className="fa-section-count">{count}</span>
-        </div>
-        <button className="home-see-all fa-button-secondary" type="button" onClick={onSeeAll} aria-label={seeAllLabel}>
-          {seeAllLabel}
-        </button>
-      </div>
-
-      {verifiedCards.length === 0 && <div className="home-inline-empty fa-empty-state">{emptyText}</div>}
-
-      {verifiedCards.length > 0 && (
-        <div className="home-card-rail">
-          {verifiedCards.map((card) => (
-            <button className="home-place-card fa-place-card" key={card.id} type="button" onClick={() => onOpen(card)}>
-              <img src={card.image} alt={card.title} loading="lazy" />
-              <span className="home-place-source fa-badge-success">{card.sourceLabel}</span>
-              <strong>{card.title}</strong>
-              <small>{card.badge}{card.distance ? ` · ${card.distance}` : ""}</small>
-              <em>{card.action}</em>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {suggestionCards.length > 0 && (
-        <div className="home-suggestion-block">
-          <div className="home-suggestion-title">{suggestionTitle}</div>
-          <div className="home-suggestion-rail">
-            {suggestionCards.map((card) => (
-              <button className="home-place-card home-suggestion-card fa-suggestion-card" key={card.id} type="button" onClick={() => onOpen(card)}>
-                <img src={card.image} alt={card.title} loading="lazy" />
-                <span className="home-place-source fa-badge-suggestion">{card.sourceLabel}</span>
-                <strong>{card.title}</strong>
-                <small>{card.badge}</small>
-                <em>{card.action}</em>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </section>
-  );
 }

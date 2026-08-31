@@ -23,6 +23,7 @@ export const destinations: Destination[] = [
   { city: "Paris", country: "France", latitude: 48.8566, longitude: 2.3522, currency: "EUR", language: "French", emergencyNumber: "112", policeNumber: "17", ambulanceNumber: "15", fireNumber: "18" },
   { city: "Madrid", country: "Spain", latitude: 40.4168, longitude: -3.7038, currency: "EUR", language: "Spanish", emergencyNumber: "112", policeNumber: "112", ambulanceNumber: "112", fireNumber: "112" },
   { city: "Barcelona", country: "Spain", latitude: 41.3874, longitude: 2.1686, currency: "EUR", language: "Spanish", emergencyNumber: "112", policeNumber: "112", ambulanceNumber: "112", fireNumber: "112" },
+  { city: "Lisbon", country: "Portugal", latitude: 38.7223, longitude: -9.1393, currency: "EUR", language: "Portuguese", emergencyNumber: "112", policeNumber: "112", ambulanceNumber: "112", fireNumber: "112" },
   { city: "Casablanca", country: "Morocco", latitude: 33.5731, longitude: -7.5898, currency: "MAD", language: "Arabic / French", emergencyNumber: "19 / 15", policeNumber: "19", ambulanceNumber: "15", fireNumber: "15" },
   { city: "Marrakech", country: "Morocco", latitude: 31.6295, longitude: -7.9811, currency: "MAD", language: "Arabic / French", emergencyNumber: "19 / 15", policeNumber: "19", ambulanceNumber: "15", fireNumber: "15" },
   { city: "Rabat", country: "Morocco", latitude: 34.0209, longitude: -6.8416, currency: "MAD", language: "Arabic / French", emergencyNumber: "19 / 15", policeNumber: "19", ambulanceNumber: "15", fireNumber: "15" },
@@ -51,5 +52,5 @@ export function findDestination(city: string, country: string) {
 }
 
 export function countryEmergency(country: string) {
-  return destinations.find((destination) => destination.country === country) || fallbackDestination;
+  return destinations.find((destination) => destination.country === country) || null;
 }

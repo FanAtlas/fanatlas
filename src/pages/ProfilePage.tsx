@@ -8,7 +8,9 @@ import {
   Languages,
   LogOut,
   NotebookTabs,
+  Route,
   Shield,
+  Sparkles,
   Ticket,
   Wrench
 } from "lucide-react";
@@ -237,6 +239,24 @@ export function ProfilePage({
           <span>
             <strong>{t.travelTools}</strong>
             <small>eSIM, currency, translator, checklist, expenses, and guides</small>
+          </span>
+          <em>›</em>
+        </button>
+
+        <button className="profile-row" onClick={() => setTab("tripDrafts")}>
+          <span className="profile-row-icon"><Route size={19} /></span>
+          <span>
+            <strong>{t["tripDrafts.title"]}</strong>
+            <small>{t["tripDrafts.subtitle"]}</small>
+          </span>
+          <em>›</em>
+        </button>
+
+        <button className="profile-row" onClick={() => setTab("ai")}>
+          <span className="profile-row-icon"><Sparkles size={19} /></span>
+          <span>
+            <strong>{t["fanAtlasAI.title"]}</strong>
+            <small>{t["fanAtlasAI.profileDescription"]}</small>
           </span>
           <em>›</em>
         </button>

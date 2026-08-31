@@ -50,35 +50,35 @@ const destinationFallbackContent: Record<string, Record<MinimumFallbackCategory,
 
 const knownStarterContent: Record<string, StarterItem[]> = {
   "paris_france": [
-    { name: "Eiffel Tower area", category: "attraction", detail: "popular attractions" },
+    { name: "Eiffel Tower area", category: "attraction", detail: "places to explore" },
     { name: "Louvre and central Paris", category: "attraction", detail: "museum district" },
     { name: "Paris restaurant search", category: "restaurant", detail: "restaurants near your destination" },
     { name: "Paris hotel search", category: "hotel", detail: "hotels near your destination" },
     { name: "Paris Metro stations", category: "transport", detail: "public transport" }
   ],
   "casablanca_morocco": [
-    { name: "Hassan II Mosque area", category: "attraction", detail: "popular attractions" },
+    { name: "Hassan II Mosque area", category: "attraction", detail: "places to explore" },
     { name: "Casablanca restaurant search", category: "restaurant", detail: "restaurants near your destination" },
     { name: "Casablanca hotel search", category: "hotel", detail: "hotels near your destination" },
     { name: "Casa Voyageurs transport", category: "transport", detail: "rail and city transport" },
     { name: "Local emergency help", category: "hospital", detail: "SOS and medical help" }
   ],
   "buenos_aires_argentina": [
-    { name: "Plaza de Mayo area", category: "attraction", detail: "popular attractions" },
+    { name: "Plaza de Mayo area", category: "attraction", detail: "places to explore" },
     { name: "Recoleta and Palermo", category: "attraction", detail: "neighborhoods and parks" },
     { name: "Buenos Aires restaurant search", category: "restaurant", detail: "restaurants near your destination" },
     { name: "Buenos Aires hotel search", category: "hotel", detail: "hotels near your destination" },
     { name: "Buenos Aires transport", category: "transport", detail: "subway, rail, and bus stations" }
   ],
   "berlin_germany": [
-    { name: "Brandenburg Gate area", category: "attraction", detail: "popular attractions" },
+    { name: "Brandenburg Gate area", category: "attraction", detail: "places to explore" },
     { name: "Museum Island area", category: "attraction", detail: "museum district" },
     { name: "Berlin restaurant search", category: "restaurant", detail: "restaurants near your destination" },
     { name: "Berlin hotel search", category: "hotel", detail: "hotels near your destination" },
     { name: "Berlin transit stations", category: "transport", detail: "U-Bahn, S-Bahn, and rail" }
   ],
   "cairo_egypt": [
-    { name: "Egyptian Museum area", category: "attraction", detail: "popular attractions" },
+    { name: "Egyptian Museum area", category: "attraction", detail: "places to explore" },
     { name: "Cairo restaurant search", category: "restaurant", detail: "restaurants near your destination" },
     { name: "Cairo hotel search", category: "hotel", detail: "hotels near your destination" },
     { name: "Cairo transport", category: "transport", detail: "metro and city transport" },
@@ -87,12 +87,12 @@ const knownStarterContent: Record<string, StarterItem[]> = {
 };
 
 const genericStarterContent: StarterItem[] = [
-  { name: "Popular Attractions", category: "attraction", detail: "Open Map for nearby places" },
+  { name: "Places to explore", category: "attraction", detail: "Open Map for local place options" },
   { name: "Restaurants", category: "restaurant", detail: "Find restaurants near this destination" },
   { name: "Hotels", category: "hotel", detail: "Search hotels near this destination" },
   { name: "Transportation", category: "transport", detail: "Find stations and transit options" },
   { name: "SOS", category: "hospital", detail: "Use SOS for local emergency help" },
-  { name: "Travel Tips", category: "attraction", detail: "Ask AI Travel Assistant for this trip" }
+  { name: "Travel tools", category: "attraction", detail: "Use travel tools for this trip" }
 ];
 
 function genericCategoryContent(input: FallbackInput, category: MinimumFallbackCategory): StarterItem[] {
@@ -121,7 +121,7 @@ function genericCategoryContent(input: FallbackInput, category: MinimumFallbackC
   }
 
   return [
-    { name: `Attractions in ${city}`, category, detail: "top local attractions" },
+    { name: `Attractions in ${city}`, category, detail: "local attractions" },
     { name: `${city} city center`, category, detail: "city center area" },
     { name: `Landmarks in ${city}`, category, detail: "local landmarks" },
     { name: `Museums nearby`, category, detail: "museums nearby" },

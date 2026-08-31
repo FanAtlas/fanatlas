@@ -1,6 +1,7 @@
 import { createContext, createElement, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { useTravelLocation } from "../TravelLocationContext";
 import { getFallbackPlaces } from "../data/globalFallbackContent";
+import { useConnectivity } from "./useConnectivity";
 import { getCachedGlobalPlaces, getGlobalPlaces, GlobalPlace, GlobalPlaceCategory } from "../services/globalPlaces";
 
 type GlobalPlacesState = {
@@ -18,6 +19,7 @@ const GlobalPlacesContext = createContext<GlobalPlacesContextValue | null>(null)
 
 export function GlobalPlacesProvider({ children }: { children: ReactNode }) {
   const { travelLocation } = useTravelLocation();
+  const connectivity = useConnectivity();
   const [refreshKey, setRefreshKey] = useState(0);
   const [state, setState] = useState<GlobalPlacesState>({
     places: getFallbackPlaces(travelLocation),
@@ -31,6 +33,7 @@ export function GlobalPlacesProvider({ children }: { children: ReactNode }) {
     const fallbackPlaces = getFallbackPlaces(travelLocation);
     const hasDestination = Boolean(travelLocation.destinationCity && travelLocation.destinationCountry);
     const hasValidDestinationCoordinates = hasValidCoordinates(travelLocation.latitude, travelLocation.longitude);
+    const isOffline = connectivity.isOffline;
 
     if (!hasValidDestinationCoordinates) {
       setState((current) => ({
@@ -44,7 +47,32 @@ export function GlobalPlacesProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (isOffline) {
+      const cached = getCachedGlobalPlaces(travelLocation);
+      setState({
+        places: cached?.places.length ? cached.places : fallbackPlaces,
+        loading: false,
+        error: null,
+        message: cached?.places.length
+          ? "Offline. Showing saved travel content."
+          : `Offline. Showing saved travel content near ${travelLocation.destinationCity}.`
+      });
+      return;
+    }
+
     const cached = getCachedGlobalPlaces(travelLocation);
+
+    if (refreshKey === 0) {
+      setState({
+        places: cached?.places.length ? cached.places : fallbackPlaces,
+        loading: false,
+        error: null,
+        message: cached?.places.length
+          ? "Showing saved travel content."
+          : `Showing saved travel content for ${travelLocation.destinationCity}.`
+      });
+      return;
+    }
 
     if (cached) {
       setState({
@@ -115,7 +143,8 @@ export function GlobalPlacesProvider({ children }: { children: ReactNode }) {
     travelLocation.destinationCountry,
     travelLocation.latitude,
     travelLocation.longitude,
-    refreshKey
+    refreshKey,
+    connectivity.isOffline
   ]);
 
   const value = useMemo<GlobalPlacesContextValue>(() => ({
@@ -126,7 +155,7 @@ export function GlobalPlacesProvider({ children }: { children: ReactNode }) {
   return createElement(GlobalPlacesContext.Provider, { value }, children);
 }
 
-export function useGlobalPlaces() {
+export function useGlobalPlaces(_options: { autoFetch?: boolean } = {}) {
   const context = useContext(GlobalPlacesContext);
   if (!context) throw new Error("useGlobalPlaces must be used within GlobalPlacesProvider");
   const { travelLocation } = useTravelLocation();

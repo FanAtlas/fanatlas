@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Home, MapPin, Compass, CalendarDays, User, Shield } from "lucide-react";
 import "./styles.css";
@@ -17,6 +17,14 @@ import { getDueNotifications, markNotificationDelivered } from "./services/notif
 import { LocationProvider } from "./LocationContext";
 import { TravelLocationProvider } from "./TravelLocationContext";
 import { GlobalPlacesProvider } from "./hooks/useGlobalPlaces";
+import { registerFanAtlasServiceWorker } from "./lib/registerServiceWorker";
+import {
+  buildNavigationRequestFromMapDestination,
+  navigationSearchParams,
+  parseNavigationRequestFromLocation,
+  type NavigationRequest,
+  type NavigationSource
+} from "./lib/navigation";
 
 const MapPage = lazy(() => import("./pages/MapPage").then((module) => ({ default: module.MapPage })));
 const ExplorePage = lazy(() => import("./pages/ExplorePage").then((module) => ({ default: module.ExplorePage })));
@@ -63,6 +71,9 @@ const TravelPassportPage = lazy(() => import("./pages/TravelPassportPage").then(
 const TravelJournalPage = lazy(() => import("./pages/TravelJournalPage").then((module) => ({ default: module.TravelJournalPage })));
 const TravelInsightsPage = lazy(() => import("./pages/TravelInsightsPage").then((module) => ({ default: module.TravelInsightsPage })));
 const TravelExplorerPage = lazy(() => import("./pages/TravelExplorerPage").then((module) => ({ default: module.TravelExplorerPage })));
+const DestinationHubPage = lazy(() => import("./pages/DestinationHubPage").then((module) => ({ default: module.DestinationHubPage })));
+const TravelPreparationPage = lazy(() => import("./pages/TravelPreparationPage").then((module) => ({ default: module.TravelPreparationPage })));
+const TripDayPage = lazy(() => import("./pages/TripDayPage").then((module) => ({ default: module.TripDayPage })));
 
 type IdleWindow = Window & {
   requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
@@ -74,7 +85,7 @@ const LEGACY_LANGUAGE_STORAGE_KEY = "fanatlas.language";
 const ADMIN_EMAIL = "kadsimohamedads@gmail.com";
 const pageFallback = <div className="page-loading">Loading...</div>;
 let highTrafficPagesPrefetched = false;
-type PublicRoute = "/" | "/app" | "/passport" | "/journal" | "/insights" | "/explorer" | "/privacy" | "/terms" | "/support";
+type PublicRoute = "/" | "/app" | "/ai" | "/passport" | "/journal" | "/insights" | "/explorer" | "/today" | "/map" | `/trip-day/${string}` | `/destination/${string}` | `/preparation/${string}` | "/privacy" | "/terms" | "/support";
 
 export type Tab =
   | "home"
@@ -123,7 +134,11 @@ export type Tab =
   | "passport"
   | "journal"
   | "insights"
-  | "explorer";
+  | "explorer"
+  | "today"
+  | "tripDay"
+  | "destination"
+  | "preparation";
 
 function isLanguage(value: string | null): value is Language {
   return value === "en" || value === "es" || value === "fr" || value === "ar" || value === "pt";
@@ -147,24 +162,35 @@ function initialLanguage(): Language {
 function App() {
   const [session, setSession] = useState<any>(null);
   const [isAdminEmail, setIsAdminEmail] = useState(false);
-  const [tab, setTab] = useState<Tab>(() => window.location.pathname === "/passport" ? "passport" : window.location.pathname === "/journal" ? "journal" : window.location.pathname === "/insights" ? "insights" : window.location.pathname === "/explorer" ? "explorer" : "home");
+  const [tab, setTab] = useState<Tab>(() => window.location.pathname === "/ai" ? "ai" : window.location.pathname === "/passport" ? "passport" : window.location.pathname === "/journal" ? "journal" : window.location.pathname === "/insights" ? "insights" : window.location.pathname === "/explorer" ? "explorer" : window.location.pathname === "/today" ? "today" : window.location.pathname === "/map" ? "map" : window.location.pathname.startsWith("/trip-day/") ? "tripDay" : window.location.pathname.startsWith("/destination/") ? "destination" : window.location.pathname.startsWith("/preparation/") ? "preparation" : "home");
   const [route, setRoute] = useState<PublicRoute>(() => routeFromPath(window.location.pathname));
   const [previousTab, setPreviousTab] = useState<Tab | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<FanAtlasMatch | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
   const [selectedStadium, setSelectedStadium] = useState<MapDestination | null>(null);
   const [exploreCategory, setExploreCategory] = useState("fanzones");
-  const [selectedMapDestination, setSelectedMapDestination] = useState<MapDestination | null>(null);
+  const [selectedMapNavigationRequest, setSelectedMapNavigationRequest] = useState<NavigationRequest | null>(() => parseNavigationRequestFromLocation(window.location.pathname === "/map" ? window.location : { search: "" }));
+  const selectedMapNavigationRequestRef = useRef<NavigationRequest | null>(selectedMapNavigationRequest);
   const [language, setLanguageState] = useState<Language>(() => initialLanguage());
 
   const t = text[language];
 
+  useEffect(() => {
+    selectedMapNavigationRequestRef.current = selectedMapNavigationRequest;
+  }, [selectedMapNavigationRequest]);
+
   function routeFromPath(pathname: string): PublicRoute {
     if (pathname === "/app") return "/app";
+    if (pathname === "/ai") return "/ai";
     if (pathname === "/passport") return "/passport";
     if (pathname === "/journal") return "/journal";
     if (pathname === "/insights") return "/insights";
     if (pathname === "/explorer") return "/explorer";
+    if (pathname === "/today") return "/today";
+    if (pathname === "/map") return "/map";
+    if (pathname.startsWith("/trip-day/")) return pathname as `/trip-day/${string}`;
+    if (pathname.startsWith("/destination/")) return pathname as `/destination/${string}`;
+    if (pathname.startsWith("/preparation/")) return pathname as `/preparation/${string}`;
     if (pathname === "/privacy") return "/privacy";
     if (pathname === "/terms") return "/terms";
     if (pathname === "/support") return "/support";
@@ -174,6 +200,14 @@ function App() {
   function navigateRoute(nextRoute: PublicRoute) {
     window.history.pushState({}, "", nextRoute);
     setRoute(nextRoute);
+  }
+
+  function navigateMapRoute(request: NavigationRequest | null) {
+    const query = request ? `?${navigationSearchParams(request).toString()}` : "";
+    const nextRoute = `/map${query}` as PublicRoute;
+    if (route !== "/map" || window.location.search !== query) {
+      navigateRoute(nextRoute);
+    }
   }
 
   function updateAdminAccess(nextSession: any) {
@@ -214,7 +248,7 @@ function App() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       updateAdminAccess(session);
-      if (session?.user && window.location.pathname !== "/passport" && window.location.pathname !== "/journal" && window.location.pathname !== "/insights" && window.location.pathname !== "/explorer") {
+      if (session?.user && window.location.pathname !== "/ai" && window.location.pathname !== "/passport" && window.location.pathname !== "/journal" && window.location.pathname !== "/insights" && window.location.pathname !== "/explorer" && window.location.pathname !== "/today" && window.location.pathname !== "/map" && !window.location.pathname.startsWith("/trip-day/") && !window.location.pathname.startsWith("/destination/") && !window.location.pathname.startsWith("/preparation/")) {
         setTab("home");
       }
     });
@@ -228,11 +262,22 @@ function App() {
     function handlePopState() {
       const nextRoute = routeFromPath(window.location.pathname);
       setRoute(nextRoute);
+      if (nextRoute === "/ai") setTab("ai");
       if (nextRoute === "/passport") setTab("passport");
       if (nextRoute === "/journal") setTab("journal");
       if (nextRoute === "/insights") setTab("insights");
       if (nextRoute === "/explorer") setTab("explorer");
-      if (nextRoute === "/app") setTab((current) => current === "passport" || current === "journal" || current === "insights" || current === "explorer" ? "profile" : current);
+      if (nextRoute === "/today") setTab("today");
+      if (nextRoute === "/map") {
+        const parsed = parseNavigationRequestFromLocation(window.location);
+        setSelectedMapNavigationRequest(parsed);
+        selectedMapNavigationRequestRef.current = parsed;
+        setTab("map");
+      }
+      if (nextRoute.startsWith("/trip-day/")) setTab("tripDay");
+      if (nextRoute.startsWith("/destination/")) setTab("destination");
+      if (nextRoute.startsWith("/preparation/")) setTab("preparation");
+      if (nextRoute === "/app") setTab((current) => current === "ai" || current === "passport" || current === "journal" || current === "insights" || current === "explorer" || current === "today" || current === "tripDay" || current === "destination" || current === "preparation" ? "profile" : current);
     }
 
     window.addEventListener("popstate", handlePopState);
@@ -243,6 +288,12 @@ function App() {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
   }, [language]);
+
+  useEffect(() => {
+    if (import.meta.env.PROD) {
+      void registerFanAtlasServiceWorker();
+    }
+  }, []);
 
   useEffect(() => {
     function deliverDueNotifications() {
@@ -296,8 +347,18 @@ function App() {
   }, [route, session, tab]);
 
   function navigateTo(nextTab: Tab) {
-    const nextRoute = nextTab === "passport" ? "/passport" : nextTab === "journal" ? "/journal" : nextTab === "insights" ? "/insights" : nextTab === "explorer" ? "/explorer" : "/app";
-    if (route !== nextRoute) {
+    const nextRoute =
+      nextTab === "ai" ? "/ai" :
+      nextTab === "passport" ? "/passport" :
+      nextTab === "journal" ? "/journal" :
+      nextTab === "insights" ? "/insights" :
+      nextTab === "explorer" ? "/explorer" :
+      nextTab === "today" ? "/today" :
+      nextTab === "map" ? null :
+      "/app";
+    if (nextTab === "map") {
+      navigateMapRoute(selectedMapNavigationRequestRef.current);
+    } else if (route !== nextRoute) {
       navigateRoute(nextRoute);
     }
 
@@ -314,9 +375,33 @@ function App() {
     setTab(target);
   }
 
+  function selectMapDestination(destination: MapDestination | null, source: NavigationSource = "manual") {
+    const request = destination ? buildNavigationRequestFromMapDestination(destination, source) : null;
+    setSelectedMapNavigationRequest(request);
+    selectedMapNavigationRequestRef.current = request;
+  }
+
   function goHome() {
     setPreviousTab("home");
     setTab("home");
+  }
+
+  function openDestination(destinationId: string) {
+    setPreviousTab(tab);
+    setTab("destination");
+    navigateRoute(`/destination/${encodeURIComponent(destinationId)}`);
+  }
+
+  function openPreparation(tripId: string) {
+    setPreviousTab(tab);
+    setTab("preparation");
+    navigateRoute(`/preparation/${encodeURIComponent(tripId)}`);
+  }
+
+  function openTripDay(tripId: string) {
+    setPreviousTab(tab);
+    setTab("tripDay");
+    navigateRoute(`/trip-day/${encodeURIComponent(tripId)}`);
   }
 
   function openApp(nextTab: Tab = "home") {
@@ -359,7 +444,7 @@ function App() {
     );
   }
 
-  if (route !== "/app" && route !== "/passport" && route !== "/journal" && route !== "/insights" && route !== "/explorer") {
+  if (route !== "/app" && route !== "/ai" && route !== "/passport" && route !== "/journal" && route !== "/insights" && route !== "/explorer" && route !== "/today" && route !== "/map" && !route.startsWith("/trip-day/") && !route.startsWith("/destination/") && !route.startsWith("/preparation/")) {
     return (
       <LanguageContext.Provider value={{ language, setLanguage, t }}>
         <LandingPage
@@ -392,8 +477,11 @@ function App() {
       return (
         <HomePage
           setExploreCategory={setExploreCategory}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "manual")}
           setSelectedRestaurant={setSelectedRestaurant}
+          onOpenDestination={openDestination}
+          onOpenPreparation={openPreparation}
+          onOpenTripDay={openTripDay}
           setTab={navigateTo}
         />
       );
@@ -401,7 +489,7 @@ function App() {
     if (tab === "map") {
       return (
         <MapPage
-          initialDestination={selectedMapDestination}
+          initialNavigationRequest={selectedMapNavigationRequest}
           setSelectedStadium={setSelectedStadium}
           setTab={navigateTo}
         />
@@ -411,7 +499,7 @@ function App() {
       return (
         <ExplorePage
           initialCategory={exploreCategory}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "explore")}
           setSelectedRestaurant={setSelectedRestaurant}
           setTab={navigateTo}
         />
@@ -421,7 +509,7 @@ function App() {
     if (tab === "matches") {
       return (
         <MatchesPage
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "stadium")}
           setSelectedStadium={setSelectedStadium}
           setTab={navigateTo}
           setSelectedMatch={setSelectedMatch}
@@ -432,7 +520,7 @@ function App() {
     if (tab === "sos") {
       return (
         <SOSPage
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "sos")}
           setTab={navigateTo}
         />
       );
@@ -459,6 +547,7 @@ function App() {
       return (
         <TravelPassportPage
           onBack={goBack}
+          onOpenDestination={openDestination}
           setTab={navigateTo}
           displayName={session.user.user_metadata?.name || session.user.email?.split("@")[0]}
         />
@@ -466,7 +555,20 @@ function App() {
     }
     if (tab === "journal") return <TravelJournalPage onBack={goBack} />;
     if (tab === "insights") return <TravelInsightsPage onBack={goBack} setTab={navigateTo} />;
-    if (tab === "explorer") return <TravelExplorerPage onBack={goBack} setTab={navigateTo} />;
+    if (tab === "explorer") return <TravelExplorerPage onBack={goBack} onOpenDestination={openDestination} setTab={navigateTo} />;
+    if (tab === "today") return <TripDayPage userId={session.user.id} onBack={goBack} onOpenDestination={openDestination} onOpenMapDestination={(destination) => selectMapDestination(destination, "trip_day")} setTab={navigateTo} />;
+    if (tab === "tripDay") {
+      const tripId = route.startsWith("/trip-day/") ? decodeTripDayTripId(route) : null;
+      return <TripDayPage userId={session.user.id} tripId={tripId} onBack={goBack} onOpenDestination={openDestination} onOpenMapDestination={(destination) => selectMapDestination(destination, "trip_day")} setTab={navigateTo} />;
+    }
+    if (tab === "destination") {
+      const destinationId = route.startsWith("/destination/") ? decodeDestinationId(route) : null;
+      return <DestinationHubPage destinationId={destinationId} onBack={goBack} onOpenDestination={openDestination} setTab={navigateTo} />;
+    }
+    if (tab === "preparation") {
+      const tripId = route.startsWith("/preparation/") ? decodePreparationTripId(route) : null;
+      return <TravelPreparationPage tripId={tripId} onBack={goBack} onOpenDestination={openDestination} setTab={navigateTo} />;
+    }
     if (tab === "privacy") return <PrivacyPage onBack={goHome} />;
     if (tab === "terms") return <TermsPage onBack={goHome} />;
     if (tab === "support") return <SupportPage onBack={goHome} />;
@@ -504,7 +606,7 @@ function App() {
         <FavoritesPage
           userId={session.user.id}
           setExploreCategory={setExploreCategory}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "manual")}
           setSelectedRestaurant={setSelectedRestaurant}
           setSelectedStadium={setSelectedStadium}
           setTab={navigateTo}
@@ -517,7 +619,7 @@ function App() {
           userId={session.user.id}
           onBack={goBack}
           setExploreCategory={setExploreCategory}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "manual")}
           setSelectedRestaurant={setSelectedRestaurant}
           setSelectedStadium={setSelectedStadium}
           setTab={navigateTo}
@@ -529,8 +631,11 @@ function App() {
         <TripDraftsPage
           userId={session.user.id}
           onBack={goBack}
+          onOpenDestination={openDestination}
+          onOpenPreparation={openPreparation}
+          onOpenTripDay={openTripDay}
           setExploreCategory={setExploreCategory}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "trip_draft")}
           setSelectedRestaurant={setSelectedRestaurant}
           setSelectedStadium={setSelectedStadium}
           setTab={navigateTo}
@@ -541,7 +646,7 @@ function App() {
       return (
         <StadiumDetailPage
           stadium={selectedStadium}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "stadium")}
           onBack={goBack}
           setTab={navigateTo}
         />
@@ -550,7 +655,7 @@ function App() {
     if (tab === "hotels") {
       return (
         <HotelsPage
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "hotel")}
           onBack={goBack}
           setTab={navigateTo}
         />
@@ -563,7 +668,7 @@ function App() {
       return (
         <FanZoneTransportPage
           onBack={goBack}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "manual")}
           setTab={navigateTo}
         />
       );
@@ -573,7 +678,7 @@ function App() {
     if (tab === "transport") {
       return (
         <TransportationPage
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "manual")}
           setTab={navigateTo}
         />
       );
@@ -585,7 +690,7 @@ function App() {
         <MatchDayPage
           match={selectedMatch}
           onBack={goBack}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "stadium")}
           setTab={navigateTo}
         />
       );
@@ -596,7 +701,7 @@ function App() {
         <RestaurantDetailPage
           restaurant={selectedRestaurant}
           setExploreCategory={setExploreCategory}
-          setMapDestination={setSelectedMapDestination}
+          setMapDestination={(destination) => selectMapDestination(destination, "restaurant")}
           onBack={goBack}
           setTab={navigateTo}
         />
@@ -606,8 +711,11 @@ function App() {
     return (
       <HomePage
         setExploreCategory={setExploreCategory}
-        setMapDestination={setSelectedMapDestination}
+        setMapDestination={(destination) => selectMapDestination(destination, "manual")}
         setSelectedRestaurant={setSelectedRestaurant}
+        onOpenDestination={openDestination}
+        onOpenPreparation={openPreparation}
+        onOpenTripDay={openTripDay}
         setTab={navigateTo}
       />
     );
@@ -647,7 +755,7 @@ function App() {
                   key={item.id}
                   className={`nav-btn ${tab === item.id ? "active" : ""}`}
                   onClick={() => {
-                    if (item.id === "map") setSelectedMapDestination(null);
+                    if (item.id === "map") selectMapDestination(null);
                     navigateTo(item.id as Tab);
                   }}
                 >
@@ -661,6 +769,30 @@ function App() {
       </GlobalPlacesProvider>
     </LanguageContext.Provider>
   );
+}
+
+function decodeDestinationId(route: string) {
+  try {
+    return decodeURIComponent(route.slice("/destination/".length));
+  } catch {
+    return null;
+  }
+}
+
+function decodeTripDayTripId(route: string) {
+  try {
+    return decodeURIComponent(route.slice("/trip-day/".length));
+  } catch {
+    return null;
+  }
+}
+
+function decodePreparationTripId(route: string) {
+  try {
+    return decodeURIComponent(route.slice("/preparation/".length));
+  } catch {
+    return null;
+  }
 }
 
 function AccessDenied({ onHome }: { onHome: () => void }) {

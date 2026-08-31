@@ -48,6 +48,20 @@ export type PlanningAction = {
   createdAt: string;
 };
 
+export type TripPreparationReminderPhase = "early" | "week_before" | "day_before" | "departure_day";
+
+export type TripPreparationReminderSettings = {
+  enabled: boolean;
+  phases: TripPreparationReminderPhase[];
+  preferredLocalTime?: string;
+};
+
+export type TripPreparationReminderOccurrence = {
+  occurrenceId: string;
+  acknowledgedAt?: string;
+  notifiedAt?: string;
+};
+
 export type TripDraftPersistedReference = {
   storageSource: SavedPlaceStorageSource;
   persistedId: string;
@@ -115,6 +129,8 @@ export type TripDraft = {
   destination?: TripDestination;
   travelDates?: TripTravelDates;
   planningActions?: PlanningAction[];
+  preparationReminderSettings?: TripPreparationReminderSettings;
+  preparationReminderOccurrences?: TripPreparationReminderOccurrence[];
   itineraryDays: TripItineraryDay[];
   placeReferences: TripDraftPlaceReference[];
   journalEntries?: TripJournalEntry[];
@@ -231,6 +247,8 @@ export type TripDraftMutationError =
   | "planning_action_too_long"
   | "planning_action_not_found"
   | "stale_planning_action"
+  | "invalid_reminder_settings"
+  | "reminder_occurrence_not_found"
   | "invalid_photo_id"
   | "photo_not_found"
   | "journal_entry_not_found"
@@ -293,6 +311,16 @@ export type UpdatePlanningActionInput = {
 
 export type PlanningActionTargetInput = {
   actionId: string;
+};
+
+export type UpdateTripPreparationReminderSettingsInput = {
+  enabled: boolean;
+  phases: readonly TripPreparationReminderPhase[];
+  preferredLocalTime?: string;
+};
+
+export type TripPreparationReminderOccurrenceInput = {
+  occurrenceId: string;
 };
 
 export type AddPlacePlanningActionInput = AddPlanningActionInput & {
@@ -406,6 +434,34 @@ export function normalizePlanningActions(value: unknown): PlanningAction[] {
     if (!action || seen.has(action.id)) return [];
     seen.add(action.id);
     return [action];
+  });
+}
+
+export function normalizeTripPreparationReminderSettings(value: unknown): TripPreparationReminderSettings | undefined {
+  const record = asRecord(value);
+  if (!record || typeof record.enabled !== "boolean") return undefined;
+  const phases = normalizeTripPreparationReminderPhases(record.phases);
+  const preferredLocalTime = normalizeReminderLocalTime(record.preferredLocalTime);
+  return {
+    enabled: record.enabled,
+    phases: phases.length ? phases : [],
+    preferredLocalTime
+  };
+}
+
+export function normalizeTripPreparationReminderOccurrences(value: unknown): TripPreparationReminderOccurrence[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  return value.flatMap((item) => {
+    const record = asRecord(item);
+    if (!record) return [];
+    const occurrenceId = readString(record.occurrenceId);
+    if (!occurrenceId || seen.has(occurrenceId)) return [];
+    const acknowledgedAt = validIsoString(record.acknowledgedAt);
+    const notifiedAt = validIsoString(record.notifiedAt);
+    if (!acknowledgedAt && !notifiedAt) return [];
+    seen.add(occurrenceId);
+    return [{ occurrenceId, acknowledgedAt, notifiedAt }];
   });
 }
 
@@ -777,6 +833,11 @@ export function duplicateTripDraft(
     destination: original.destination ? { ...original.destination } : undefined,
     travelDates: original.travelDates ? { ...original.travelDates } : undefined,
     planningActions: original.planningActions?.map(clonePlanningAction),
+    preparationReminderSettings: original.preparationReminderSettings ? {
+      ...original.preparationReminderSettings,
+      phases: [...original.preparationReminderSettings.phases]
+    } : undefined,
+    preparationReminderOccurrences: [],
     journalEntries: [],
     itineraryDays,
     placeReferences: original.placeReferences.map((reference) => ({
@@ -1229,6 +1290,45 @@ export function removeTripPlanningAction(
       updatedAt: isoNow()
     })
   };
+}
+
+export function updateTripPreparationReminderSettings(
+  state: TripDraftsState,
+  draftId: string,
+  input: UpdateTripPreparationReminderSettingsInput
+): TripDraftMutationResult<TripDraftsState> {
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const settings = normalizeReminderSettingsInput(input);
+  if (!settings) return { ok: false, error: "invalid_reminder_settings" };
+  if (sameReminderSettings(draft.preparationReminderSettings, settings)) return { ok: true, value: current };
+  return {
+    ok: true,
+    value: replaceDraft(current, {
+      ...draft,
+      preparationReminderSettings: settings,
+      updatedAt: isoNow()
+    })
+  };
+}
+
+export function acknowledgeTripPreparationReminder(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripPreparationReminderOccurrenceInput,
+  acknowledgedAt: string = isoNow()
+): TripDraftMutationResult<TripDraftsState> {
+  return upsertTripPreparationReminderOccurrence(state, draftId, input, { acknowledgedAt });
+}
+
+export function markTripPreparationReminderNotified(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripPreparationReminderOccurrenceInput,
+  notifiedAt: string = isoNow()
+): TripDraftMutationResult<TripDraftsState> {
+  return upsertTripPreparationReminderOccurrence(state, draftId, input, { notifiedAt });
 }
 
 export function addPlacePlanningAction(
@@ -1901,6 +2001,8 @@ export function normalizeTripDraft(value: unknown): TripDraft | null {
     destination: normalizeTripDestination(record.destination),
     travelDates: normalizeTripTravelDates(record.travelDates),
     planningActions: normalizePlanningActions(record.planningActions),
+    preparationReminderSettings: normalizeTripPreparationReminderSettings(record.preparationReminderSettings),
+    preparationReminderOccurrences: normalizeTripPreparationReminderOccurrences(record.preparationReminderOccurrences),
     itineraryDays,
     placeReferences,
     journalEntries: normalizeTripJournalEntries(record.journalEntries, {
@@ -2079,6 +2181,11 @@ function cloneTripDraft(draft: TripDraft): TripDraft {
     destination: draft.destination ? { ...draft.destination } : undefined,
     travelDates: draft.travelDates ? { ...draft.travelDates } : undefined,
     planningActions: draft.planningActions?.map(clonePlanningAction),
+    preparationReminderSettings: draft.preparationReminderSettings ? {
+      ...draft.preparationReminderSettings,
+      phases: [...draft.preparationReminderSettings.phases]
+    } : undefined,
+    preparationReminderOccurrences: draft.preparationReminderOccurrences?.map((occurrence) => ({ ...occurrence })),
     journalEntries: draft.journalEntries?.map((entry) => ({
       ...entry,
       photoIds: entry.photoIds ? [...entry.photoIds] : undefined
@@ -2095,6 +2202,83 @@ function cloneTripDraft(draft: TripDraft): TripDraft {
 
 function clonePlanningAction(action: PlanningAction): PlanningAction {
   return { ...action };
+}
+
+function normalizeReminderSettingsInput(value: UpdateTripPreparationReminderSettingsInput): TripPreparationReminderSettings | null {
+  const phases = normalizeTripPreparationReminderPhases(value.phases);
+  const preferredLocalTime = normalizeReminderLocalTime(value.preferredLocalTime);
+  if (value.enabled && phases.length === 0) return null;
+  return {
+    enabled: value.enabled,
+    phases,
+    preferredLocalTime
+  };
+}
+
+function normalizeTripPreparationReminderPhases(value: unknown): TripPreparationReminderPhase[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<TripPreparationReminderPhase>();
+  const phases: TripPreparationReminderPhase[] = [];
+  for (const item of value) {
+    if (!isTripPreparationReminderPhase(item) || seen.has(item)) continue;
+    seen.add(item);
+    phases.push(item);
+  }
+  return phases;
+}
+
+function isTripPreparationReminderPhase(value: unknown): value is TripPreparationReminderPhase {
+  return value === "early" || value === "week_before" || value === "day_before" || value === "departure_day";
+}
+
+function normalizeReminderLocalTime(value: unknown) {
+  const text = readString(value);
+  return /^\d{2}:\d{2}$/.test(text) ? text : undefined;
+}
+
+function sameReminderSettings(left: TripPreparationReminderSettings | undefined, right: TripPreparationReminderSettings) {
+  const leftPhases = left?.phases || [];
+  return Boolean(left) &&
+    left?.enabled === right.enabled &&
+    left?.preferredLocalTime === right.preferredLocalTime &&
+    leftPhases.length === right.phases.length &&
+    leftPhases.every((phase, index) => phase === right.phases[index]);
+}
+
+function upsertTripPreparationReminderOccurrence(
+  state: TripDraftsState,
+  draftId: string,
+  input: TripPreparationReminderOccurrenceInput,
+  patch: Pick<TripPreparationReminderOccurrence, "acknowledgedAt"> | Pick<TripPreparationReminderOccurrence, "notifiedAt">
+): TripDraftMutationResult<TripDraftsState> {
+  const current = normalizeTripDraftsState(state);
+  const draft = current.drafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, error: "draft_not_found" };
+  const occurrenceId = readString(input.occurrenceId);
+  if (!occurrenceId) return { ok: false, error: "reminder_occurrence_not_found" };
+  const existing = draft.preparationReminderOccurrences || [];
+  const currentOccurrence = existing.find((item) => item.occurrenceId === occurrenceId);
+  const nextOccurrence = {
+    ...(currentOccurrence || { occurrenceId }),
+    ...patch
+  };
+  if (
+    currentOccurrence &&
+    currentOccurrence.acknowledgedAt === nextOccurrence.acknowledgedAt &&
+    currentOccurrence.notifiedAt === nextOccurrence.notifiedAt
+  ) {
+    return { ok: true, value: current };
+  }
+  return {
+    ok: true,
+    value: replaceDraft(current, {
+      ...draft,
+      preparationReminderOccurrences: currentOccurrence
+        ? existing.map((item) => item.occurrenceId === occurrenceId ? nextOccurrence : item)
+        : [...existing, nextOccurrence],
+      updatedAt: isoNow()
+    })
+  };
 }
 
 function normalizeStatus(value: unknown): TripDraftStatus {

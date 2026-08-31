@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { languages } from "../i18n";
 import { useLanguage } from "../LanguageContext";
+import { useConnectivity } from "../hooks/useConnectivity";
 import { Tab } from "../main";
 import { MapDestination } from "../mapDestinations";
 import { useLocation } from "../LocationContext";
 import { useTravelLocation } from "../TravelLocationContext";
-import { getEmergencyNumbers } from "../data/emergencyNumbers";
+import { findEmergencyNumbers, getEmergencyNumbers } from "../data/emergencyNumbers";
 import { useGlobalPlaces } from "../hooks/useGlobalPlaces";
 import { GlobalPlace, placeEmoji } from "../services/globalPlaces";
 
@@ -339,6 +340,7 @@ export function SOSPage({
   setTab: (tab: Tab) => void;
 }) {
   const { language, t } = useLanguage();
+  const connectivity = useConnectivity();
   const { location, status: locationStatus } = useLocation();
   const { travelLocation } = useTravelLocation();
   const { groups, loading, message, refreshPlaces } = useGlobalPlaces();
@@ -351,6 +353,8 @@ export function SOSPage({
     : "";
 
   const emergency = getEmergencyNumbers(travelLocation.destinationCountry);
+  const emergencySupported = Boolean(findEmergencyNumbers(travelLocation.destinationCountry));
+  const primaryEmergencyNumber = emergencySupported ? emergency.emergency.split(" / ")[0] : "";
   const activePlaces = useMemo(() => {
     if (activeCategory === "hospital") return groups.hospitals;
     if (activeCategory === "police") return groups.police;
@@ -407,11 +411,15 @@ export function SOSPage({
         <strong>Change</strong>
       </button>
 
-      <a href={`tel:${emergency.emergency.split(" / ")[0]}`} className="sos-hero">
+      {emergencySupported ? <a href={`tel:${primaryEmergencyNumber}`} className="sos-hero">
         <span>⚠️</span>
         <h2>{t.sosEmergency}</h2>
         <p>{t.tapEmergency}: {emergency.emergency}</p>
-      </a>
+      </a> : <div className="sos-hero" role="status">
+        <span>⚠️</span>
+        <h2>{t.sosEmergency}</h2>
+        <p>Emergency numbers for this destination are not verified yet. Use official local guidance or nearby emergency services.</p>
+      </div>}
 
       <div className="sos-category-grid">
         <button
@@ -445,6 +453,13 @@ export function SOSPage({
         </div>
       )}
 
+      {connectivity.isOffline && (
+        <div className="fa-inline-message" role="status">
+          <strong>{t.offline}</strong>
+          <span>{t.offlineEmergencyNumbers}</span>
+        </div>
+      )}
+
       <div className="card-dark">
         <strong>{userLocation ? "Nearby" : "Host-city"} {activeCategory === "embassy" ? "consular help" : activeCategory}</strong>
         <p className="subtle">
@@ -474,7 +489,7 @@ export function SOSPage({
             </div>
 
             <div className="sos-actions">
-              <a href={`tel:${location.phone || emergency.emergency.split(" / ")[0]}`}>Call</a>
+              {(location.phone || primaryEmergencyNumber) && <a href={`tel:${location.phone || primaryEmergencyNumber}`}>Call</a>}
               <button onClick={() => openDirections(location)}>Directions</button>
               {location.website && <a href={location.website} target="_blank" rel="noreferrer">Website</a>}
             </div>
@@ -489,12 +504,18 @@ export function SOSPage({
           { country: travelLocation.destinationCountry, label: "Police", phone: emergency.police, note: "Police" },
           { country: travelLocation.destinationCountry, label: "Ambulance", phone: emergency.ambulance, note: "Medical emergency" },
           { country: travelLocation.destinationCountry, label: "Fire", phone: emergency.fire, note: "Fire services" }
-        ].map((item) => (
+        ].map((item) => emergencySupported ? (
           <a className="sos-tile" href={`tel:${item.phone.split(" / ")[0]}`} key={item.label}>
             <strong>{item.label} · {item.country}</strong>
             <span>{item.phone}</span>
             <p>{item.note}</p>
           </a>
+        ) : (
+          <div className="sos-tile" key={item.label}>
+            <strong>{item.label} · {item.country}</strong>
+            <span>{item.phone}</span>
+            <p>Not verified yet</p>
+          </div>
         ))}
       </div>
 

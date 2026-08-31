@@ -31,6 +31,15 @@ jobs:
       - name: Unit tests
         run: npm run test:coverage
 
+      - name: Offline AI evaluations
+        run: npm run test:ai-evals
+
+      - name: AI coordination contract tests
+        run: npm run test:ai-coordination
+
+      - name: AI current-information tool tests
+        run: npm run test:ai-tools
+
       - name: Build
         run: npm run build
 
@@ -63,3 +72,87 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  live-ai-coordination:
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.event_name == 'workflow_dispatch'
+    env:
+      FANATLAS_E2E_NONPRODUCTION: ${{ secrets.FANATLAS_E2E_NONPRODUCTION }}
+      SUPABASE_URL: ${{ secrets.FANATLAS_E2E_SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.FANATLAS_E2E_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FANATLAS_E2E_SUPABASE_SERVICE_ROLE_KEY }}
+      FANATLAS_PRODUCTION_SUPABASE_REF: ${{ secrets.FANATLAS_PRODUCTION_SUPABASE_REF }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check live AI coordination readiness
+        run: npm run check:ai-coordination
+
+      - name: Run live AI coordination contracts
+        run: npm run test:ai-coordination:live
+
+  authenticated-e2e:
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.event_name == 'workflow_dispatch'
+    env:
+      FANATLAS_E2E_NONPRODUCTION: ${{ secrets.FANATLAS_E2E_NONPRODUCTION }}
+      SUPABASE_URL: ${{ secrets.FANATLAS_E2E_SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.FANATLAS_E2E_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FANATLAS_E2E_SUPABASE_SERVICE_ROLE_KEY }}
+      FANATLAS_PRODUCTION_SUPABASE_REF: ${{ secrets.FANATLAS_PRODUCTION_SUPABASE_REF }}
+      FANATLAS_E2E_AUTH_EMAIL: ${{ secrets.FANATLAS_E2E_AUTH_EMAIL }}
+      FANATLAS_E2E_AUTH_PASSWORD: ${{ secrets.FANATLAS_E2E_AUTH_PASSWORD }}
+      FANATLAS_E2E_AUTH_STORAGE_STATE: tests/e2e/.auth/fanatlas-nonproduction.storage-state.json
+      FANATLAS_AI_RELEASE_MODE: internal
+      FANATLAS_AI_MOCK: "true"
+      FANATLAS_AI_COORDINATION_LIVE_VALIDATED: "false"
+      FANATLAS_AI_RELEASE_GATE_RUN_LIVE: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check authenticated E2E configuration
+        id: auth-e2e-config
+        run: |
+          if [ "$FANATLAS_E2E_NONPRODUCTION" = "true" ] && [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ] && [ -n "$FANATLAS_E2E_AUTH_EMAIL" ] && [ -n "$FANATLAS_E2E_AUTH_PASSWORD" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Authenticated E2E skipped: protected nonproduction auth secrets are not configured."
+          fi
+
+      - name: Create Playwright auth state
+        if: steps.auth-e2e-config.outputs.configured == 'true'
+        run: npm run e2e:auth:setup
+
+      - name: Run authenticated Playwright
+        if: steps.auth-e2e-config.outputs.configured == 'true'
+        run: npm run test:e2e:authenticated -- --project=chromium
+
+      - name: Run AI release gate
+        if: steps.auth-e2e-config.outputs.configured == 'true'
+        run: npm run check:ai-release-gate

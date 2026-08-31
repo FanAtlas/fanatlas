@@ -18,6 +18,8 @@ import {
 import { BackButton } from "../components/BackButton";
 import { useLanguage } from "../LanguageContext";
 import { useTripDrafts } from "../hooks/useTripDrafts";
+import { destinationHubTranslate } from "../lib/destinationHubI18n";
+import type { Language } from "../i18n";
 import { deriveTravelPassport, getPassportStampRotation } from "../lib/travelPassport";
 import type {
   TravelPassportAchievement,
@@ -29,11 +31,12 @@ import type { Tab } from "../main";
 
 type Props = {
   onBack: () => void;
+  onOpenDestination: (destinationId: string) => void;
   setTab: (tab: Tab) => void;
   displayName?: string;
 };
 
-export function TravelPassportPage({ onBack, setTab, displayName }: Props) {
+export function TravelPassportPage({ onBack, onOpenDestination, setTab, displayName }: Props) {
   const { language, t } = useLanguage();
   const { drafts, refreshDrafts } = useTripDrafts([]);
   const [showAllCities, setShowAllCities] = useState(false);
@@ -89,7 +92,7 @@ export function TravelPassportPage({ onBack, setTab, displayName }: Props) {
 
             <PassportSummaryGrid summary={passport.summary} formatNumber={formatNumber} />
             {passport.countries.length > 0 ? (
-              <PassportStampCollection countries={passport.countries} language={language} formatNumber={formatNumber} />
+              <PassportStampCollection countries={passport.countries} language={language} formatNumber={formatNumber} onOpenDestination={onOpenDestination} />
             ) : (
               <PartialNotice icon={<Stamp size={18} />} title={translate(t, "travelPassport.noStamps")} />
             )}
@@ -103,6 +106,7 @@ export function TravelPassportPage({ onBack, setTab, displayName }: Props) {
                 onToggle={() => setShowAllCities((value) => !value)}
                 language={language}
                 formatNumber={formatNumber}
+                onOpenDestination={onOpenDestination}
               />
             )}
             {passport.yearlySummaries.length > 0 && (
@@ -174,7 +178,7 @@ function PassportSummaryGrid({ summary, formatNumber }: { summary: any; formatNu
   );
 }
 
-function PassportStampCollection({ countries, language, formatNumber }: { countries: TravelPassportCountryEntry[]; language: string; formatNumber: (value: number) => string }) {
+function PassportStampCollection({ countries, language, formatNumber, onOpenDestination }: { countries: TravelPassportCountryEntry[]; language: string; formatNumber: (value: number) => string; onOpenDestination: (destinationId: string) => void }) {
   const { t } = useLanguage();
   return (
     <section className="passport-stamp-collection" aria-labelledby="passport-stamps-title">
@@ -201,6 +205,9 @@ function PassportStampCollection({ countries, language, formatNumber }: { countr
                 <div><dt>{translate(t, "travelPassport.trips")}</dt><dd>{formatNumber(country.tripCount)}</dd></div>
                 <div><dt>{translate(t, "travelPassport.places")}</dt><dd>{formatNumber(country.visitedPlaceCount)}</dd></div>
               </dl>
+              <button type="button" className="mini-btn" onClick={() => onOpenDestination(`country:${country.countryCode}`)}>
+                {destinationHubTranslate(language as Language, "destinationHub.viewDestination")}
+              </button>
             </article>
           </li>
         ))}
@@ -278,7 +285,7 @@ function PassportAchievements({ achievements, formatNumber }: { achievements: Tr
   );
 }
 
-function PassportCityList({ cities, totalCount, expanded, onToggle, language, formatNumber }: { cities: TravelPassportCityEntry[]; totalCount: number; expanded: boolean; onToggle: () => void; language: string; formatNumber: (value: number) => string }) {
+function PassportCityList({ cities, totalCount, expanded, onToggle, language, formatNumber, onOpenDestination }: { cities: TravelPassportCityEntry[]; totalCount: number; expanded: boolean; onToggle: () => void; language: string; formatNumber: (value: number) => string; onOpenDestination: (destinationId: string) => void }) {
   const { t } = useLanguage();
   return (
     <section className="passport-city-list" aria-labelledby="passport-cities-title">
@@ -291,6 +298,7 @@ function PassportCityList({ cities, totalCount, expanded, onToggle, language, fo
             <Building2 size={18} aria-hidden="true" />
             <span><strong>{city.cityName}{city.countryCode ? `, ${localizedCountryName(city.countryCode, language, city.countryName)}` : ""}</strong><small>{formatNumber(city.tripCount)} {unit(t, "trip", city.tripCount)} · {formatNumber(city.visitedPlaceCount)} {unit(t, "place", city.visitedPlaceCount)} · {formatNumber(city.memoryCount)} {unit(t, "memory", city.memoryCount)}</small></span>
             <em>{formatMonthYear(city.latestVisitDate, language)}</em>
+            {city.countryCode && <button type="button" className="mini-btn" onClick={() => onOpenDestination(`city:${city.id}`)}>{destinationHubTranslate(language as Language, "destinationHub.viewDestination")}</button>}
           </li>
         ))}
       </ul>

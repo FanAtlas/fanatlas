@@ -3,6 +3,7 @@ import { BackButton } from "../BackButton";
 import { useTravelIntelligence } from "../../contexts/TravelIntelligenceContext";
 import { useTripDrafts } from "../../hooks/useTripDrafts";
 import { useLanguage } from "../../LanguageContext";
+import { destinationHubTranslate } from "../../lib/destinationHubI18n";
 import type { Tab } from "../../main";
 import { getFanZoneDestination, getStadiumDestination, type MapDestination } from "../../mapDestinations";
 import type {
@@ -17,6 +18,8 @@ import type { SavedPlaceAction } from "../../lib/savedPlaceActions";
 import { prepareTripPhotoFile } from "../../lib/prepareTripPhoto";
 import { deleteTripPhotoOwnedBy, deleteTripPhotosByIds, PHOTO_MAX_SELECTION_COUNT, saveTripPhoto, type TripPhotoStorageError } from "../../lib/tripPhotoStorage";
 import { collectTripDraftPhotoReferences } from "../../lib/tripJournal";
+import { resolveDestinationId } from "../../lib/destinationHub";
+import { travelPreparationTranslate } from "../../lib/travelPreparationI18n";
 import { createDefaultMissingDayTitles, formatTimeBlockSuccess, translateTripDraftError } from "./displayUtils";
 import { TripDraftDetailView } from "./TripDraftDetailView";
 import { TripDraftListView } from "./TripDraftListView";
@@ -24,6 +27,9 @@ import { TripStatusMessage } from "./TripStatusMessage";
 
 export type TripDraftPlannerProps = {
   onBack: () => void;
+  onOpenDestination?: (destinationId: string) => void;
+  onOpenPreparation?: (tripId: string) => void;
+  onOpenTripDay?: (tripId: string) => void;
   setExploreCategory: (category: string) => void;
   setMapDestination: (destination: MapDestination | null) => void;
   setSelectedRestaurant: (restaurant: unknown) => void;
@@ -37,6 +43,9 @@ type TripDraftsView =
 
 export function TripDraftPlanner({
   onBack,
+  onOpenDestination,
+  onOpenPreparation,
+  onOpenTripDay,
   setExploreCategory,
   setMapDestination,
   setSelectedRestaurant,
@@ -95,7 +104,11 @@ export function TripDraftPlanner({
   const [localMessage, setLocalMessage] = useState("");
   const [addingPhotosPlaceId, setAddingPhotosPlaceId] = useState<string | null>(null);
   const labels = t as Record<string, string>;
-  const translate = (key: string) => labels[key] || key;
+  const translate = (key: string) => key.startsWith("destinationHub.")
+    ? destinationHubTranslate(language, key)
+    : key.startsWith("travelPreparation.")
+      ? travelPreparationTranslate(language, key)
+      : labels[key] || key;
   const selected = view.mode === "detail"
     ? hydratedDrafts.find((draft) => draft.draft.id === view.draftId)
     : undefined;
@@ -590,6 +603,7 @@ export function TripDraftPlanner({
           deleteId={deleteId}
           deleteDayId={deleteDayId}
           draft={selected}
+          destinationGuideId={selected.draft.destination ? resolveDestinationId(selected.draft.destination) : null}
           editingId={editingId}
           editingDetailsId={editingDetailsId}
           editingDayId={editingDayId}
@@ -669,6 +683,9 @@ export function TripDraftPlanner({
           onRename={submitRename}
           onSaveDetails={submitTripDetails}
           onStartEditDetails={startEditDetails}
+          onOpenDestination={onOpenDestination}
+          onOpenPreparation={onOpenPreparation}
+          onOpenTripDay={onOpenTripDay}
           onStartRenameDay={startRenameDay}
           onStartRename={startRename}
           translate={translate}

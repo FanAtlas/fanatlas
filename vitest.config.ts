@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.test.js"],
     exclude: ["node_modules", "dist", "coverage", "playwright-report", "test-results"],
     setupFiles: ["src/test/setup.ts"],
     clearMocks: true,
