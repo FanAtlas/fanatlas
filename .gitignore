@@ -8,3 +8,4 @@ tests/e2e/.auth/
 *.storage-state.json
 .env
 .env.*
+!.env.example
