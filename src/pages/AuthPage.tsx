@@ -78,7 +78,7 @@ export function AuthPage({ setTab }: { setTab: (tab: Tab) => void }) {
       <form className="auth-card" onSubmit={submit}>
         <div className="auth-logo">FA</div>
         <h1>FanAtlas</h1>
-        <p>World Cup 2026 Travel Companion</p>
+        <p>Global travel companion</p>
 
         <label>
           Email or phone
